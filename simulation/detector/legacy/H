@@ -1,0 +1,639 @@
+#include "TH1D.h"
+#include <iostream>
+#include <vector>
+#include <cstdlib> // For std::getenv
+#include <stdexcept> // For std::invalid_argument and std::out_of_range
+#include "TMath.h"
+
+//-------------energy range relationship of water --------
+double alpha_w = 2.585e-3;
+double p_w = 1.738;
+double alpha_pbwo4 = 7.275e-4;
+double p_pbwo4 = 1.690;
+
+int coincidence_layer = 14;
+
+
+void draw_legend(TH1D* hist1, TH1D* hist2, TH1D* hist3=nullptr, TH1D* hist4=nullptr){
+    gPad->Update(); // Necessary to update the pad
+
+    Char_t legendinfo[100];
+    Double_t statsX1, statsX2, statsY1, statsY2;
+    // Get the statistics box   
+    TPaveStats *stats = (TPaveStats*)hist1->FindObject("stats");
+    // Get the stats box dimensions
+    statsX1 = stats->GetX1NDC();
+    statsY1 = stats->GetY1NDC();
+    statsX2 = stats->GetX2NDC();
+    statsY2 = stats->GetY2NDC();
+    
+    // Create a legend
+    TLegend *legend = new TLegend(statsX1, statsY2 - 0.2, statsX2, statsY2 - 0.1 - (statsY2 - statsY1));
+    legend->SetTextSize(0.05);
+    sprintf(legendinfo, "#splitline{Coincidence}{with ch 0}"); 
+    legend->AddEntry(hist1, legendinfo, "f1");
+    legend->Draw();
+    return;
+}
+
+void draw_legend2(TH1D* hist1, TH1D* hist2=nullptr){
+    gPad->Update(); // Necessary to update the pad
+
+    Char_t legendinfo[100];
+    Double_t statsX1, statsX2, statsY1, statsY2;
+    // Get the statistics box   
+    TPaveStats *stats = (TPaveStats*)hist1->FindObject("stats");
+    // Get the stats box dimensions
+    statsX1 = stats->GetX1NDC();
+    statsY1 = stats->GetY1NDC();
+    statsX2 = stats->GetX2NDC();
+    statsY2 = stats->GetY2NDC();
+    
+    // Create a legend
+    TLegend *legend = new TLegend(statsX1, statsY2 - 0.2, statsX2, statsY2 - 0.2 - (statsY2 - statsY1));
+    legend->SetTextSize(0.05);
+    sprintf(legendinfo, "#splitline{Coincidence}{with ch 0}"); 
+    legend->AddEntry(hist1, legendinfo, "f1");
+    legend->Draw();
+    return;
+}
+
+void plot_th1d(TH1D* hist, TString x_title, TString y_title){
+    gPad->SetGrid();
+    // Set border line color and width
+    gPad->SetFrameLineColor(1); // White color
+    gPad->SetFrameLineWidth(1); // Borderline width
+    // Adjust margins
+    gPad->SetLeftMargin(0.15);
+    gPad->SetRightMargin(0.1);
+    gPad->SetTopMargin(0.1);
+    gPad->SetBottomMargin(0.15);
+
+    hist->GetYaxis()->SetNdivisions(506); // 5 primary ticks
+    hist->GetYaxis()->SetTitle(y_title);
+    hist->GetYaxis()->SetLabelFont(42);
+	hist->GetYaxis()->SetLabelSize(0.07);
+	hist->GetYaxis()->SetTitleSize(0.07);
+    hist->GetYaxis()->SetTitleOffset(1);
+
+    hist->GetXaxis()->SetTitle(x_title);
+	hist->GetXaxis()->SetLabelFont(42);
+	hist->GetXaxis()->SetLabelSize(0.07);
+	hist->GetXaxis()->SetTitleSize(0.07);
+    hist->Draw("HIST");
+}
+
+struct particle {
+    Int_t fnbofdetectors=0;
+    Double_t TotalEDep=0;
+    std::vector<double> edep={};
+    std::vector<std::vector<double>> dE={};
+
+    particle(const int& nbofdetectors){
+        fnbofdetectors = nbofdetectors;
+        TotalEDep = 0;
+        edep = std::vector<double>(nbofdetectors);
+        dE = std::vector<std::vector<double>>(nbofdetectors);
+    }
+
+    Double_t GetTotalEDep(){
+        TotalEDep = 0;
+        for(int i=0; i<edep.size(); i++){
+            TotalEDep += edep.at(i);
+        }
+        return TotalEDep;
+    }
+
+    void CalculateEDep(const int channel){
+        for(const double& dE_i :dE.at(channel)){
+            edep.at(channel) += dE_i;
+        }
+        return;
+    }
+
+    void ProcessParticle(){
+        for(int i=0; i<edep.size(); i++){            
+            CalculateEDep(i);         
+        }
+        return;
+    }
+
+
+    bool Coincidence(int layer){
+        if(layer <= coincidence_layer){
+            layer = coincidence_layer;
+        }
+        for(int i = 0; i < layer; i++){
+            if(edep.at(i) < 0.2){
+                return false;
+            }
+        }
+        return true;
+    }
+
+    void Clear(){
+        TotalEDep = 0;
+        edep = std::vector<double>(fnbofdetectors);
+        dE = std::vector<std::vector<double>>(fnbofdetectors);
+    }
+};
+
+void set_standard_pad(TH1D* h_1, TH1D* h_2 = nullptr, TH1D* h_3 = nullptr, TH1D* h_4 = nullptr){
+    gPad->SetGrid();
+    // Set border line color and width
+    gPad->SetFrameLineColor(1); // White color
+    gPad->SetFrameLineWidth(1); // Borderline width
+    // Adjust margins
+    gPad->SetLeftMargin(0.1);
+    gPad->SetRightMargin(0.1);
+    gPad->SetTopMargin(0.1);
+    gPad->SetBottomMargin(0.1);
+
+    //gPad->SetTitle(title);
+
+    h_1->GetXaxis()->SetTitle("Energy / MeV");
+    h_1->SetLineColor(kRed);
+    h_1->GetYaxis()->SetTitle("Counts");
+    h_1->GetYaxis()->SetLabelFont(42);
+	h_1->GetYaxis()->SetLabelSize(0.04);
+	h_1->GetYaxis()->SetTitleSize(0.04);
+	h_1->GetXaxis()->SetLabelFont(42);
+	h_1->GetXaxis()->SetLabelSize(0.04);
+	h_1->GetXaxis()->SetTitleSize(0.04);
+    h_1->Draw("HIST");
+    if(h_2 != nullptr){
+        h_2->SetLineColor(kRed);
+	    h_2->Draw("HIST SAME");
+    }
+    if(h_3 != nullptr){
+        h_3->SetLineColor(kGreen+2);	
+	    h_3->Draw("HIST SAME");
+    }
+    if(h_4 != nullptr){
+        h_4->SetLineColor(kOrange+1);	
+	    h_4->Draw("HIST SAME");
+    }
+}
+
+void plot_tgrapherror(TGraphErrors* Graph, TString x_title, TString y_title, bool same = false){
+    gPad->SetGrid();
+    // Set border line color and width
+    gPad->SetFrameLineColor(1); // White color
+    gPad->SetFrameLineWidth(1); // Borderline width
+    // Adjust margins
+    gPad->SetLeftMargin(0.1);
+    gPad->SetRightMargin(0.1);
+    gPad->SetTopMargin(0.1);
+    gPad->SetBottomMargin(0.1);
+
+    Graph->SetMarkerStyle(6);  // Crosses
+    Graph->SetMarkerSize(0.9);
+    Graph->GetXaxis()->SetTitle(x_title);
+    Graph->GetYaxis()->SetTitle(y_title);
+    Graph->GetYaxis()->SetLabelFont(42);
+	Graph->GetYaxis()->SetLabelSize(0.04);
+	Graph->GetYaxis()->SetTitleSize(0.04);
+	Graph->GetXaxis()->SetLabelFont(42);
+	Graph->GetXaxis()->SetLabelSize(0.04);
+	Graph->GetXaxis()->SetTitleSize(0.04);
+    if(same){
+        Graph->Draw("P Same");
+        return;
+    }
+    Graph->Draw("AP");
+    return;
+}
+
+void plot_tgraph(TGraph* Graph, TString x_title, TString y_title, bool same = false){
+    gPad->SetGrid();
+    // Set border line color and width
+    gPad->SetFrameLineColor(1); // White color
+    gPad->SetFrameLineWidth(1); // Borderline width
+    // Adjust margins
+    gPad->SetLeftMargin(0.1);
+    gPad->SetRightMargin(0.1);
+    gPad->SetTopMargin(0.1);
+    gPad->SetBottomMargin(0.1);
+    
+    Graph->SetMarkerStyle(2);  // Crosses
+    Graph->SetMarkerSize(1);
+    Graph->GetXaxis()->SetTitle(x_title);
+    Graph->GetYaxis()->SetTitle(y_title);
+    Graph->GetYaxis()->SetLabelFont(42);
+	Graph->GetYaxis()->SetLabelSize(0.04);
+	Graph->GetYaxis()->SetTitleSize(0.04);
+	Graph->GetXaxis()->SetLabelFont(42);
+	Graph->GetXaxis()->SetLabelSize(0.04);
+	Graph->GetXaxis()->SetTitleSize(0.04);
+    if(same){
+        Graph->Draw("P Same");
+        return;
+    }
+    Graph->Draw("AP");
+    return;
+}
+
+void simple_plot(TH1D* hist, TString x_title, TString y_title){
+    gPad->SetGrid();
+    // Set border line color and width
+    gPad->SetFrameLineColor(1); // White color
+    gPad->SetFrameLineWidth(1); // Borderline width
+    // Adjust margins
+    gPad->SetLeftMargin(0.1);
+    gPad->SetRightMargin(0.1);
+    gPad->SetTopMargin(0.1);
+    gPad->SetBottomMargin(0.1);
+
+    //gPad->SetTitle(title);
+
+    hist->GetXaxis()->SetTitle(x_title);
+    hist->GetYaxis()->SetTitle(y_title);
+    hist->GetYaxis()->SetLabelFont(42);
+	hist->GetYaxis()->SetLabelSize(0.04);
+	hist->GetYaxis()->SetTitleSize(0.04);
+	hist->GetXaxis()->SetLabelFont(42);
+	hist->GetXaxis()->SetLabelSize(0.04);
+	hist->GetXaxis()->SetTitleSize(0.04);
+    hist->Draw("HIST");
+}
+
+void data_analysis_p(int tar = -1){
+    ROOT::EnableImplicitMT();
+    #ifdef _WIN32
+        std::cout << "Running on Windows, getting environmental variables" << std::endl;
+    #elif __linux__
+        std::cout << "Running on Linux, getting environmental variables" << std::endl;
+    #elif __APPLE__
+        std::cout << "Running on macOS, getting environmental variables" << std::endl;
+    #else
+        std::cout << "Unknown operating system, Could not find environmental variables using defaults instead" << std::endl;
+    #endif
+
+    const char* cNbOfDetectors = std::getenv("ENV_NBDETECTORS");
+    const char* cNbOfDetectorsPbWO4 = std::getenv("ENV_NBDETECTORSPWO");
+
+    int nbofdetectors;
+    int nbofdetectorsPbWO4;
+    int nbofdetectorsPEN;
+
+    if (cNbOfDetectors && cNbOfDetectorsPbWO4) {
+        try {
+            nbofdetectors = std::stoi(cNbOfDetectors);
+            nbofdetectorsPbWO4 = std::stoi(cNbOfDetectorsPbWO4);
+            nbofdetectorsPEN = nbofdetectors - nbofdetectorsPbWO4;
+
+            std::cout << "ENV_NBDETECTORS: " << nbofdetectors << std::endl;
+            std::cout << "ENV_NBDETECTORSPWO: " << nbofdetectorsPbWO4 << std::endl;
+        } catch (const std::invalid_argument& e) {
+            std::cerr << "Invalid argument: " << e.what() << std::endl;
+            return;
+        } catch (const std::out_of_range& e) {
+            std::cerr << "Out of range: " << e.what() << std::endl;
+            return;
+        }
+    } 
+    else {
+      cout << "Could not find environmental variables using defaults instead" << endl;
+      nbofdetectors = 15;
+      nbofdetectorsPbWO4 = 15;
+      nbofdetectorsPEN = nbofdetectors-nbofdetectorsPbWO4;
+    }
+
+    Char_t target[100];
+    Char_t target_data[100];
+    switch (tar)
+    {
+    case 0:
+        sprintf(target, "beam2");
+        sprintf(target_data, "without a target");
+        break;
+    case 1:
+        sprintf(target, "homogeneous");
+        sprintf(target_data, "with the homogeneous Target");
+        break;
+    case 2:
+        sprintf(target, "heterogeneous");
+        sprintf(target_data, "with the heterogeneous target");
+        break;
+    default:
+        sprintf(target, "beam2");
+        sprintf(target_data, "without a target");
+        break;
+    }
+    //sprintf(target, "heterogeneous");
+    
+    Char_t input_file[100];
+    sprintf(input_file, "%s/raw_data_p.root", target);
+
+    Char_t output_file[100];
+    sprintf(output_file, "%s/%s_analysed.root", target, target);
+
+    Int_t event = 0; //store tree values simulation 
+    Int_t NDet = 0; 
+    Double_t EDep = 0;
+    Int_t TrackID;
+    
+    Char_t histName[100]; // temp store of histNames
+    Char_t histTitle[100]; // temp store of histNames
+    Char_t detectorMat[100];
+
+    std::vector<Double_t> run_edep(nbofdetectors, 0.0);
+    std::vector<Double_t> run_edep_proton(nbofdetectors, 0.0);
+    std::vector<Double_t> run_edep_coinc(nbofdetectors, 0.0);
+    std::vector<Double_t> total_protons(nbofdetectors, 0.0);
+    std::vector<Double_t> means(nbofdetectors, 0.0);
+
+    Double_t total_edep = 0, total_edep_proton = 0, total_edep_coinc = 0;
+
+    //init  histograms and file access
+    TFile *input = new TFile(input_file, "READ");
+    TH1D *h_edep[nbofdetectors], *h_edep_all[nbofdetectors], *h_edep_coinc[nbofdetectors];
+
+    sprintf(histName, "Total energy deposition %s", target_data);
+    TH1D *h_total_edep = new TH1D("h_total_edep", histName, 800, 100, 260);
+    TH1D *h_total_edep_proton = new TH1D("h_total_edep_proton", histName, 1000, 0, 230);
+    TH1D *h_total_edep_coinc = new TH1D("h_total_edep_coinc", histName, 1000, 0, 230);
+    TH1D *h_total_protons = new TH1D("h_total_protons", "Number of protons per Detector layer", nbofdetectors, 0, nbofdetectors);
+    TH1D *h_means = new TH1D("h_means", "Total energy deposition per Layer", nbofdetectors+1, 0, nbofdetectors+1);
+    
+    TGraphErrors *h_means_coinc = new TGraphErrors();
+    sprintf(histName, "Norm. energy depth dose distribution %s", target_data);
+    h_means_coinc->SetTitle(histName);
+    h_means_coinc->SetLineWidth(2);
+    h_means_coinc->SetMarkerStyle(20);
+    h_means_coinc->SetMarkerSize(1);
+
+    //init of histograms of edep and edepcut
+    for(int i = 0; i<nbofdetectors; i++){
+        if(i < nbofdetectorsPbWO4){
+            sprintf(detectorMat, "PbWO4");
+        }
+        else{
+            sprintf(detectorMat, "PEN");
+        }
+        sprintf(histName, "Energy deposition of CH%i %s",i, target_data);
+        sprintf(histTitle, "h_edep_%i", i);
+        h_edep[i] = new TH1D(histTitle, histName, 700, 0, 70);
+        sprintf(histTitle, "h_edep_alls_%i", i);
+        h_edep_all[i] = new TH1D(histTitle, histName, 1000, 0, 100);
+        sprintf(histTitle, "h_edep_coinc_%i", i);
+        h_edep_coinc[i] = new TH1D(histTitle, histName, 300, 0, 60);
+    }
+
+    if (!input || input->IsZombie()) {
+        cout << "Error: Failed to open file 'data.root'!" << endl;
+        return;
+    }
+
+    TTree *datatree = (TTree*)input->Get("braggsampler");
+
+    if (!datatree) {
+        cout << "Error: Failed to retrieve tree 'tree' from file!" << endl;
+        input->Close();
+        return;
+    }
+
+	datatree->SetBranchAddress("event", &event);
+    datatree->SetBranchAddress("track", &TrackID);
+	datatree->SetBranchAddress("NDet", &NDet);
+	datatree->SetBranchAddress("EDep", &EDep);
+
+    datatree->GetEntry(0);
+    int prevEvent = -1;
+    double prevEDep = EDep;
+
+    std::vector<particle> particles;
+    particle proton(nbofdetectors);
+
+    int64_t entries = datatree->GetEntries();
+    cout << "Getting raw data from ROOT file." << endl;
+    cout << "Entries: " << entries << endl;
+    for (int64_t i = 0; i<entries; i++){
+		datatree->GetEntry(i);
+        
+        if(prevEvent != event){
+            particles.push_back(proton);
+            proton.Clear();
+            if(particles.size() == 100000) break;
+        }
+
+        if(TrackID == 1){            
+            proton.SetdE(NDet, EDep);            
+        }
+        prevEvent = event; 
+    }
+
+    cout << "Calculating energy depositions for coincidences." << endl;
+    for(particle p : particles){
+        p.ProcessParticle();
+        p.GetTotalEDep();
+        for(int ch = 0; ch<nbofdetectors; ch++){
+            if(p.edep.at(ch) > 0.1){
+                h_edep_all[ch]->Fill(p.edep.at(ch));
+            }
+            if(p.Coincidence(ch) && p.edep.at(ch) > 0.1){
+                h_edep_coinc[ch]->Fill(p.edep.at(ch));
+                h_total_edep->Fill(p.TotalEDep);
+            }
+        }
+    }
+    
+    TCanvas *c1 = new TCanvas("c1","Bragg Sampler Simulation Analysis", 10, 10, 1900, 1000);
+    //set canvas settings
+    int nbOfPads = std::ceil((nbofdetectors+5)/4);
+    c1->SetFillColor(0);
+	c1->SetGrid();
+	c1->SetBorderMode(0);
+	c1->SetBorderSize(2);
+	c1->SetFrameBorderMode(0);
+    c1->Divide(4, nbOfPads); 
+
+    for(int i = 0; i < nbofdetectors; i++){
+        c1->cd(i+1); //change pad for drawing
+        set_standard_pad(h_edep_all[i], h_edep_coinc[i]);
+    }
+    c1->cd(nbofdetectors+1);
+    set_standard_pad(h_total_edep); //
+
+    c1->cd(nbofdetectors+2);
+    for(int i = 0; i < nbofdetectors; i++){
+        h_total_protons->Fill(i, total_protons.at(i));
+    }
+    simple_plot(h_total_protons, "Detector layer", "Counts");
+    
+    c1->cd(nbofdetectors+4);
+    simple_plot(h_edep_all[0], "Energy / MeV", "Counts");
+    for(int i = 1; i < nbofdetectors; i++){
+	    h_edep_all[i]->Draw("HIST SAME");
+    }
+
+    c1->cd(nbofdetectors+5);
+    double totalenergydose[nbofdetectors];
+    double totalenergydose_quaderr[nbofdetectors];
+    double x_sigma[nbofdetectors];
+    double x[nbofdetectors];
+    double alpha_pbwo4 = 7.275e-3;
+    double p_pbwo4 = 1.690;
+    double alpha_h2o = 2.585e-2;
+    double p_h2o = 1.738;
+    double energy = 220;
+    double wet_coef = alpha_h2o*std::pow(energy, p_h2o)/(alpha_pbwo4*std::pow(energy,p_pbwo4));
+    double wet_coef2 = alpha_h2o/alpha_pbwo4*(p_h2o-p_pbwo4)*std::pow(energy, p_h2o-p_pbwo4-1);
+    for(int ch = 0; ch<nbofdetectors; ch++){
+        x[ch] = (0.25 + 0.5*ch)*wet_coef;
+        x_sigma[ch] = sqrt(std::pow((0.5/sqrt(12)*wet_coef),2) + std::pow(((0.25 + 0.5*ch)*wet_coef2*0.005*energy), 2));
+    }
+
+    for(int i = 0; i < nbofdetectors; i++){
+        totalenergydose[i] = 0;
+        totalenergydose_quaderr[i] = 0;
+	    for(int j = 1; j<=h_edep_coinc[i]->GetNbinsX(); j++){
+            double bin_content = h_edep_coinc[i]->GetBinContent(j);
+            if(bin_content == 0) continue;
+            double energy = h_edep_coinc[i]->GetBinCenter(j);
+            double bin_width = h_edep_coinc[i]->GetBinWidth(j);
+            bin_width = 1;
+            totalenergydose[i] += bin_content * energy * bin_width;
+            totalenergydose_quaderr[i] += std::pow(energy * bin_width, 2) / bin_content;
+        }
+        std::cout << "Channel: " << i << " Total Energy Dose: " << totalenergydose[i] << " +- " << sqrt(totalenergydose_quaderr[i]) << " ~" << sqrt(totalenergydose_quaderr[i])/totalenergydose[i]*100 << "%" <<std::endl;
+        h_means_coinc->SetPoint(i, x[i],totalenergydose[i]/h_edep_coinc[0]->GetEntries());
+        h_means_coinc->SetPointError(i, x_sigma[i], sqrt(totalenergydose_quaderr[i])/h_edep_coinc[0]->GetEntries());
+    }
+
+    gPad->SetGrid();
+    h_means_coinc->GetXaxis()->SetTitle("Depth [cm]");
+    h_means_coinc->GetYaxis()->SetTitle("Norm. Energy Dose [MeV]");
+    h_means_coinc->SetLineColor(kRed+1);
+	h_means_coinc->SetFillColor(kRed+1);
+    h_means_coinc->Draw("AP");
+
+    TFile *	hfile = new TFile(output_file,"RECREATE");
+    c1->Write("ALL");
+
+    TCanvas *c2 = new TCanvas("c2","Bragg Sampler Simulation Analysis", 10, 10, 1900, 1000);
+    //set canvas settings
+    c2->SetFillColor(0);
+	c2->SetGrid();
+	c2->SetBorderMode(0);
+	c2->SetBorderSize(2);
+	c2->SetFrameBorderMode(0);
+
+    h_edep_all[0]->Draw("HIST");
+	h_edep_coinc[0]->Draw("HIST SAME");
+    for(int i = 1; i < nbofdetectors; i++){
+        h_edep_all[i]->Draw("HIST SAME");
+	    h_edep_coinc[i]->Draw("HIST SAME");
+    }
+    c2->SetTitle("Energy deposition");
+    c2->Write("edep_all");
+    c2->Clear();
+    
+    for(int i = 1; i < nbofdetectors; i++){
+        sprintf(histName, "edep_%i", i);
+        h_edep_all[i]->Draw("HIST");
+        h_edep_coinc[i]->Draw("HIST SAME");
+        c2->SetTitle("Energy deposition");
+        c2->Write(histName);
+        c2->Clear();
+    }
+    c2->Clear();
+
+	h_total_edep->Draw("HIST");
+
+    c2->SetTitle("Total energy deposition");
+    c2->Write("total_edep");
+    c2->Clear();
+
+    h_total_protons->Draw("HIST");
+    c2->SetTitle("Total number of Protons per Layer");
+    c2->Write("NbofProtons");
+    c2->Clear();
+
+    gPad->SetGrid();
+    gPad->SetFrameLineColor(1); // White color
+    gPad->SetFrameLineWidth(1); // Borderline width
+    gPad->SetLeftMargin(0.15);
+    gPad->SetRightMargin(0.1);
+    gPad->SetTopMargin(0.1);
+    gPad->SetBottomMargin(0.15);
+
+    h_means_coinc->GetYaxis()->SetNdivisions(506); // 5 primary ticks
+    h_means_coinc->GetYaxis()->SetLabelFont(42);
+	h_means_coinc->GetYaxis()->SetLabelSize(0.07);
+	h_means_coinc->GetYaxis()->SetTitleSize(0.07);
+    h_means_coinc->GetYaxis()->SetTitleOffset(1);
+	h_means_coinc->GetXaxis()->SetLabelFont(42);
+	h_means_coinc->GetXaxis()->SetLabelSize(0.07);
+	h_means_coinc->GetXaxis()->SetTitleSize(0.07);
+    h_means_coinc->Draw("AP");
+    c2->SetTitle("Total energy deposition per Layer");
+
+    c2->Write("mean_edep");
+
+    hfile->SetCompressionLevel(0);
+    hfile->Close();
+    sprintf(histTitle, "Bragg Sampler %s Analysis", target);
+    TCanvas *c3 = new TCanvas("c3", histTitle, 4000, 2000);
+    for(int i = 0; i < nbofdetectors; i++){
+        c3->SetFillColor(0);
+        c3->SetGrid();
+	    c3->SetBorderMode(0);
+	    c3->SetBorderSize(2);
+	    c3->SetFrameBorderMode(0);
+
+        plot_th1d(h_edep_coinc[i], "EDep [MeV]", "Counts");
+        gStyle->SetTitleFontSize(0.07); // Title font size for the canvas
+        draw_legend2(h_edep_coinc[i]);
+
+        sprintf(histName, "%s/h_edep_%i.pdf", target, i);
+        c3->Update();
+        c3->Print(histName);
+        c3->Clear();
+    }
+
+    c3->SetFillColor(0);
+    c3->SetGrid();
+	c3->SetBorderMode(0);
+	c3->SetBorderSize(2);
+	c3->SetFrameBorderMode(0);
+    
+    h_means_coinc->Draw("AP");
+    gStyle->SetTitleFontSize(0.07); // Title font size for the canvas
+    c3->Update();
+    sprintf(histName, "%s/h_means.pdf", target);
+    c3->Print(histName);
+    
+    plot_th1d(h_total_edep, "EDep [MeV]", "Counts");
+    gStyle->SetTitleFontSize(0.07); // Title font size for the canvas
+    draw_legend2(h_total_edep);
+    
+    sprintf(histName, "%s/h_total_edep.pdf", target);
+    c3->Print(histName);
+
+    Char_t file[100];
+    sprintf(file, "%s/%sMeans.root", target, target);
+    hfile = new TFile(file, "RECREATE");
+    
+    // Create a TTree
+    TTree *meantree = new TTree("meantree", "Tree storing histogram means");
+
+    // Variable to store histogram means
+    Int_t ch;
+    Double_t mean;
+    Double_t error;
+
+    // Create a branch in the TTree
+    meantree->Branch("ch", &ch);
+    meantree->Branch("mean", &mean);
+    meantree->Branch("error", &error);
+
+    for (int i = 0; i < nbofdetectors; ++i) {
+        ch = i;
+        mean = totalenergydose[i]/h_edep_coinc[0]->GetEntries();
+        error = sqrt(totalenergydose_quaderr[i])/h_edep_coinc[0]->GetEntries();
+        meantree->Fill();        
+    }
+    meantree->Write();    
+    hfile->Close();
+}

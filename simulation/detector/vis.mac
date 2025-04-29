@@ -1,0 +1,17 @@
+/run/numberOfThreads 8
+/run/initialize
+/vis/open OGL
+/vis/viewer/set/viewpointVector 1 1 1
+/vis/drawVolume
+#/vis/scene/add/axes
+/vis/scene/add/eventID
+/vis/scene/add/hits
+/vis/scene/add/trajectories smooth
+/vis/viewer/set/autoRefresh true
+/vis/modeling/trajectories/create/drawByCharge
+/vis/modeling/trajectories/drawByCharge-0/default/setDrawStepPts true
+/vis/modeling/trajectories/drawByCharge-0/default/setStepPtsSize 0.5
+/vis/scene/endOfEventAction accumulate 10
+/gun/particle proton
+#/gun/particle mu-
+/vis/ogl/set/displayListLimit 5000000
