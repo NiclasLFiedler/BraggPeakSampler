@@ -387,7 +387,6 @@ if(bhetero):
     o_t = np.sqrt(bestfit_params.stddev[1]**2+convParams.stddev[1]**2)
     
     sigmat = np.sqrt(convParams.sigma**2 - bestfit_params.sigma**2)
-    #sigmat = 0.39
     
     o_sigmat = np.sqrt(convParams.sigma**2/(convParams.sigma**2-bestfit_params.sigma**2)*convParams.stddev[2]**2+bestfit_params.sigma**2/(convParams.sigma**2-bestfit_params.sigma**2)*bestfit_params.stddev[2]**2)
     pmod = sigmat**2/t*10000

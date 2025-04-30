@@ -17,6 +17,6 @@ fi
 
 cd ../data
 ./merge_p.sh
-mv raw_data_p.root ~/braggpeak_sampler/data/simulation/notarget/input/notarget.root
-cd ~/braggpeak_sampler/analysis
+mv raw_data_p.root ../../../data/simulation/notarget/input/notarget.root
+cd ../../../analysis
 root -q 'analysis.cpp()'

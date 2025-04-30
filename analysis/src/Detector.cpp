@@ -5,7 +5,7 @@ Detector::Detector(DetectorProperties* detectorProperties)
 
     Char_t histdesc[100];
     Char_t histname[100];
-    int binningEdep[3] = {2400, 0, 240};
+    int binningEdep[3] = {1000, 0, 1};
     int binningPhotons[3] = {200, 0, 50};
     
     sprintf(histdesc, "Total energy deposition %s", detectorProperties->GetTarget());

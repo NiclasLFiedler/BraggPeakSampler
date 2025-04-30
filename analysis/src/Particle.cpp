@@ -4,13 +4,10 @@
 Particle::Particle(int fnbDetectors, int fcoincidence_time, int fcoincidence_layer, Calibration* fcalibration)
     : nbDetectors(fnbDetectors), coincidence_time(fcoincidence_time), coincidence_layer(fcoincidence_layer), calibration(fcalibration){
     
-    traces = std::vector<TraceProperties>(nbDetectors);
-    QuenchedDeposition = std::vector<Double_t>(nbDetectors, 0.0);
     Deposition = std::vector<Double_t>(nbDetectors, 0.0);
     DepositionStdDev = std::vector<Double_t>(nbDetectors, 0.0);
-    //time = std::vector<Double_t>(nbDetectors, 0.0);
-
-    //sim
+    traces = std::vector<TraceProperties>(nbDetectors);
+    QuenchedDeposition = std::vector<Double_t>(nbDetectors, 0.0);
     dE = std::vector<std::vector<double>>(nbDetectors);
     NPhotons = std::vector<Double_t>(nbDetectors, 0.0);
     EntryPos = std::vector<std::vector<Double_t>>(nbDetectors, std::vector<Double_t>(3,0.0)); 
@@ -25,11 +22,10 @@ void Particle::Clear() {
     ampOffsetStatus = false;
     missingChannel = false;
 
-    traces = std::vector<TraceProperties>(nbDetectors);
-    QuenchedDeposition = std::vector<Double_t>(nbDetectors, 0.0);
     Deposition = std::vector<Double_t>(nbDetectors, 0.0);
     DepositionStdDev = std::vector<Double_t>(nbDetectors, 0.0);
-    //sim
+    traces = std::vector<TraceProperties>(nbDetectors);
+    QuenchedDeposition = std::vector<Double_t>(nbDetectors, 0.0);
     dE = std::vector<std::vector<double>>(nbDetectors);
     NPhotons = std::vector<Double_t>(nbDetectors, 0.0); 
     EntryPos = std::vector<std::vector<Double_t>>(nbDetectors, std::vector<Double_t>(3,0.0)); 

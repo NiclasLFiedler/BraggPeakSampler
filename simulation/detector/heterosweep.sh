@@ -27,12 +27,12 @@ for value1 in 0; do  # Change these as needed
         cd ../../analysis
         python3 braggfit.py
         cd ../simulation/detector
-        cp ../../data/simulation/notarget/output/notargetMeans.root ../../data/heterosweep/output/"$value1"um_"$value2"mmMeans.root
-        cp ../../data/simulation/notarget/output/notarget_fit.root ../../data/heterosweep/output/"$value1"um_"$value2"mmFit.root
+        cp ../../data/simulation/notarget/output/notargetMeans.root ../../data/heterosweep/outputComp100um/"$value1"um_"$value2"mmMeans.root
+        cp ../../data/simulation/notarget/output/notarget_fit.root ../../data/heterosweep/outputComp100um/"$value1"um_"$value2"mmFit.root
     done
 done
 
-for value1 in 200 500; do  # Change these as needed
+for value1 in 100 200 300 400 500 600 700 800; do  # Change these as needed
     for value2 in 50 100 150 200; do  # Change these as needed
         echo "Setting config.json: param1=$value1, param2=$value2"
         
@@ -45,14 +45,12 @@ for value1 in 200 500; do  # Change these as needed
         cd ../../analysis
         python3 braggfit.py
         cd ../simulation/detector
-        #mv ../../data/simulation/homotarget/output/homotargetMeans.root ../../data/heterosweep/output/"$value1"um_"$value2"mmMeans.root
-        #mv ../../data/simulation/homotarget/output/homotarget_fit.root ../../data/heterosweep/output/"$value1"um_"$value2"mmFit.root
-        mv ../../data/simulation/heterotarget/output/heterotargetMeans.root ../../data/heterosweep/output/"$value1"um_"$value2"mmMeans.root
-        mv ../../data/simulation/heterotarget/output/heterotarget_fit.root ../../data/heterosweep/output/"$value1"um_"$value2"mmFit.root
+        cp ../../data/simulation/heterotarget/output/heterotargetMeans.root ../../data/heterosweep/outputComp100um/"$value1"um_"$value2"mmMeans.root
+        cp ../../data/simulation/heterotarget/output/heterotarget_fit.root ../../data/heterosweep/outputComp100um/"$value1"um_"$value2"mmFit.root
     done
 done
 
-cd ../../analysis
-python3 heterosweep.py
+#cd ../../analysis
+#python3 heterosweep.py
 
 deactivate

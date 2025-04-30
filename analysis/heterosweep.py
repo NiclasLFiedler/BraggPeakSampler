@@ -41,6 +41,30 @@ class fit_params:
         self.curve = curve
         self.stddev = stddev
 
+
+def right_sided_convolution(f, g, z_values):
+    def convole(z):
+        if(len(z_values)<100):
+            zlin = np.linspace(0,40,400)
+            combined = np.concatenate([zlin, z_values])
+            zFull = np.sort(combined)
+        else:
+            zFull = z_values
+
+        indices = [np.where(zFull == value)[0][0] for value in z_values]
+
+        dz = zFull[1]-zFull[0]
+        convolution_result = np.zeros_like(zFull)
+        
+        for i, z_val in enumerate(zFull):
+            shifted_f = lambda z: f(z + z_val)
+            product = g(zFull) * shifted_f(zFull)
+            convolution_result[i] = simpson(y=product, x=zFull)
+
+        return convolution_result[indices]
+
+    return convole(z_values)
+
 def characterize_z_D_curve(z, D):
     results = {}
     D100_index = np.argmax(D)
@@ -70,8 +94,8 @@ def characterize_z_D_curve(z, D):
 
     return results
 
-def gaussian(x, amp, mean, sigma):
-    return amp * np.exp(-0.5 * ((x - mean) / sigma) ** 2)
+def gaussian(x, amp, mean, stddev):
+    return amp * np.exp(-(x-mean)**2 / (2 * stddev**2)) / (np.sqrt(2 * np.pi) * stddev)
 
 def GetRange(E):
     return alpha*E**p
@@ -170,6 +194,7 @@ pmods = [100,200,300,400,500,600,700,800]
 thicknesses = [50,100,150,200]
 
 pmods = [100, 200, 500]
+
 #thicknesses = [50, 100]
 
 combination = []
@@ -191,6 +216,12 @@ capSize = 3
 
 output = "output"
 
+notargetX = []
+notargetY = []
+z = np.linspace(0, 40, 4001)
+f = []
+f2 = []
+popt = []
 for comb in combination:
     meansfile = f"../data/heterosweep/{output}/{comb[0]}um_{comb[1]}mmMeans.root"
     fitfile = f"../data/heterosweep/{output}/{comb[0]}um_{comb[1]}mmFit.root"
@@ -238,6 +269,8 @@ for comb in combination:
     sigma     = np.sqrt(sigmaMono**2+sigmaE0**2*a_h2o**2*p_h2o**2*beamEnergy**(2*p_h2o-2))
 
     if(comb[2] == 0):
+        notargetX = x_data
+        notargetY = y_data
         bestfit_params = bortfeld_fit(x_data, y_data, Phi0, R0, sigma, epsilon)
         t = 0
         o_t = 0
@@ -260,16 +293,34 @@ for comb in combination:
         pmod = sigmat**2/t*10000
         sigma_pmod = np.sqrt((2*sigmat/t**2*o_sigmat)**2+(sigmat**2/t**2*o_t)**2)*10000
 
+        f = interp1d(notargetX, notargetY, kind='linear', fill_value="extrapolate")
+        f2 = interp1d(notargetX, notargetY, kind='cubic', fill_value="extrapolate")
+
+        popt, pcov =  curve_fit(lambda x, amp, mean, stddev: right_sided_convolution(f, lambda x2: gaussian(x2, amp, mean, stddev), x), x_data, y_data, p0 = [1, 2, 0.2], bounds=((0.9, 0, 0), (1.1, 10, 1)))
+        popt2, pcov2 =  curve_fit(lambda x, amp, mean, stddev: right_sided_convolution(f2, lambda x2: gaussian(x2, amp, mean, stddev), x), x_data, y_data, p0 = [1, 2, 0.2], bounds=((0.9, 0, 0), (1.1, 10, 1)))
+        print(popt)
+        t_conv = popt[1]
+        sigmat_conv = popt[2]
+        pmod_conv = popt[2]**2/popt[1]*10**4
+        
+        t_conv2 = popt2[1]
+        sigmat_conv2 = popt2[2]
+        pmod_conv2 = popt2[2]**2/popt2[1]*10**4
+
     # Step 2: Plot using Matplotlib
     if comb[2] != 0:
-        labeltext = f"{comb[0]} um, {comb[1]} mm, {params.R0:.3f} mm, {params.sigma:.3f} mm, {t:.3f} cm, {sigmat:.3f} cm, {pmod:.3f} um, Diff: {(pmod/comb[0]-1)*100:.2f} %"
+        labeltext = f"{comb[0]} um, {comb[1]} mm, Fit: {params.R0:.3f} mm, {params.sigma:.3f} mm, {t:.3f} cm, {sigmat:.3f} cm, {pmod:.3f} um | Conv: {t_conv:.3f} cm, {sigmat_conv:.3f} cm, {pmod_conv:.3f} um, | Conv2: {t_conv2:.3f} cm, {sigmat_conv2:.3f} cm, {pmod_conv2:.3f} um ||  Diff: {(pmod/comb[0]-1)*100:.2f} % | {(pmod_conv/comb[0]-1)*100:.2f} % | {(pmod_conv2/comb[0]-1)*100:.2f} %"
+        ax.plot(z, right_sided_convolution(f, lambda x2: gaussian(x2, *popt), z), label='Right-sided convolved (Gaussian)')
     else:
         labeltext = f"{comb[0]} um, {comb[1]} mm, {params.R0:.3f} mm, {params.sigma:.3f} mm, {t:.3f} cm, {sigmat:.3f} cm, {pmod:.3f} um, Diff: {0} %"
-    ax.step(x, depth_dose_distribution(x, params.Phi0, params.R0, params.sigma, params.epsilon), where='mid', label=labeltext, linewidth=1, color=colors[comb[2]])
+    
+    #ax.step(x, depth_dose_distribution(x, params.Phi0, params.R0, params.sigma, params.epsilon), where='mid', label=labeltext, linewidth=1, color=colors[comb[2]])
+    
     print(labeltext)
     # texText = f"{comb[0]} & {comb[1]} & {popt[1]:.2f}" " $\\pm$ " f"{popt[2]:.2f} & {R0:.2f}" " $\\pm$ " f"{sigmaR0:.2f} & {Pmod:.2f} \\\\"
     # print(texText)
 
+ax.plot(notargetX, f(notargetX))
 #ax.set_yscale('log')
 #ax.set_xlim(175, 225)
 # Add labels and title

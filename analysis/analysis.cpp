@@ -270,28 +270,40 @@ void analysis(){
 		    datatree->GetEntry(e);
 
             if(prevEvent != event){
-                particles.push_back(proton);
+                //particles.push_back(proton);
+                proton.ProcessEDep();
+                for(int ch = 0; ch<nLayers; ch++){
+                    if(proton.GetEDep(ch) > 0.0){
+                        detector->EnergyHist(ch)->Fill(proton.GetEDep(ch));
+                    }
+                    if(proton.Coincidence(ch) && proton.GetEDep(ch) > 0.0){
+                        detector->CoincEnergyHist(ch)->Fill(proton.GetEDep(ch));
+                        detector->TotalEnergyHist()->Fill(proton.total_edep);
+                    }
+                }
                 proton.Clear();
             }
 
             if(TrackID == 1){
-                proton.SetdE(NDet, EDep);            
+                proton.SetdE(NDet, EDep);
             }
             prevEvent = event; 
         }
-        cout << "Calculating energy depositions for coincidences." << endl;
-        for(Particle p : particles){
-            p.ProcessEDep();
-            for(int ch = 0; ch<nLayers; ch++){
-                if(p.GetEDep(ch) > 0.0){
-                    detector->EnergyHist(ch)->Fill(p.GetEDep(ch));
-                }
-                if(p.Coincidence(ch) && p.GetEDep(ch) > 0.0){
-                    detector->CoincEnergyHist(ch)->Fill(p.GetEDep(ch));
-                    detector->TotalEnergyHist()->Fill(p.total_edep);
-                }
-            }
-        }
+        cout << "Data acquisition finished" << endl;
+        // cout << "Calculating energy depositions for coincidences." << endl;
+        // for(Particle p : particles){
+        //     p.ProcessEDep();
+        //     for(int ch = 0; ch<nLayers; ch++){
+        //         if(p.GetEDep(ch) > 0.0){
+        //             detector->EnergyHist(ch)->Fill(p.GetEDep(ch));
+        //         }
+        //         if(p.Coincidence(ch) && p.GetEDep(ch) > 0.0){
+        //             detector->CoincEnergyHist(ch)->Fill(p.GetEDep(ch));
+        //             detector->TotalEnergyHist()->Fill(p.total_edep);
+        //         }
+        //     }
+        // }
+        cout << "Calculating finished" << endl;
         if(bScintSim){
             photontree->GetEntry(0);
             prevEvent = eventPhotons;
@@ -319,7 +331,7 @@ void analysis(){
             }
         }
     }
-
+    cout << "Processing Detector" << endl;
     detector->Process();
 
     for(int i = 0;  i < nLayers; i++){
@@ -425,6 +437,7 @@ void analysis(){
     }
     //store hist means for bortfield fit
     sprintf(file, "%s%sMeans.root", out_path, in_data[fileSelect]);
+    std::cout << "Outpath Means file: " << file << std::endl;
     hfile = new TFile(file, "RECREATE");
     
     TTree *meantree = new TTree("meantree", "Tree storing histogram means");
@@ -446,7 +459,8 @@ void analysis(){
         error = detector->crystals.at(ch).dose.stddev;
         meantree->Fill();        
     }
-    meantree->Write();  
+    meantree->Write(); 
+
     if(bPhotons){
         TCanvas* c3 = new TCanvas("c3", title, 10, 10, 1900, 1000);
         c3->SetFillColor(0);

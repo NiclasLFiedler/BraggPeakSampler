@@ -15,7 +15,6 @@ if(WITH_GEANT4_UIVIS)
 else()
   find_package(Geant4 REQUIRED)
 endif()
-find_package(DICOM REQUIRED PATHS )
 
 #----------------------------------------------------------------------------
 # Setup Geant4 include directories and compile definitions
@@ -24,22 +23,18 @@ find_package(DICOM REQUIRED PATHS )
 #message(${Geant4_DIR})
 include(${Geant4_USE_FILE})
 include_directories(${PROJECT_SOURCE_DIR}/include)
-include_directories(~/geant4-v11.3.0/examples/extended/medical/DICOM/include)
 #----------------------------------------------------------------------------
 # Locate sources and headers for this project
 # NB: headers are included so they will show up in IDEs
 #geant4-v11.3.0/examples/extended/medical/DICOM
 file(GLOB sources ${PROJECT_SOURCE_DIR}/src/*.cc)
 file(GLOB headers ${PROJECT_SOURCE_DIR}/include/*.hh)
-file(GLOB sources_DICOM ~/geant4-v11.3.0/examples/extended/medical/DICOM/src/*.cc)
-file(GLOB headers_DICOM ~/geant4-v11.3.0/examples/extended/medical/DICOM/include/*.hh)
-
 
 #----------------------------------------------------------------------------
 # Add the executable, and link it to the Geant4 libraries
 #
-add_executable(braggsampler braggsampler.cc ${sources} ${headers} ${sources_DICOM} ${headers_DICOM})
-target_link_libraries(braggsampler ${Geant4_LIBRARIES} DICOM)
+add_executable(braggsampler braggsampler.cc ${sources} ${headers})
+target_link_libraries(braggsampler ${Geant4_LIBRARIES})
 
 #----------------------------------------------------------------------------
 # Copy all scripts to the build directory, i.e. the directory in which we

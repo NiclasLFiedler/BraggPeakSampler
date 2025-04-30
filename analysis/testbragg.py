@@ -68,123 +68,11 @@ def right_sided_convolution(f, g, z_values):
 
     return convole(z_values)
 
-def depth_dose_convolved(x, Phi0, R0, sigma, epsilon, amp, mean, stddev):
-    return right_sided_convolution(lambda x1: depth_dose_distribution(x1, Phi0, R0, sigma, epsilon), lambda x2: gaussian(x2, amp, mean, stddev), x)
-
-
-def convolution_fit(Xconv, Yconv, params, weights):
-    popt, pcov = curve_fit(lambda x, amp, mean, stddev: depth_dose_convolved(x, params.Phi0, params.R0, params.sigma, params.epsilon, amp, mean, stddev), xdata= Xconv, ydata=Yconv, sigma=weights, p0 = [1, 7, 0.5], bounds=((0.9, 0, 0), (1.1, 10, 1)))
-    errors = np.sqrt(np.diag(pcov))
-    return [popt, errors]
-
-def cyl_gauss(a,x):
-    xarr=np.copy(x)
-    yarr = np.copy(xarr)
-    branch1 = -20.0
-    branch2 = 20.0
-
-    indset1 = (xarr<branch1) 
-    x1 = xarr[indset1]
-    y1 = np.sqrt(2*np.pi)/special.gamma(-a)*(-x1)**(-a-1)
-    yarr[indset1] = y1
-
-    indset2 = ((xarr>=branch1) & (xarr<branch2))
-    x2 = xarr[indset2]
-    y2a = special.pbdv(a,x2)[0]
-    y2b = np.exp(-x2*x2/4)
-    y2 = y2a*y2b
-    yarr[indset2] = y2
-
-    indset3 = (xarr>=branch2)
-    yarr[indset3] = 0.0
-
-    return yarr
-
-def depth_dose_distribution(z, Phi0, R0, sigma, epsilon): 
-    beta =  0.0
-    gamma = 0.6
-
-    return Phi0*sigma**(1/p_h2o)*special.gamma(1/p_h2o)/(np.sqrt(2*np.pi)*p_h2o*a_h2o**(1/p_h2o)*(1+beta*R0))*(sigma**(-1)*cyl_gauss(-1/p_h2o,(z-R0)/sigma)+(beta/p_h2o + gamma*beta + epsilon/R0)*cyl_gauss(-1/p_h2o-1,(z-R0)/sigma))
-
-def depth_dose_distribution_ionization(z, Phi0, R0, sigma, epsilon): 
-    beta =  0.0
-
-    return Phi0*sigma**(1/p_h2o)*special.gamma(1/p_h2o)/(np.sqrt(2*np.pi)*p_h2o*a_h2o**(1/p_h2o)*(1+beta*R0))*(sigma**(-1)*cyl_gauss(-1/p_h2o,(z-R0)/sigma))
-
-def depth_dose_distribution_nonelastic(z, Phi0, R0, sigma, epsilon): 
-    beta =  0.0
-    gamma = 0.6
-
-    return Phi0*sigma**(1/p_h2o)*special.gamma(1/p_h2o)/(np.sqrt(2*np.pi)*p_h2o*a_h2o**(1/p_h2o)*(1+beta*R0))*((beta/p_h2o + gamma*beta + epsilon/R0)*cyl_gauss(-1/p_h2o-1,(z-R0)/sigma))
-
 def gaussian_with_cutoff(mean, sigma, cutoff=2.5):
     while True:
         value = np.random.normal(mean, sigma)
         if mean-cutoff <= value <= mean+cutoff:
             return value
-
-def range_energy_relationship(E, alpha, p):
-    return alpha*E**p
-
-def bortfeld_fit(x, y, Phi0, R0, epsilon, sigma, weights=None):    
-    if weights is None:
-        weights = np.ones_like(y)
-    sigma_weights = 1 / weights
-    
-    params = fit_params()
-    popt, pcov = curve_fit(lambda z, Phi0, R0, sigma, epsilon: depth_dose_distribution(z, Phi0, R0, sigma, epsilon), x, y, p0=[Phi0, R0, sigma*10, epsilon], bounds=((Phi0*0.5, R0 - 3*sigma, 0.1*sigma, 0), (Phi0*1.5, R0 + 3.5*sigma, 10*sigma, 1)), sigma=sigma_weights, maxfev=int(1e8))
-    params.curve = depth_dose_distribution(z, *popt)
-    params.Phi0 = popt[0] 
-    params.R0 = popt[1] 
-    params.sigma = popt[2]
-    params.epsilon = popt[3]
-    params.stddev = np.sqrt(np.diag(pcov))
-    return params
-
-def bortfeld_fit_hetero(x, y, Phi0, R0, sigma, epsilon, weights=None):    
-    if weights is None:
-        weights = np.ones_like(y)
-    sigma_weights = 1 / weights
-    
-    params = fit_params()
-    #popt, _ = curve_fit(lambda z, R0, sigma: depth_dose_distribution(z, Phi0, R0, sigma, epsilon), x, y, p0=[R0, sigma], bounds=((R0 - 3*sigma, 0.1*sigma), (R0 + 3.5*sigma, 3*sigma)), sigma=sigma_weights, maxfev=int(1e8))
-    popt, pcov = curve_fit(lambda z, Phi0, R0, sigma: depth_dose_distribution(z, Phi0, R0, sigma, epsilon), x, y, p0=[Phi0, R0, sigma], bounds=((Phi0*0.5, R0 - 3*sigma, 0.01*sigma), (Phi0*1.5, R0 + 3.5*sigma, 3*sigma)), sigma=sigma_weights, maxfev=int(1e8))
-    params.curve = depth_dose_distribution(z, popt[0], popt[1], popt[2], epsilon)
-    params.Phi0 = popt[0] 
-    params.R0 = popt[1] 
-    params.sigma = popt[2]
-    params.epsilon = epsilon
-    params.stddev = np.sqrt(np.diag(pcov))
-    return params
-
-def characterize_z_D_curve(z, D):
-    results = {}
-    D100_index = np.argmax(D)
-    D100       = D[D100_index]
-    R100       = z[D100_index]
-    results.update({'D100': D100, 'R100': R100})
-
-    z_proximal    = z[:D100_index]
-    dose_proximal = D[:D100_index]
-    z_distal      = z[D100_index:]
-    dose_distal   = D[D100_index:]
-
-    R90P = z_proximal[np.argmin(np.abs(dose_proximal - 0.9 * D100))]
-    R90D = z_distal  [np.argmin(np.abs(dose_distal   - 0.9 * D100))]
-    R80P = z_proximal[np.argmin(np.abs(dose_proximal - 0.8 * D100))]
-    R80D = z_distal  [np.argmin(np.abs(dose_distal   - 0.8 * D100))]
-    R50P = z_proximal[np.argmin(np.abs(dose_proximal - 0.5 * D100))]
-    R50D = z_distal  [np.argmin(np.abs(dose_distal   - 0.5 * D100))]
-    R20D = z_distal  [np.argmin(np.abs(dose_distal   - 0.2 * D100))]
-    R10D = z_distal  [np.argmin(np.abs(dose_distal   - 0.1 * D100))]
-    results.update({'R90P': R90P, 'R90D': R90D, 'R80P': R80P, 'R80D': R80D, 'R50P': R50P, 'R50D': R50D, 'R20D': R20D, 'R10D': R10D})
-
-    FWHM    = R50D  - R50P
-    DFO2080 = R20D  - R80D
-    DFO1090 = R10D  - R90D
-    results.update({'FWHM': FWHM, 'DFO2080': DFO2080, 'DFO1090': DFO1090})
-
-    return results
 
 with open("config.json", "r") as file:
     fullConfig = json.load(file)
@@ -266,41 +154,19 @@ else:
 start_time = time.time()
 
 z = np.linspace(0, 40, 4001)
-epsilon = 0.001*beamEnergy
-Phi0 = max(y_data1)/20
-
-beta = 0.012
-
-resolution = 0.01*np.min(np.diff(z))
-
-spline_func = interp1d(x_data, y_data1, kind='cubic')
-z_spline    = np.linspace(min(x_data), max(x_data), round((max(x_data)-min(x_data)) / resolution ))
-quantities  = characterize_z_D_curve(z_spline, spline_func(z_spline))
-
-
-R0 = quantities['R80D']
-if file == "notarget":
-    R0 = range_energy_relationship(beamEnergy, a_h2o, p_h2o)
-
-sigmaMono = (beta*R0**0.935)
-sigmaE0   = 0.01*beamEnergy
-sigma     = np.sqrt(sigmaMono**2+sigmaE0**2*a_h2o**2*p_h2o**2*beamEnergy**(2*p_h2o-2))
-
-top_indices = np.argsort(y_data1)[-3:]
-weights = np.ones_like(y_data1)
-weights[top_indices] = 1
-
 
 ax1.errorbar(x_data, y_data1, y_sigma1, x_sigma, fmt='s', markersize=1, capsize=capSize, elinewidth=lineWidth, color='#004600', label="No target data points") 
 ax1.errorbar(x_data2, y_data2, y_sigma2, x_sigma2, fmt='o', markersize=1, capsize=capSize, elinewidth=lineWidth, color="#cc7000", label="Hetero. data points") #Convolution
 
-# Convolve
-x = np.asarray(x_data)
-y2 = gaussian(x, 1, 2.55, 0.277)
-print(y2)
-smoothed = right_sided_convolution(interp1d(x_data, y_data1, kind='linear', fill_value="extrapolate"), interp1d(x_data, y2, kind='linear', fill_value="extrapolate"), x)
+f = interp1d(x_data, y_data1, kind='linear', fill_value="extrapolate")
 
-# Plot
-plt.plot(x, smoothed, label='Right-sided convolved (Gaussian)')
+popt, pcov =  curve_fit(lambda x, amp, mean, stddev: right_sided_convolution(f, lambda x2: gaussian(x2, amp, mean, stddev), x), x_data2, y_data2, p0 = [1, 2, 0.2], bounds=((0.9, 0, 0), (1.1, 10, 1)))
+
+print(f"amp = {popt[0]}")
+print(f"t = {popt[1]}")
+print(f"sigmat = {popt[2]}")
+print(f"pmod = {popt[2]**2/popt[1]*10**4}")
+plt.plot(z, f(z), label='Right-sided convolved (Gaussian)')
+plt.plot(z, right_sided_convolution(f, lambda x2: gaussian(x2, *popt), z), label='Right-sided convolved (Gaussian)')
 plt.legend()
 plt.show()

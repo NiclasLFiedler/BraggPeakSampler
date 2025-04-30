@@ -629,14 +629,13 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   
   G4double passiveFill = 0;
   for(G4int i=0; i<fLayers-fLayersCut; i++){
-    if(absorberStatus) passiveFill = absorberSize+5*mm;
+    if(absorberStatus) passiveFill = absorberSize+gapSizeZ;
     translation = (absSizeZ+gapSizeZ)*fLayersCut + detSizeZ*(i)+(i)*gapSizeZ+d_IsocentreDetector+passiveFill;
     physicalPosition = G4ThreeVector(0.,0., -translation);
     if(i == 0){
-      physicalPosition = G4ThreeVector(0.,0., -translation+passiveFill-detSizeZ/2);
+      physicalPosition = G4ThreeVector(0.,0., -translation-passiveFill);
     }
     physAluFoil = new G4PVPlacement(nullptr, physicalPosition, logicalAluFoil,"physAluFoil", logicalworld, false, i+fLayersCut, fCheckOverlaps);
-    //G4Box
     physLGAlu = new G4PVPlacement(rotationMatrix, physicalPosition+G4ThreeVector(solidAluFoil->GetXHalfLength()+solidLGAluFull->GetXHalfLength(), 0, 0), logicalLGAlu, "physLGAlu", logicalworld, false, i+fLayersCut, fCheckOverlaps);
     physSiPM = new G4PVPlacement(nullptr, physicalPosition+G4ThreeVector(solidAluFoil->GetXHalfLength()+solidSiPM->GetXHalfLength(), 0, 0), logicalSiPM, "physSiPM", logicalworld, false, i+fLayersCut, fCheckOverlaps);
   
@@ -687,6 +686,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   }
   G4double dBeamSpot = 0.1*mm;
   
+
   if (ftarget == 2){ //heterogenous
     bool test = false;
     if(test){
