@@ -3,6 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from scipy.signal import find_peaks
+import matplotlib
+matplotlib.use('Qt5Agg')
 
 class BPSData:
     def __init__(self):
@@ -21,8 +23,13 @@ def process_files():
     bps_list = []
 
     # Loop over 15 files named BPS_CH$(number).txt
-    for i in range(0, 36):
-        filename = f'data/bpsCrystal{i}.his.txt'
+    path = "lateral"
+    for i in range(0, 38):
+        filename = f'data/2504/{path}/bps_pwo_lateral_{i}_na22.his.txt'
+        if(i == 36):
+            filename = f'data/2504/{path}/bps_pwo_lateral_window_0_na22.his.txt'
+        elif(i == 37):
+            filename = f'data/2504/{path}/bps_pwo_lateral_window_21_na22.his.txt'
         bps_data = BPSData()  # Create a new BPSData object for each file
         if os.path.exists(filename):
             with open(filename, 'r') as file:
@@ -37,7 +44,7 @@ def process_files():
         bps_list.append(bps_data)
         
     return bps_list
-
+    
 def gaussian(x, a, mu, sigma):
     return a * np.exp(-(x - mu)**2 / (2 * sigma**2))
 
@@ -52,7 +59,7 @@ def fit_second_peak(BPSData, plot=True):
     second_peak_idx = sorted_peaks[0]
     peak_channel = channel[second_peak_idx]
 
-    window = 75  # adjust depending on your data
+    window = 75
     window_right = 100
     mask = (channel > peak_channel - window) & (channel < peak_channel + window+window_right)
     x_fit = channel[mask]
@@ -67,7 +74,7 @@ def fit_second_peak(BPSData, plot=True):
 
     if plot:
         plt.figure(figsize=(8, 5))
-        plt.plot(channel, count, label="Data")
+        plt.step(channel, count, label="Data")
         plt.plot(x_fit, gaussian(x_fit, *popt), 'r--', label="Gaussian Fit")
         plt.axvline(popt[1], color='g', linestyle=':', label=f"Mean = {popt[1]:.2f}")
         plt.legend()
@@ -102,14 +109,14 @@ def main():
     LY_err = []
     for i, bps_data in enumerate(bps_list):
         popt = fit_second_peak(bps_data, False)
-        #print(f"File {i}:")
+        print(f"File {i}:")
         print(f"{i}, {popt[0]}, {popt[1]}, {popt[2]}")
         LY.append(popt[1])
         LY_err.append(popt[2])
 
-    print(LY)
+    print([float(x) for x in LY])
     print()
-    print(LY_err)
+    print([float(x) for x in LY_err])
 
 if __name__ == "__main__":
     main()

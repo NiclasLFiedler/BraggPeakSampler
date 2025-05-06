@@ -475,7 +475,7 @@ for param in params_list:
     sigma_branch[0] = param.sigma
     epsilon_branch[0] = param.epsilon
     curve_branch[:] = param.curve
-    vtree.Fill() ######################change
+    vtree.Fill() #change
 
 if fit_file1.IsOpen():
     print("Fit file is successfully written.")
