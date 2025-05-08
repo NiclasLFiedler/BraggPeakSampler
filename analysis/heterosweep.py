@@ -193,7 +193,7 @@ Fitfiles = []
 pmods = [100,200,300,400,500,600,700,800]
 thicknesses = [50,100,150,200]
 
-pmods = [100, 200, 500]
+#pmods = [100, 200, 500]
 
 #thicknesses = [50, 100]
 
@@ -214,7 +214,7 @@ bPlotMeans = True
 lineWidth = 2
 capSize = 3
 
-output = "output"
+output = "outputComp2mm"
 
 notargetX = []
 notargetY = []
@@ -296,8 +296,8 @@ for comb in combination:
         f = interp1d(notargetX, notargetY, kind='linear', fill_value="extrapolate")
         f2 = interp1d(notargetX, notargetY, kind='cubic', fill_value="extrapolate")
 
-        popt, pcov =  curve_fit(lambda x, amp, mean, stddev: right_sided_convolution(f, lambda x2: gaussian(x2, amp, mean, stddev), x), x_data, y_data, p0 = [1, 2, 0.2], bounds=((0.9, 0, 0), (1.1, 10, 1)))
-        popt2, pcov2 =  curve_fit(lambda x, amp, mean, stddev: right_sided_convolution(f2, lambda x2: gaussian(x2, amp, mean, stddev), x), x_data, y_data, p0 = [1, 2, 0.2], bounds=((0.9, 0, 0), (1.1, 10, 1)))
+        popt, pcov =  curve_fit(lambda x, amp, mean, stddev: right_sided_convolution(f, lambda x2: gaussian(x2, amp, mean, stddev), x), x_data, y_data, p0 = [1, 2, 0.2], bounds=((0.8, 0, 0), (1.3, 10, 2)))
+        popt2, pcov2 =  curve_fit(lambda x, amp, mean, stddev: right_sided_convolution(f2, lambda x2: gaussian(x2, amp, mean, stddev), x), x_data, y_data, p0 = [1, 2, 0.2], bounds=((0.8, 0, 0), (1.3, 10, 2)))
         print(popt)
         t_conv = popt[1]
         sigmat_conv = popt[2]

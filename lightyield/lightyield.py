@@ -3,8 +3,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from scipy.signal import find_peaks
-import matplotlib
-matplotlib.use('Qt5Agg')
 
 class BPSData:
     def __init__(self):
@@ -24,11 +22,15 @@ def process_files():
 
     # Loop over 15 files named BPS_CH$(number).txt
     path = "lateral"
-    for i in range(0, 38):
-        filename = f'data/2504/{path}/bps_pwo_lateral_{i}_na22.his.txt'
-        if(i == 36):
+    for i in range(0, 4):
+        #filename = f'data/2504/{path}/bps_pwo_lateral_{i}_na22.his.txt'
+        if(i == 0):
+            filename = f'data/2504/{path}/bps_pwo_lateral_0_na22.his.txt'
+        elif(i == 1):
             filename = f'data/2504/{path}/bps_pwo_lateral_window_0_na22.his.txt'
-        elif(i == 37):
+        elif(i == 2):
+            filename = f'data/2504/{path}/bps_pwo_lateral_21_na22.his.txt'
+        elif(i == 3):
             filename = f'data/2504/{path}/bps_pwo_lateral_window_21_na22.his.txt'
         bps_data = BPSData()  # Create a new BPSData object for each file
         if os.path.exists(filename):
@@ -108,7 +110,7 @@ def main():
     LY = []
     LY_err = []
     for i, bps_data in enumerate(bps_list):
-        popt = fit_second_peak(bps_data, False)
+        popt = fit_second_peak(bps_data, True)
         print(f"File {i}:")
         print(f"{i}, {popt[0]}, {popt[1]}, {popt[2]}")
         LY.append(popt[1])

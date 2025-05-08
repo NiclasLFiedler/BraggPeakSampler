@@ -74,7 +74,7 @@ def depth_dose_convolved(x, Phi0, R0, sigma, epsilon, amp, mean, stddev):
 
 
 def convolution_fit(Xconv, Yconv, params, weights):
-    popt, pcov = curve_fit(lambda x, amp, mean, stddev: depth_dose_convolved(x, params.Phi0, params.R0, params.sigma, params.epsilon, amp, mean, stddev), xdata= Xconv, ydata=Yconv, sigma=weights, p0 = [1, 2, 0.2], bounds=((0.99999, 0, 0), (1.0001, 10, 1)))
+    popt, pcov = curve_fit(lambda x, amp, mean, stddev: depth_dose_convolved(x, params.Phi0, params.R0, params.sigma, params.epsilon, amp, mean, stddev), xdata= Xconv, ydata=Yconv, sigma=weights, p0 = [1, 2, 0.2], bounds=((0.9, 0, 0), (1.1, 10, 2)))
     errors = np.sqrt(np.diag(pcov))
     return [popt, errors]
 
@@ -133,7 +133,7 @@ def bortfeld_fit(x, y, Phi0, R0, epsilon, sigma, weights=None):
     sigma_weights = 1 / weights
     
     params = fit_params()
-    popt, pcov = curve_fit(lambda z, Phi0, R0, sigma, epsilon: depth_dose_distribution(z, Phi0, R0, sigma, epsilon), x, y, p0=[Phi0, R0, sigma*10, epsilon], bounds=((Phi0*0.5, R0 - 3*sigma, 0.1*sigma, 0), (Phi0*1.5, R0 + 3.5*sigma, 10*sigma, 1)), sigma=sigma_weights, maxfev=int(1e8))
+    popt, pcov = curve_fit(lambda z, Phi0, R0, sigma, epsilon: depth_dose_distribution(z, Phi0, R0, sigma, epsilon), x, y, p0=[Phi0, R0, sigma*10, epsilon], bounds=((Phi0*0.5, R0 - 3*sigma, 0.1*sigma, 0), (Phi0*1.5, R0 + 3.5*sigma, 10*sigma, 2)), sigma=sigma_weights, maxfev=int(1e8))
     params.curve = depth_dose_distribution(z, *popt)
     params.Phi0 = popt[0] 
     params.R0 = popt[1] 

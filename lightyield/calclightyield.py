@@ -1,7 +1,5 @@
 import matplotlib.pyplot as plt
-import matplotlib
 import numpy as np
-matplotlib.use('Qt5Agg')
 
 def normalize(data):
     # Check if the first element is zero to avoid division by zero
@@ -41,66 +39,95 @@ def main():
     LY_lat = [457.3293200657901, 473.1145670080971, 460.2227469560361, 451.4789680411492, 479.0370633469254, 484.41893790520476, 457.58561819358823, 452.27247185213486, 467.0652346924665, 486.1498828479076, 457.9884315099127, 479.81885244448364, 485.6655351647721, 495.98592633091937, 467.39202022687977, 313.08219073193203, 313.3490354833067, 301.2406239993116, 301.9498689381933, 352.4771095133145, 375.95712819446646, 396.59781031823076, 381.18803950738703, 325.10196567755065, 380.48697262401015, 347.46567514220203, 316.43229799388115, 312.16901475677275, 417.9609414962273, 360.0856903237679, 430.4278511659892, 420.0990384588279, 412.9547851527781, 391.5824987128114, 397.28296194386303, 436.51222800479803, 309.2099430572384, 262.9420838345245]
     LY_lat_err = [135.15219777138492, 137.9848543055064, 124.73222735843882, 123.77041412695226, 131.36498055446114, 133.29327635051513, 133.29125319115678, 126.38899739123876, 125.16996504359446, 130.65907950528802, 125.17013060330986, 131.78206645838952, 128.72366486072883, 133.36027504155135, 127.38872636454161, 103.5534501088127, 102.8606319617789, 98.87466583231763, 96.62153505146449, 113.16439535989089, 120.34496590629885, 127.2955910933667, 121.72637157473348, 107.71730027027988, 123.33702875892618, 113.69521031763921, 106.64027555610934, 94.92042698482652, 126.93579870849513, 125.62193365805214, 130.62142571901975, 128.79891881010582, 126.00432630801515, 125.09478683454286, 127.32259101682668, 132.75867345516508, 98.41133605624921, 57.16752058574868]
     
-    #LY_old = LY
-    #LY_err_old = LY_err
-    LY = LY_lat
-    LY_err = LY_lat_err
     
     LY_pe = []
     LY_pe_err = []
     LY_ph = []
     LY_ph_err = []
     
-    LY_pe_old = []
-    LY_pe_err_old = []
-    LY_ph_old = []
-    LY_ph_err_old = []
-    
-    LY_pe_diff = []
-    LY_ph_diff = []
+    LY_pe_lat = []
+    LY_pe_err_lat = []
+    LY_ph_lat = []
+    LY_ph_err_lat = []
     
     ly_average = 0
     ly_average_err = 0
-    new = 0
-    for index in range(38):
+    ly_average_lat = 0
+    ly_average_err_lat = 0
+
+    for index in range(36):
         LY_pe.append(GetPE(LY[index]))
         LY_pe_err.append(GetPEDev(LY_err[index]))
         LY_ph.append(GetPH(LY[index]))
         LY_ph_err.append(GetPHDev(LY_err[index]))
         
-        #LY_pe_old.append(GetPE(LY_old[index]))
-        #LY_pe_err_old.append(GetPE(LY_err_old[index]))
-        #LY_ph_old.append(GetPH(LY_old[index]))
-        #LY_ph_err_old.append(GetPH(LY_err_old[index]))
-        
-        #LY_pe_diff.append(LY_pe[index]-LY_pe_old[index])
-        #LY_ph_diff.append(LY_ph[index]-LY_ph_old[index])
-        
-        print(f"CHold {index} CH new {new} Light yield: {LY[index]} ± {LY_err[index]:.2f} LY_pe: {LY_pe[-1]:.2f} ± {LY_pe_err[-1]:.2f}  LY_ph: {LY_ph[-1]:.2f} ± {LY_ph_err[-1]:.2f}")
+        print(f"Flat: CH {index} Light yield: {LY[index]} ± {LY_err[index]:.2f} LY_pe: {LY_pe[-1]:.2f} ± {LY_pe_err[-1]:.2f}  LY_ph: {LY_ph[-1]:.2f} ± {LY_ph_err[-1]:.2f}")
         ly_average = ly_average + LY_ph[-1]
         ly_average_err = ly_average_err + LY_ph_err[-1]
-        new = new + 1
-    print(f"\nAverage Light yield: {ly_average/36}")
-    print(f"Average Light yield Error: {ly_average_err/36}")
 
+    for index in range(38):
+        LY_pe_lat.append(GetPE(LY_lat[index]))
+        LY_ph_lat.append(GetPH(LY_lat[index]))
+        LY_pe_err_lat.append(GetPEDev(LY_lat_err[index]))
+        LY_ph_err_lat.append(GetPHDev(LY_lat_err[index]))
+        
+        print(f"Lateral: CH {index} Light yield: {LY_lat[index]} ± {LY_lat_err[index]:.2f} LY_pe: {LY_pe_lat[-1]:.2f} ± {LY_pe_err_lat[-1]:.2f}  LY_ph: {LY_ph_lat[-1]:.2f} ± {LY_ph_err_lat[-1]:.2f}")
+        ly_average_lat = ly_average_lat + LY_ph_lat[-1]
+        ly_average_err_lat = ly_average_err_lat + LY_ph_err_lat[-1]
+
+
+    print(f"\nAverage flat light yield: {ly_average/36}")
+    print(f"Average flat light yield Error: {ly_average_err/36}")
+    print()
+    print(f"\nAverage lateral light yield: {ly_average_lat/38}")
+    print(f"Average lateral light yield Error: {ly_average_err_lat/38}")
     # Create the primary plot
     plt.rcParams.update({'font.size': 14})
     fig, ax1 = plt.subplots(figsize=(10, 6))
     color = 'tab:blue'
     ax1.set_xlabel('Crystal Index')
-    ax1.set_ylabel('Light yield  [ph/MeV]')
-    ax1.errorbar(range(38), LY_ph, yerr=LY_ph_err, fmt='o', capsize=5, elinewidth=1, capthick=1, color="black", label='Light yield data points')
-    #ax1.scatter(range(38), LY_ph_diff, color="black", label='Light yield data points')
+    ax1.set_ylabel('Light yield / ph/MeV')
+
+    xaxis = [i for i in range(1)] + [i for i in range(2, 23)] + [i for i in range(24, 38)]
+
+    ax1.errorbar(xaxis, LY_ph, yerr=LY_ph_err, fmt='o', capsize=5, elinewidth=1, capthick=1, color="orange", label='Flat light yield')
+    ax1.errorbar(xaxis, LY_ph_lat[:36], yerr=LY_ph_err_lat[:36], fmt='o', capsize=5, elinewidth=1, capthick=1, color="green", label='Lateral light yield')
     ax1.tick_params(axis='y')
     ax1.grid()
 
-    axX = 180
+    ax1.errorbar([1,23], [LY_ph_lat[36], LY_ph_lat[37]], yerr=[LY_ph_err_lat[36], LY_ph_err_lat[37]], fmt='o', capsize=5, elinewidth=1, capthick=1, color="black", label='Window & Lateral light yield')
+
+    average_first_15 = np.mean(LY_ph[:15])
+    average_last_21 = np.mean(LY_ph[15:36])
+    print(f"average {average_first_15}" )
+    average_first_15_lat = np.mean(LY_ph_lat[:15])
+    average_last_21_lat = np.mean(LY_ph_lat[15:36])
+    
+    ax1.plot(range(16), [average_first_15] * 16, color='dodgerblue', linestyle='--')
+    ax1.plot(range(16, 38), [average_last_21] * 22, color='dodgerblue', linestyle='--')
+
+    ax1.text(-1, average_first_15-3, f'{average_first_15:.2f}', color='dodgerblue', fontsize=12, va='bottom', ha='center')
+    ax1.text(38, average_last_21-3, f'{average_last_21:.2f}', color='dodgerblue', fontsize=12, va='bottom', ha='center')
+
+    ax1.plot(range(16), [average_first_15_lat] * 16, color='crimson', linestyle='--')
+    ax1.plot(range(16, 38), [average_last_21_lat] * 22, color='crimson', linestyle='--')
+
+    ax1.text(-1, average_first_15_lat-3, f'{average_first_15_lat:.2f}', color='crimson', fontsize=12,va='bottom', ha='center')
+    ax1.text(38, average_last_21_lat-3, f'{average_last_21_lat:.2f}', color='crimson', fontsize=12, va='bottom', ha='center')
+
+    axX = 240
     axY = 0
-    ax1.set_ylim(axY,axX)
+    ax1.set_ylim(axY, axX)
 
     twin1 = ax1.twinx()
-    twin1.set_ylim(axY*11.73/50.65, axX*11.73/50.65)
-    twin1.set_ylabel('Light yield  [p.e./MeV]')
+    twin1.set_ylim(axY * 11.73 / 50.65, axX * 11.73 / 50.65)
+    twin1.set_ylabel('Light yield / p.e./MeV')
+
+    # Define custom x-tick labels
+    xtick_labels = [f'{0}'] + [f'window {0}'] + [f'{i+1}' for i in range(0,21)] +[f'window {21}'] +[f'{i+1}' for i in range(21,35)]
+    print(xtick_labels)
+    ax1.set_xticks(range(38))  # Set x-ticks for all 38 entries
+    ax1.set_xticklabels(xtick_labels, rotation=90, ha='right')  # Rotate labels for better readability
 
     fig.tight_layout()
     ax1.legend()
