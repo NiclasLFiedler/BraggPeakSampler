@@ -83,8 +83,8 @@ def main():
     print(f"Average lateral light yield Error: {ly_average_err_lat/38}")
     # Create the primary plot
     plt.rcParams.update({'font.size': 14})
-    fig, ax1 = plt.subplots(figsize=(10, 6))
-    color = 'tab:blue'
+    fig, ax1 = plt.subplots(figsize=(15, 9))
+    ax1.set_title('Measured light yield of PbWO4 crystals 3mm and 2mm thick using a Na22 source at 20°C')
     ax1.set_xlabel('Crystal Index')
     ax1.set_ylabel('Light yield / ph/MeV')
 
