@@ -90,13 +90,13 @@ def main():
 
     xaxis = [i for i in range(1)] + [i for i in range(2, 23)] + [i for i in range(24, 38)]
 
-    ax1.errorbar(xaxis, LY_ph, yerr=LY_ph_err, fmt='o', capsize=5, elinewidth=1, capthick=1, color="orange", label='Flat light yield')
-    ax1.errorbar(xaxis, LY_ph_lat[:36], yerr=LY_ph_err_lat[:36], fmt='o', capsize=5, elinewidth=1, capthick=1, color="green", label='Lateral light yield')
-    ax1.tick_params(axis='y')
+    ax1.errorbar(xaxis, LY_ph, yerr=LY_ph_err, fmt='o', capsize=5, elinewidth=2, capthick=2, markersize=8, color="orange", label='Flat light yield')
+    ax1.errorbar(xaxis, LY_ph_lat[:36], yerr=LY_ph_err_lat[:36], fmt='o', capsize=5, elinewidth=2, capthick=2, markersize=8, color="green", label='Lateral light yield')
+    ax1.errorbar([1,23], [LY_ph_lat[36], LY_ph_lat[37]], yerr=[LY_ph_err_lat[36], LY_ph_err_lat[37]], fmt='o', capsize=5, elinewidth=2, capthick=2, markersize=8, color="black", label='Window & Lateral light yield')
+
     ax1.grid()
-
-    ax1.errorbar([1,23], [LY_ph_lat[36], LY_ph_lat[37]], yerr=[LY_ph_err_lat[36], LY_ph_err_lat[37]], fmt='o', capsize=5, elinewidth=1, capthick=1, color="black", label='Window & Lateral light yield')
-
+    ax1.tick_params(axis='y')
+    
     average_first_15 = np.mean(LY_ph[:15])
     average_last_21 = np.mean(LY_ph[15:36])
     print(f"average {average_first_15}" )
@@ -106,14 +106,14 @@ def main():
     ax1.plot(range(16), [average_first_15] * 16, color='dodgerblue', linestyle='--')
     ax1.plot(range(16, 38), [average_last_21] * 22, color='dodgerblue', linestyle='--')
 
-    ax1.text(-1, average_first_15-3, f'{average_first_15:.2f}', color='dodgerblue', fontsize=12, va='bottom', ha='center')
-    ax1.text(38, average_last_21-3, f'{average_last_21:.2f}', color='dodgerblue', fontsize=12, va='bottom', ha='center')
+    ax1.text(-1, average_first_15-3, f'{average_first_15:.2f}', color='dodgerblue', fontsize=16, va='bottom', ha='center')
+    ax1.text(38, average_last_21-3, f'{average_last_21:.2f}', color='dodgerblue', fontsize=16, va='bottom', ha='center')
 
     ax1.plot(range(16), [average_first_15_lat] * 16, color='crimson', linestyle='--')
     ax1.plot(range(16, 38), [average_last_21_lat] * 22, color='crimson', linestyle='--')
 
-    ax1.text(-1, average_first_15_lat-3, f'{average_first_15_lat:.2f}', color='crimson', fontsize=12,va='bottom', ha='center')
-    ax1.text(38, average_last_21_lat-3, f'{average_last_21_lat:.2f}', color='crimson', fontsize=12, va='bottom', ha='center')
+    ax1.text(-1, average_first_15_lat-3, f'{average_first_15_lat:.2f}', color='crimson', fontsize=16,va='bottom', ha='center')
+    ax1.text(38, average_last_21_lat-3, f'{average_last_21_lat:.2f}', color='crimson', fontsize=16, va='bottom', ha='center')
 
     axX = 240
     axY = 0

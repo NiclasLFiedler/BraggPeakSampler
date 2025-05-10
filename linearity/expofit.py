@@ -198,10 +198,13 @@ for sel_dir in range(0, 5):
     absright = [[normalized_intersections[i]['xintersect'], normalized_intersections[i]['x_intersect_std']] for i in range(0, 5)]
 
     leftSipmvalue = [leftSipmvalue[4], leftSipmvalue[3], leftSipmvalue[0],leftSipmvalue[1], leftSipmvalue[2]] 
-
     centerSipmvalue = [centerSipmvalue[4], centerSipmvalue[3], centerSipmvalue[0],centerSipmvalue[1], centerSipmvalue[2]]
-
     rightSipmvalue = [rightSipmvalue[4], rightSipmvalue[3], rightSipmvalue[0],rightSipmvalue[1], rightSipmvalue[2]]
+
+    absleft = [absleft[4], absleft[3], absleft[0],absleft[1], absleft[2]] 
+    abscenter = [abscenter[4], abscenter[3], abscenter[0],abscenter[1], abscenter[2]]
+    absright = [absright[4], absright[3], absright[0],absright[1], absright[2]]
+
 
     plt.errorbar([1,2,3,4,5], [val[0] for val in leftSipmvalue], yerr=[val[1] for val in leftSipmvalue], fmt='o', capsize=4, label='Left SiPM Position', color='blue')
     plt.plot([1,2,3,4,5], [val[0] for val in leftSipmvalue], linestyle='--', linewidth=1,color='blue')
@@ -229,17 +232,20 @@ for sel_dir in range(0, 5):
 plt.figure(figsize=(15, 9))
 plt.xticks([1,2,3,4,5], ["Bottom Left", "Top Left", "Center", "Top Right", "Bottom Right"])
 colors = ["green", "red", "blue", "orangered", "cyan"]
+
+spos = 0
+
 for index, scintD in enumerate(scintData):
-    plt.errorbar([1,2,3,4,5], [val[0]/scintData[0][1][2][0] for val in scintD[1]], yerr=[val[1]/scintData[0][1][2][0] for val in scintD[1]], fmt='o', capsize=4, label=f'{scint[index]}', color=colors[index])
-    plt.plot([1,2,3,4,5], [val[0]/scintData[0][1][2][0] for val in scintD[1]], linestyle='--', linewidth=1,color=colors[index])
+    plt.errorbar([1,2,3,4,5], [val[0]/scintData[0][spos][2][0] for val in scintD[spos]], yerr=[val[1]/scintData[0][spos][2][0] for val in scintD[spos]], fmt='o', capsize=4, label=f'{scint[index]}', color=colors[index])
+    plt.plot([1,2,3,4,5], [val[0]/scintData[0][spos][2][0] for val in scintD[spos]], linestyle='--', linewidth=1,color=colors[index])
 plt.xlabel("Source Position")
 plt.ylabel("EJ200 Center Normed Intersection / ADC Channel")
 plt.title(f"y-Intersection of $^{{90}}$Sr Source \n for Different Scintillator Types, Read Out by Hamamatsu SiPM S14160-1350")
 plt.grid()  
 plt.legend()
-plt.savefig(f"data/All_Sr90_fit.pdf", format="pdf")
+plt.savefig(f"data/All_Sr90_fit_left.pdf", format="pdf")
 plt.yscale("log")
-plt.savefig(f"data/All_Sr90_fit_log.pdf", format="pdf")
+plt.savefig(f"data/All_Sr90_fit_log_left.pdf", format="pdf")
 plt.show()
 plt.close()
 
