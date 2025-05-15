@@ -233,7 +233,7 @@ plt.figure(figsize=(15, 9))
 plt.xticks([1,2,3,4,5], ["Bottom Left", "Top Left", "Center", "Top Right", "Bottom Right"])
 colors = ["green", "red", "blue", "orangered", "cyan"]
 
-spos = 0
+spos = 1
 
 for index, scintD in enumerate(scintData):
     plt.errorbar([1,2,3,4,5], [val[0]/scintData[0][spos][2][0] for val in scintD[spos]], yerr=[val[1]/scintData[0][spos][2][0] for val in scintD[spos]], fmt='o', capsize=4, label=f'{scint[index]}', color=colors[index])
