@@ -5,7 +5,7 @@ Detector::Detector(DetectorProperties* detectorProperties)
 
     Char_t histdesc[100];
     Char_t histname[100];
-    int binningEdep[3] = {10000, 0, 10};
+    int binningEdep[3] = {1000, 0, 40};
     int binningPhotons[3] = {200, 0, 50};
     
     sprintf(histdesc, "Total energy deposition %s", detectorProperties->GetTarget());
@@ -96,10 +96,10 @@ void Detector::CalcDose(int layer){
         }
     }
     crystals.at(layer).dose.stddev = sqrt(fdeviationSq);
-    if(layer < detectorProperties->GetNSecondaryLayers()){
-        crystals.at(layer).dose.dose*=detectorProperties->GetLayerSizeZ()/detectorProperties->GetSecondaryLayerSizeZ();
-        crystals.at(layer).dose.stddev*=detectorProperties->GetLayerSizeZ()/detectorProperties->GetSecondaryLayerSizeZ();
-    }
+    
+    //crystals.at(layer).dose.dose*=1/detectorProperties->GetLayerSizeZ(layer);
+    //crystals.at(layer).dose.stddev*=1/detectorProperties->GetLayerSizeZ(layer);
+    
     if(detectorProperties->GetNormStatus()){
         crystals.at(layer).dose.dose*=1/h_edep_coinc[0]->GetEntries();
         crystals.at(layer).dose.stddev*=1/h_edep_coinc[0]->GetEntries();

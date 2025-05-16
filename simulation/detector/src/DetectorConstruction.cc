@@ -68,7 +68,7 @@ DetectorConstruction::DetectorConstruction()
     gapSizeZ                     = config["gapSizeZ"];
     secondaryLayerStatus           = config["secondaryLayerStatus"];
     fLayersCut                      = config["nSecondaryLayers"];
-    absSizeZ                = config["secLayerSizeZ"];
+    absSizeZ                        = config["secLayerSizeZ"];
     
     absorberStatus                 = config["absorberStatus"];
     absorberSize                 = config["absorberSize"];
@@ -567,6 +567,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   if(absSizeZ == 0) absSizeZ = 0.1*mm;
   solidAbsorber = new G4Box("solidAbsorber", detSizeX/2, detSizeY/2, absSizeZ/2);
   logicalAbsorber = new G4LogicalVolume(solidAbsorber, detMaterial, "logicalAbsorber");
+  G4cout << "Secondary layer is active "<< secondaryLayerStatus << G4endl;
   if(secondaryLayerStatus){
     logicalAbsorber->SetUserLimits(userLimits);
     
@@ -628,13 +629,15 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   //GuideDetectorBoarder = new G4LogicalBorderSurface("GuideDetectorBoarder", physTeflonFoil, physDetector, dielectricSurface);
   
   G4double passiveFill = 0;
+  std::cout << "AbsorberSize: " << absorberSize << std::endl;
   for(G4int i=0; i<fLayers-fLayersCut; i++){
     if(absorberStatus) passiveFill = absorberSize+gapSizeZ;
     translation = (absSizeZ+gapSizeZ)*fLayersCut + detSizeZ*(i)+(i)*gapSizeZ+d_IsocentreDetector+passiveFill;
     physicalPosition = G4ThreeVector(0.,0., -translation);
     if(i == 0){
-      physicalPosition = G4ThreeVector(0.,0., -translation-passiveFill);
+      physicalPosition = G4ThreeVector(0.,0., -translation+passiveFill);
     }
+    G4cout << "Translation: " << translation << G4endl;
     physAluFoil = new G4PVPlacement(nullptr, physicalPosition, logicalAluFoil,"physAluFoil", logicalworld, false, i+fLayersCut, fCheckOverlaps);
     physLGAlu = new G4PVPlacement(rotationMatrix, physicalPosition+G4ThreeVector(solidAluFoil->GetXHalfLength()+solidLGAluFull->GetXHalfLength(), 0, 0), logicalLGAlu, "physLGAlu", logicalworld, false, i+fLayersCut, fCheckOverlaps);
     physSiPM = new G4PVPlacement(nullptr, physicalPosition+G4ThreeVector(solidAluFoil->GetXHalfLength()+solidSiPM->GetXHalfLength(), 0, 0), logicalSiPM, "physSiPM", logicalworld, false, i+fLayersCut, fCheckOverlaps);
@@ -805,7 +808,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
     G4LogicalVolume* logicalAbsorberPlate = new G4LogicalVolume(solidAbsorberPlate, homoMaterial, "logicalAbsorberPlate");
     
     if(absorberStatus){
-      G4PVPlacement* physAbsorberPlate = new G4PVPlacement(nullptr, G4ThreeVector(0.,0., -d_IsocentreDetector-absorberSize/2-detSizeZ-2.5*mm), logicalAbsorberPlate,"physAbsorberPlate", logicalworld, false, 0, fCheckOverlaps);
+      G4PVPlacement* physAbsorberPlate = new G4PVPlacement(nullptr, G4ThreeVector(0.,0., -d_IsocentreDetector-absorberSize/2-detSizeZ/2-gapSizeZ), logicalAbsorberPlate,"physAbsorberPlate", logicalworld, false, 0, fCheckOverlaps);
       //physHomo = new G4PVPlacement(nullptr, G4ThreeVector(0.,0.,absorberSize/2+dBeamSpot/2), logicalHomo,"physHomo", logicalworld, false, 0, fCheckOverlaps);
     }
     else{
