@@ -41,9 +41,9 @@ def bethe_bloch(E, z, M, Z, A, I):
     return dEdx  # MeV/cm
 
 elements = {
+    'N': {'Z': 7, 'A': 14.007, 'I': 82.0e-6},
     'H': {'Z': 1, 'A': 1.00794, 'I': 19.2e-6},
     'C': {'Z': 6, 'A': 12.011, 'I': 81.0e-6},
-    'N': {'Z': 7, 'A': 14.007, 'I': 82.0e-6},
     'O': {'Z': 8, 'A': 15.999, 'I': 95.0e-6},
     'Na': {'Z': 11, 'A': 22.990, 'I': 149.0e-6},
     'Mg': {'Z': 12, 'A': 24.305, 'I': 156.0e-6},
@@ -100,8 +100,7 @@ def stopping_power_water(E):
         dEdx = bethe_bloch(E, z, M, Z, A, I)  # MeV/cm
         dEdx_total += w * dEdx
     coeffh2o = K * z**2 * Z_h2o / A_h2o
-    return dEdx_total/density
-    #return (dEdx_total-coeffh2o*density_correction(*beta_gamma(E,M), 'H2O')) / density  # Convert to MeV·cm²/g
+    return (dEdx_total-coeffh2o*density_correction(*beta_gamma(E,M), 'H2O'))
 
 def stopping_power_lung(E):
     dEdx_total = 0
@@ -112,8 +111,10 @@ def stopping_power_lung(E):
         w = weights_lung[el]
         dEdx = bethe_bloch(E, z, M, Z, A, I)  # MeV/cm
         dEdx_total += w * dEdx
-    #coeffh2o = K * z**2 * Z_h2o / A_h2o
-    return dEdx_total
+    coeffh2o = K * z**2 * Z_h2o / A_h2o
+    #if density_correction(*beta_gamma(E,M), 'H2O') != 0:
+    #    print(f'Density correction is not zero at E={E} MeV')
+    return (dEdx_total-coeffh2o*density_correction(*beta_gamma(E,M), 'H2O'))
 
 def density_correction(beta, gamma, element):
     x = np.log10(beta * gamma)
@@ -141,7 +142,7 @@ density_air = 0.00120479
 density_pmma = 1.18
 #rho = 8.37480E-05
 # Energy range
-energies = np.linspace(1, 5000, 50000)  # MeV
+energies = np.linspace(1, 1000, 50000)  # MeV
 dEdx_mass_lung = [stopping_power_lung(E) for E in energies]
 
 ICRU_E = [1.000E-03, 1.500E-03, 2.000E-03, 2.500E-03, 3.000E-03, 4.000E-03, 5.000E-03, 6.000E-03, 7.000E-03, 8.000E-03, 9.000E-03, 1.000E-02, 1.250E-02, 1.500E-02, 1.750E-02, 2.000E-02, 2.250E-02, 2.500E-02, 2.750E-02, 3.000E-02, 3.500E-02, 4.000E-02, 4.500E-02, 5.000E-02, 5.500E-02, 6.000E-02, 6.500E-02, 7.000E-02, 7.500E-02, 8.000E-02, 8.500E-02, 9.000E-02, 9.500E-02, 1.000E-01, 1.250E-01, 1.500E-01, 1.750E-01, 2.000E-01, 2.250E-01, 2.500E-01, 2.750E-01, 3.000E-01, 3.500E-01, 4.000E-01, 4.500E-01, 5.000E-01, 5.500E-01, 6.000E-01, 6.500E-01, 7.000E-01, 7.500E-01, 8.000E-01, 8.500E-01, 9.000E-01, 9.500E-01, 1.000E+00, 1.250E+00, 1.500E+00, 1.750E+00, 2.000E+00, 2.250E+00, 2.500E+00, 2.750E+00, 3.000E+00, 3.500E+00, 4.000E+00, 4.500E+00, 5.000E+00, 5.500E+00, 6.000E+00, 6.500E+00, 7.000E+00, 7.500E+00, 8.000E+00, 8.500E+00, 9.000E+00, 9.500E+00, 1.000E+01, 1.250E+01, 1.500E+01, 1.750E+01, 2.000E+01, 2.500E+01, 2.750E+01, 3.000E+01, 3.500E+01, 4.000E+01, 4.500E+01, 5.000E+01, 5.500E+01, 6.000E+01, 6.500E+01, 7.000E+01, 7.500E+01, 8.000E+01, 8.500E+01, 9.000E+01, 9.500E+01, 1.000E+02, 1.250E+02, 1.500E+02, 1.750E+02, 2.000E+02, 2.250E+02, 2.500E+02, 2.750E+02, 3.000E+02, 3.500E+02, 4.000E+02, 4.500E+02, 5.000E+02, 5.500E+02, 6.000E+02, 6.500E+02, 7.000E+02, 7.500E+02, 8.000E+02, 8.500E+02, 9.000E+02, 9.500E+02, 1.000E+03, 1.500E+03, 2.000E+03, 2.500E+03, 3.000E+03, 4.000E+03, 5.000E+03, 6.000E+03, 7.000E+03, 8.000E+03, 9.000E+03, 1.000E+04]
@@ -165,7 +166,7 @@ splineAir = bethe_interpolate(ICRU_E, ICRUstoppingTotal_Air)
 plt.plot(energies, splineH2O(np.log10(energies)), label='ICRU Stopping Power (H2O)')
 plt.plot(energies, splinePMMA(np.log10(energies)), label='ICRU Stopping Power (PMMA)')
 plt.plot(energies, splineAir(np.log10(energies)), label='ICRU Stopping Power (Air)')
-plt.plot(ICRU_E, ICRUstoppingTotal_H2o, 'o', label='ICRU Stopping Power')
+#plt.plot(ICRU_E, ICRUstoppingTotal_H2o, 'o', label='ICRU Stopping Power')
 #plt.plot(ICRU_E, [rho*Stopping for Stopping in ICRUstoppingTotal], 'o', label='ICRU Stopping Power')
 plt.xlabel('Kinetic Energy [MeV]')
 plt.ylabel('Stopping Power [-dE/dx] [MeV/cm]')
@@ -182,6 +183,8 @@ def FillProb(energy):
     S_l = stopping_power_lung(energy)*density_lung
     S_Air = splineAir(np.log10(energy))*density_air
     S_pmma = splinePMMA(np.log10(energy))*density_pmma
+    S_h2o = splineH2O(np.log10(energy))*density
+    #S_pmma = S_h2o
     return (S_l-S_Air)/(S_pmma-S_Air)
 
 def CalcPmod(energy):
@@ -189,11 +192,13 @@ def CalcPmod(energy):
     S_h2o = splineH2O(np.log10(energy))*density
     S_Air = splineAir(np.log10(energy))*density_air
     S_pmma = splinePMMA(np.log10(energy))*density_pmma
+    #S_pmma = S_h2o
     return S_h2o/S_l*FillProb(energy)*(1-FillProb(energy))*(S_pmma-S_Air)**2/S_h2o**2
 
 plt.plot(energies, [FillProb(energ) for index, energ in enumerate(energies)], 'o', label='ICRU Stopping Power')
 plt.xlabel('Kinetic Energy [MeV]')
 plt.ylabel('Fill probability')
+plt.ylim(0,1)
 plt.legend()
 plt.grid(True)
 plt.tight_layout()
