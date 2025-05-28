@@ -16,14 +16,12 @@
 #include "G4PhysListFactory.hh"
 
 #include "Randomize.hh"
-
 #include "G4VisExecutive.hh"
 #include "G4UIExecutive.hh"
 
 int main(int argc,char** argv)
 {
-  // Detect interactive mode (if no arguments) and define UI session
-  //
+
   G4UIExecutive* ui = nullptr;
   if ( argc == 1 ) { ui = new G4UIExecutive(argc, argv); }
 

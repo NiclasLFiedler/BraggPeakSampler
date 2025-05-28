@@ -31,6 +31,9 @@
 
 #include "Randomize.hh"
 
+#include "G4EmCalculator.hh"
+#include "G4Proton.hh"
+
 //#include "G4LogicalBorderSurface.hh"
 #include "nlohmann/json.hpp"
 #include <filesystem>
@@ -43,7 +46,7 @@ G4GlobalMagFieldMessenger* DetectorConstruction::fMagFieldMessenger = nullptr;
 
 DetectorConstruction::DetectorConstruction()
 {  
-  std::ifstream configFile("../../../analysis/config.json");
+    std::ifstream configFile("../../../analysis/config.json");
     if (!configFile) {
         std::cerr << "Error opening config file!" << std::endl;
         return;
@@ -113,7 +116,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
 void DetectorConstruction::DefineMaterials()
 {
   // Material definition
-
+  
   G4NistManager* nistManager = G4NistManager::Instance();
 
   G4Element *elH = nistManager->FindOrBuildElement("H");    // 1
