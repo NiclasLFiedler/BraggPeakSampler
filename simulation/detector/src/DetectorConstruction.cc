@@ -116,7 +116,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
 void DetectorConstruction::DefineMaterials()
 {
   // Material definition
-  
+
   G4NistManager* nistManager = G4NistManager::Instance();
 
   G4Element *elH = nistManager->FindOrBuildElement("H");    // 1
@@ -184,7 +184,7 @@ void DetectorConstruction::DefineMaterials()
   lungTissue->AddElement(elZn, 0.000010);
 
   homoMaterial = nistManager->FindOrBuildMaterial("G4_WATER"); 
-  homoMaterial->GetIonisation()->SetMeanExcitationEnergy(79.7*eV);
+  homoMaterial->GetIonisation()->SetMeanExcitationEnergy(75*eV);
 
   G4Material *SiO2 = new G4Material("SiO2", 2.65*g/cm3, 2);
   SiO2->AddElement(elSi, 1);
