@@ -36,7 +36,7 @@ def gauss(x, A, mu, sigma):
 def main():
     histname = 'h_ampl0'
     dir_path = '3005'
-    measurement = "window"
+    measurement = "df2000"
     source = "sr90"
     output_path = f'{dir_path}/{measurement}_{source}.png'
 

@@ -27,6 +27,7 @@
 #include "G4RotationMatrix.hh"
 #include "G4SystemOfUnits.hh"
 #include "DetectorParameterisationColour.hh"
+#include "HeteroParametrisation.cc"
 #include "G4RegularNavigation.hh"
 
 #include "Randomize.hh"
@@ -67,6 +68,11 @@ DetectorConstruction::DetectorConstruction()
     detSizeX = crystalSize.at(0) * mm;
     detSizeY = crystalSize.at(1)* mm;
     detSizeZ = crystalSize.at(2)* mm;
+
+    G4cout << "Detector size: " << detSizeX << " x " << detSizeY << " x " << detSizeZ << G4endl;
+    G4cout << "Detector size: " << detSizeX << " x " << detSizeY << " x " << detSizeZ << G4endl;
+    G4cout << "Detector size: " << detSizeX << " x " << detSizeY << " x " << detSizeZ << G4endl;
+    G4cout << "Detector size: " << detSizeX << " x " << detSizeY << " x " << detSizeZ << G4endl;
 
     gapSizeZ                     = config["gapSizeZ"];
     secondaryLayerStatus           = config["secondaryLayerStatus"];
@@ -347,7 +353,7 @@ void DetectorConstruction::DefineMaterials()
   heteroWater = new G4Material("heteroWater", 1.00*g/cm3,2);
   heteroWater->AddElement(elH, 2);
   heteroWater->AddElement(elO, 1);
-  heteroWater->GetIonisation()->SetMeanExcitationEnergy(79.7*eV);
+  heteroWater->GetIonisation()->SetMeanExcitationEnergy(75*eV);
 
   aluminumFoil = new G4Material("aluminumFoil", 2.71*g/cm3,1);
   aluminumFoil->AddElement(elAl,1);
@@ -501,155 +507,78 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   
   G4double SiPMSizeYZ = 3.7*mm;
   if(SiPMSizeYZ>detSizeZ) SiPMSizeYZ = detSizeZ;
-  G4double SiPMSizeX = ThicknessTeflon+ThicknessAlu;
+  G4double SiPMSizeX = ThicknessTeflon;
   G4Box* solidSiPM = new G4Box("solidSiPM", SiPMSizeX/2, SiPMSizeYZ/2, SiPMSizeYZ/2);
-  
-  G4double dz  = 100.0 * mm;
-  G4double dx1 = detSizeZ;
-  G4double dx2 = detSizeZ;
-  G4double dy1 = detSizeY;
-  G4double dx3 = SiPMSizeYZ;
-  G4double dx4 = SiPMSizeYZ;
-  G4double dy2 = SiPMSizeYZ;
+  logicalSiPM = new G4LogicalVolume(solidSiPM, SiPMGlassMat, "logicalSiPM");
 
   G4RotationMatrix* rotationMatrix = new G4RotationMatrix();
   //rotationMatrix->rotateZ(90.0 * deg);
 
-  G4LogicalVolume *logicalLGAlu;
-  G4LogicalVolume *logicalLGTeflon;
-  G4LogicalSkinSurface *skinLGTeflon;
-  G4LogicalVolume *logicalLightGuide;
-  
-  // G4Trap* solidLGAlu = new G4Trap("solidLGAlu", dz/2, 0.0, 0.0, dy1/2+ThicknessAlu+ThicknessTeflon, dx1/2+ThicknessAlu+ThicknessTeflon, dx2/2+ThicknessAlu+ThicknessTeflon, 0.0, dy2/2+ThicknessAlu+ThicknessTeflon, dx3/2+ThicknessAlu+ThicknessTeflon, dx4/2+ThicknessAlu+ThicknessTeflon, 0.0);
-  // G4Trap* solidLGTeflon = new G4Trap("solidLGTeflon", dz/2, 0.0, 0.0, dy1/2+ThicknessTeflon, dx1/2+ThicknessTeflon, dx2/2+ThicknessTeflon, 0.0, dy2/2+ThicknessTeflon, dx3/2+ThicknessTeflon, dx4/2+ThicknessTeflon, 0.0);
-  // G4Trap* solidLightGuide = new G4Trap("solidLightGuide", dz/2, 0.0, 0.0, dy1/2, dx1/2, dx2/2, 0.0, dy2/2, dx3/2, dx4/2, 0.0);
-  // logicalLGAlu = new G4LogicalVolume(solidLGAlu , aluminumFoil, "logicalLGAlu");
-  // logicalLGTeflon = new G4LogicalVolume(solidLGTeflon , Teflon, "logicalLGTeflon");
-  // skinLGTeflon = new G4LogicalSkinSurface("skinLGTeflon", logicalLGTeflon, wrappingSurface);
-  // logicalLightGuide = new G4LogicalVolume(solidLightGuide , SiPMGlassMat, "logicalLightGuide");
-  
-  // G4TessellatedSolid* solidLGAlu = stl.Read("../constructs/lightguide_alu.stl");
-  // G4TessellatedSolid* solidLGTeflon = stl.Read("../constructs/lightguide_teflon.stl");
-  // G4TessellatedSolid* solidLightGuide = stl.Read("../constructs/lightguide.stl");
-  
-  G4Box* solidSiPMSub = new G4Box("solidSiPMSub", SiPMSizeX/2+5*mm, SiPMSizeYZ/2, SiPMSizeYZ/2);
-  logicalSiPM = new G4LogicalVolume(solidSiPM, SiPMGlassMat, "logicalSiPM");
-  G4Box* solidLGAluFull = new G4Box("solidLGAluFull", 0.1*mm/2+ThicknessAlu/2+ThicknessTeflon/2, detSizeY/2+ThicknessAlu+ThicknessTeflon, detSizeZ/2+ThicknessAlu+ThicknessTeflon);
-  G4Box* solidLGTeflonFull = new G4Box("solidLGTeflonFull", 0.1*mm/2+ThicknessTeflon/2, detSizeY/2+ThicknessTeflon, detSizeZ/2+ThicknessTeflon);
-  
-  G4SubtractionSolid* solidLGAlu =  new G4SubtractionSolid("solidLGAlu", solidLGAluFull, solidSiPMSub, rotationMatrix, G4ThreeVector(0,0,0));
-  G4SubtractionSolid* solidLGTeflon =  new G4SubtractionSolid("solidLGTeflon", solidLGTeflonFull, solidSiPMSub, rotationMatrix, G4ThreeVector(0,0,0));
-  
-  logicalLGAlu = new G4LogicalVolume(solidLGAlu , aluminumFoil, "logicalLGAlu");
-  logicalLGTeflon = new G4LogicalVolume(solidLGTeflon , Teflon, "logicalLGTeflon");
-  skinLGTeflon = new G4LogicalSkinSurface("skinLGTeflon", logicalLGTeflon, wrappingSurface);
-  // logicalLightGuide = new G4LogicalVolume(solidLightGuide , SiPMGlassMat, "logicalLightGuide");
-  // G4LogicalSkinSurface *skinLightGuide = new G4LogicalSkinSurface("skinLightGuide", logicalDetector, dielectricSurface);
-  
-  G4VisAttributes* visLGAlu = new G4VisAttributes(G4Colour(1.0, 0.0, 0.0, 1));
-  visLGAlu->SetVisibility(true);
-  // visLGAlu->SetForceSolid(true);
-  logicalLGAlu->SetVisAttributes(visLGAlu);
-  G4VisAttributes* visLGTeflon = new G4VisAttributes(G4Colour(0.0, 1.0, 0.0, 1));
-  visLGTeflon->SetVisibility(true);
-  // visLGTeflon->SetForceSolid(true);
-  logicalLGTeflon->SetVisAttributes(visLGTeflon);
-
-  // G4VisAttributes* visLightGuide = new G4VisAttributes(G4Colour(0.0, 0.0, 1.0, 1));
-  // visLightGuide->SetVisibility(true);
-  // visLightGuide->SetForceSolid(true);
-  // logicalLightGuide->SetVisAttributes(visLightGuide);
-  
-  //G4Box
-  G4PVPlacement* physLGTeflon = new G4PVPlacement(nullptr, G4ThreeVector(-(ThicknessAlu)/2, 0, 0), logicalLGTeflon, "physLGTeflon", logicalLGAlu, false, 0, fCheckOverlaps);
-  //G4PVPlacement* physLightGuide = new G4PVPlacement(nullptr, G4ThreeVector(-(ThicknessTeflon)/2, 0, 0), logicalLightGuide, "physLightGuide", logicalLGTeflon, false, 0, fCheckOverlaps);
-  
-  //Lightguide
-  // G4PVPlacement* physLGTeflon = new G4PVPlacement(nullptr, G4ThreeVector(0, 0, ThicknessAlu), logicalLGTeflon, "physLGTeflon", logicalLGAlu, false, 0, fCheckOverlaps);
-  // G4PVPlacement* physLightGuide = new G4PVPlacement(nullptr, G4ThreeVector(0, 0, ThicknessTeflon), logicalLightGuide, "physLightGuide", logicalLGTeflon, false, 0, fCheckOverlaps);
   if(absSizeZ == 0) absSizeZ = 0.1*mm;
   solidAbsorber = new G4Box("solidAbsorber", detSizeX/2, detSizeY/2, absSizeZ/2);
   logicalAbsorber = new G4LogicalVolume(solidAbsorber, detMaterial, "logicalAbsorber");
-  G4cout << "Secondary layer is active "<< secondaryLayerStatus << G4endl;
+  G4cout << "Secondary layer active? "<< secondaryLayerStatus << G4endl;
+  G4Box* solidAluFoilAbs = new G4Box("solidAluFoilAbs", detSizeX/2+ThicknessTeflon+ThicknessAlu, detSizeY/2+ThicknessTeflon+ThicknessAlu, absSizeZ/2+ThicknessTeflon+ThicknessAlu);
+  G4Box* solidTeflonFoilAbs = new G4Box("solidTeflonFoilAbs", detSizeX/2+ThicknessTeflon, detSizeY/2+ThicknessTeflon, absSizeZ/2+ThicknessTeflon);
   if(secondaryLayerStatus){
     logicalAbsorber->SetUserLimits(userLimits);
-    
-    G4Box* solidLGAluFullAbs = new G4Box("solidLGAluFullAbs", 0.1*mm/2+ThicknessAlu/2+ThicknessTeflon/2, detSizeY/2+ThicknessAlu+ThicknessTeflon, absSizeZ/2+ThicknessAlu+ThicknessTeflon);
-    G4Box* solidLGTeflonFullAbs = new G4Box("solidLGTeflonFullAbs", 0.1*mm/2+ThicknessTeflon/2, detSizeY/2+ThicknessTeflon, absSizeZ/2+ThicknessTeflon);
-    G4SubtractionSolid* solidLGAluAbs =  new G4SubtractionSolid("solidLGAluAbs", solidLGAluFullAbs, solidSiPMSub, rotationMatrix, G4ThreeVector(0,0,0));
-    G4SubtractionSolid* solidLGTeflonAbs =  new G4SubtractionSolid("solidLGTeflonAbs", solidLGTeflonFullAbs, solidSiPMSub, rotationMatrix, G4ThreeVector(0,0,0));
 
-    G4LogicalVolume* logicalLGAluAbs = new G4LogicalVolume(solidLGAluAbs , aluminumFoil, "logicalLGAluAbs");
-    G4LogicalVolume* logicalLGTeflonAbs = new G4LogicalVolume(solidLGTeflonAbs , Teflon, "logicalLGTeflonAbs");
-    G4LogicalSkinSurface* skinLGTeflonAbs = new G4LogicalSkinSurface("skinLGTeflonAbs", logicalLGTeflonAbs, wrappingSurface);
-    G4PVPlacement* physLGTeflonAbs = new G4PVPlacement(nullptr, G4ThreeVector(-(ThicknessAlu)/2, 0, 0), logicalLGTeflonAbs, "physLGTeflonAbs", logicalLGAluAbs, false, 0, fCheckOverlaps);
-
-    G4Box* solidTeflonFoilAbs = new G4Box("solidTeflonFoilAbs", (detSizeX+ThicknessTeflon)/2, detSizeY/2+ThicknessTeflon, absSizeZ/2+ThicknessTeflon);
-    G4Box* solidAluFoilAbs = new G4Box("solidAluFoilAbs", (detSizeX+ThicknessTeflon+ThicknessAlu)/2, detSizeY/2+ThicknessTeflon+ThicknessAlu, absSizeZ/2+ThicknessTeflon+ThicknessAlu);
-    
     logicalTeflonFoilAbs = new G4LogicalVolume(solidTeflonFoilAbs, Teflon, "logicalTeflonFoilAbs");
     G4LogicalSkinSurface* skinTeflonAbs = new G4LogicalSkinSurface("skinTeflonAbs", logicalTeflonFoilAbs, wrappingSurface);
     logicalAluFoilAbs = new G4LogicalVolume(solidAluFoilAbs, aluminumFoil, "logicalAluFoilAbs");
 
-    physTeflonFoilAbs = new G4PVPlacement(nullptr, G4ThreeVector((ThicknessAlu)/2, 0, 0), logicalTeflonFoilAbs, "physTeflonFoilAbs", logicalAluFoilAbs, false, 0, fCheckOverlaps);
-    physAbsorber = new G4PVPlacement(nullptr, G4ThreeVector((ThicknessTeflon)/2, 0, 0), logicalAbsorber, "physAbsorber", logicalTeflonFoilAbs, false, 0, fCheckOverlaps);
-
-    G4VisAttributes* visLGAluAbs = new G4VisAttributes(G4Colour(1.0, 0.431, 0.0, 1));
-    visLGAluAbs->SetVisibility(true);
-    // visLGAluAbs->SetForceSolid(true);
-    logicalLGAluAbs->SetVisAttributes(visLGAluAbs);
-    logicalAluFoilAbs->SetVisAttributes(visLGAluAbs);
+    physTeflonFoilAbs = new G4PVPlacement(nullptr, G4ThreeVector(0, 0, 0), logicalTeflonFoilAbs, "physTeflonFoilAbs", logicalAluFoilAbs, false, 0, fCheckOverlaps);
     
-    G4VisAttributes* visLGTeflonAbs = new G4VisAttributes(G4Colour(0.502, 0.0, 0.502, 1));
-    visLGTeflonAbs->SetVisibility(true);
-    // visLGTeflonAbs->SetForceSolid(true);
-    logicalLGTeflonAbs->SetVisAttributes(visLGTeflonAbs);
-    logicalTeflonFoilAbs->SetVisAttributes(visLGTeflonAbs);
+    physAbsorber = new G4PVPlacement(nullptr, G4ThreeVector(0, 0, 0), logicalAbsorber, "physAbsorber", logicalTeflonFoilAbs, false, 0, fCheckOverlaps);
+
+    physSiPMAbs = new G4PVPlacement(nullptr, G4ThreeVector(solidAbsorber->GetXHalfLength()+solidSiPM->GetXHalfLength(), 0, 0), logicalSiPM, "physSiPMAbs", logicalTeflonFoilAbs, false, 0, fCheckOverlaps);
+
+    G4VisAttributes* visAluAbs = new G4VisAttributes(G4Colour(1.0, 0.431, 0.0, 1));
+    visAluAbs->SetVisibility(true);
+    logicalAluFoilAbs->SetVisAttributes(visAluAbs);
+    
+    G4VisAttributes* visTeflonAbs = new G4VisAttributes(G4Colour(0.502, 0.0, 0.502, 1));
+    visTeflonAbs->SetVisibility(true);
+    logicalTeflonFoilAbs->SetVisAttributes(visTeflonAbs);
 
     for(G4int i=0; i<fLayersCut; i++){
       if(fLayers == i) break;
-      translation = absSizeZ*(i)+(i)*gapSizeZ+d_IsocentreDetector;
+      translation = (solidAluFoilAbs->GetZHalfLength()*2+gapSizeZ)*(i)+d_IsocentreDetector;
       physicalPosition = G4ThreeVector(0.,0., -translation);
       
       physAluFoilAbs = new G4PVPlacement(nullptr, physicalPosition, logicalAluFoilAbs, "physAluFoilAbs", logicalworld, false, i, fCheckOverlaps);
-      G4PVPlacement* physLGAluAbs = new G4PVPlacement(rotationMatrix, physicalPosition+G4ThreeVector(solidAluFoilAbs->GetXHalfLength()+solidLGAluFullAbs->GetXHalfLength(), 0, 0), logicalLGAluAbs, "physLGAluAbs", logicalworld, false, i+fLayersCut, fCheckOverlaps);
-      physSiPMAbs = new G4PVPlacement(nullptr, physicalPosition+G4ThreeVector(solidAluFoilAbs->GetXHalfLength()+solidSiPM->GetXHalfLength(), 0, 0), logicalSiPM, "physSiPMAbs", logicalworld, false, i, fCheckOverlaps);
     }
   }
+
   solidDetector = new G4Box("solidDetector", detSizeX/2, detSizeY/2, detSizeZ/2);
   logicalDetector = new G4LogicalVolume(solidDetector, detMaterial, "logicalDetector");
   logicalDetector->SetUserLimits(userLimits);
-
-  G4Box* solidAluFoil = new G4Box("solidAluFoil", (detSizeX+ThicknessAlu+ThicknessTeflon)/2, detSizeY/2+ThicknessAlu+ThicknessTeflon, detSizeZ/2+ThicknessAlu+ThicknessTeflon);
+  
+  G4Box* solidAluFoil = new G4Box("solidAluFoil", detSizeX/2+ThicknessAlu+ThicknessTeflon, detSizeY/2+ThicknessAlu+ThicknessTeflon, detSizeZ/2+ThicknessAlu+ThicknessTeflon);
+  G4Box* solidTeflonFoil = new G4Box("solidTeflonFoil", detSizeX/2+ThicknessTeflon, detSizeY/2+ThicknessTeflon, detSizeZ/2+ThicknessTeflon);
+  
   logicalAluFoil = new G4LogicalVolume(solidAluFoil , aluminumFoil, "logicalAluFoil");
-  G4Box* solidTeflonFoil = new G4Box("solidTeflonFoil", (detSizeX+ThicknessTeflon)/2, detSizeY/2+ThicknessTeflon, detSizeZ/2+ThicknessTeflon);
   logicalTeflonFoil = new G4LogicalVolume(solidTeflonFoil, Teflon, "logicalTeflonFoil");
   G4LogicalSkinSurface *skinTeflon = new G4LogicalSkinSurface("skinTeflonFoil", logicalTeflonFoil, wrappingSurface);
-  physTeflonFoil = new G4PVPlacement(nullptr, G4ThreeVector((ThicknessAlu)/2, 0, 0), logicalTeflonFoil, "physTeflonFoil", logicalAluFoil, false, 0, fCheckOverlaps);
-  physDetector = new G4PVPlacement(nullptr, G4ThreeVector((ThicknessTeflon)/2, 0, 0), logicalDetector, "physDetector", logicalTeflonFoil, false, 0, fCheckOverlaps);
-
-  //DetectorGuideBoarder = new G4LogicalBorderSurface("DetectorGuideBoarder", physDetector, physTeflonFoil, dielectricSurface);
-  //GuideDetectorBoarder = new G4LogicalBorderSurface("GuideDetectorBoarder", physTeflonFoil, physDetector, dielectricSurface);
   
+  physTeflonFoil = new G4PVPlacement(nullptr, G4ThreeVector(0, 0, 0), logicalTeflonFoil, "physTeflonFoil", logicalAluFoil, false, 0, fCheckOverlaps);
+  
+  physDetector = new G4PVPlacement(nullptr, G4ThreeVector(0, 0, 0), logicalDetector, "physDetector", logicalTeflonFoil, false, 0, fCheckOverlaps);
+  
+  physSiPM = new G4PVPlacement(nullptr, G4ThreeVector(solidDetector->GetXHalfLength()+solidSiPM->GetXHalfLength(), 0, 0), logicalSiPM, "physSiPM", logicalTeflonFoil, false, 0, fCheckOverlaps);
+
   G4double passiveFill = 0;
-  std::cout << "AbsorberSize: " << absorberSize << std::endl;
+  
   for(G4int i=0; i<fLayers-fLayersCut; i++){
     if(absorberStatus) passiveFill = absorberSize+gapSizeZ;
-    translation = (absSizeZ+gapSizeZ)*fLayersCut + detSizeZ*(i)+(i)*gapSizeZ+d_IsocentreDetector+passiveFill;
+    
+    translation = (solidAluFoilAbs->GetZHalfLength()*2+gapSizeZ)*fLayersCut + (solidAluFoil->GetZHalfLength()*2+gapSizeZ)*(i)+d_IsocentreDetector+passiveFill;
     physicalPosition = G4ThreeVector(0.,0., -translation);
     if(i == 0){
       physicalPosition = G4ThreeVector(0.,0., -translation+passiveFill);
     }
-    G4cout << "Translation: " << translation << G4endl;
-    physAluFoil = new G4PVPlacement(nullptr, physicalPosition, logicalAluFoil,"physAluFoil", logicalworld, false, i+fLayersCut, fCheckOverlaps);
-    physLGAlu = new G4PVPlacement(rotationMatrix, physicalPosition+G4ThreeVector(solidAluFoil->GetXHalfLength()+solidLGAluFull->GetXHalfLength(), 0, 0), logicalLGAlu, "physLGAlu", logicalworld, false, i+fLayersCut, fCheckOverlaps);
-    physSiPM = new G4PVPlacement(nullptr, physicalPosition+G4ThreeVector(solidAluFoil->GetXHalfLength()+solidSiPM->GetXHalfLength(), 0, 0), logicalSiPM, "physSiPM", logicalworld, false, i+fLayersCut, fCheckOverlaps);
-  
-    //lightguide
-    // physLGAlu = new G4PVPlacement(rotationMatrix, physicalPosition+G4ThreeVector(solidAluFoil->GetXHalfLength(), 0, -solidLGAlu->GetMaxZExtent()/2), logicalLGAlu, "physLGAlu", logicalworld, false, i+fLayersCut, fCheckOverlaps);
-    // physSiPM = new G4PVPlacement(nullptr, physicalPosition+G4ThreeVector(solidAluFoil->GetXHalfLength()+solidLGAlu->GetMaxYExtent()+solidSiPM->GetXHalfLength()), logicalSiPM, "physSiPM", logicalworld, false, i+fLayersCut, fCheckOverlaps);
-    //GuideSiPMBoarder = new G4LogicalBorderSurface("GuideSiPMBoarder", physLightGuide, physSiPM,  dielectricSurface);
-    //SiPMGuideBoarder = new G4LogicalBorderSurface("SiPMGuideBoarder", physSiPM, physLightGuide, dielectricSurface);
+    
+    physAluFoil = new G4PVPlacement(nullptr, physicalPosition, logicalAluFoil, "physAluFoil", logicalworld, false, i+fLayersCut, fCheckOverlaps);
   }  
 
   G4VisAttributes* visDetector = new G4VisAttributes(G4Colour(1.0, 0.84, 0.0, 0.5));
@@ -761,8 +690,15 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
       airVisAttr->SetVisibility(true);
       airVisAttr->SetForceSolid(true);
 
-      G4double cubeSizeX = 0.2 * mm, cubeSizeY = 0.2 * mm, cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.75)*0.001;
-      G4int nx = 100, ny = 100, nz = static_cast<int>(std::round(heteroThickness/cubeSizeZ));
+      G4double cubeSizeX = 0.15 * mm, cubeSizeY = 0.15 * mm;
+      // G4double cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.75)*0.001;
+      // G4double cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7900)*0.001;
+      G4double cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7355)*0.001;
+      G4int nx = 180, ny = 180, nz = static_cast<int>(std::round(heteroThickness/cubeSizeZ));
+      // nz = 3;
+      // nx = 3;
+      // ny = 3;
+      // cubeSizeX = 5 * mm, cubeSizeY = 5 * mm, cubeSizeZ = 5 * mm;
       auto voxelSolid = new G4Box("Voxel", cubeSizeX/2, cubeSizeY/2, cubeSizeZ/2);
 
       std::cout << "pmod: " << pmod << std::endl;
@@ -770,33 +706,52 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
       std::cout << "voxelZ: " << cubeSizeZ << std::endl;
       std::cout << "NbOfSlices: " << nz << G4endl;
 
-      // Place voxels in a grid
-      for (G4int ix = 0; ix < nx; ix++) {
-          for (G4int iy = 0; iy < ny; iy++) {
-              for (G4int iz = 0; iz < nz; iz++) {
-                  // Randomly assign material
-                  G4Material* mat = (G4UniformRand() < 0.25) ? homoMaterial : worldMat;
+      auto voxelContainerSolid = new G4Box("VoxelContainer", (nx*cubeSizeX)/2, (ny*cubeSizeY)/2, (nz*cubeSizeZ)/2);
+      auto voxelContainerLV = new G4LogicalVolume(voxelContainerSolid, heteroAir, "VoxelContainerLV");
+      new G4PVPlacement(nullptr, G4ThreeVector(0,0,cubeSizeZ*nz/2 + 2*cm), voxelContainerLV,
+                  "VoxelContainer", logicalworld, false, 0);
 
-                  // Define voxel logical volume with assigned material
-                  auto voxelLogic = new G4LogicalVolume(voxelSolid, mat, "Voxel");
-                  if (mat == homoMaterial) {
-                    voxelLogic->SetVisAttributes(waterVisAttr);
-                  } else {
-                    voxelLogic->SetVisAttributes(airVisAttr);
-                  }
-                  G4ThreeVector position(
-                      (ix - nx/2) * cubeSizeX,
-                      (iy - ny/2) * cubeSizeY,
-                      (iz - nz/2) * cubeSizeZ + cubeSizeZ*nz/2 + 2*cm
-                  );
+      auto* parameterisation = new HeteroParameterisation(nx, ny, nz,
+        cubeSizeX, cubeSizeY, cubeSizeZ,
+        heteroWater, heteroAir,
+        waterVisAttr, airVisAttr);
+    
+      int nVoxels = nx * ny * nz;
+      
+      auto voxelLogic = new G4LogicalVolume(voxelSolid, heteroAir, "Voxel");
+      voxelLogic->SetVisAttributes(airVisAttr);
 
-                  // Unique copy number if needed
-                  G4int copyNo = ix * ny * nz + iy * nz + iz;
+      new G4PVParameterised(
+        "Voxel", voxelLogic, voxelContainerLV, kUndefined, nVoxels, parameterisation
+      );
+      // // Place voxels in a grid
+      // for (G4int ix = 0; ix < nx; ix++) {
+      //     for (G4int iy = 0; iy < ny; iy++) {
+      //         for (G4int iz = 0; iz < nz; iz++) {
+      //             // Randomly assign material
+      //             // G4Material* mat = (G4UniformRand() < 0.248) ? homoMaterial : worldMat;
+      //             G4Material* mat = (G4UniformRand() < 0.2251) ? heteroWater : heteroAir;
 
-                  new G4PVPlacement(nullptr, position, voxelLogic, "Voxel", logicalworld, false, copyNo);
-              }
-          }
-      }
+      //             // Define voxel logical volume with assigned material
+      //             auto voxelLogic = new G4LogicalVolume(voxelSolid, mat, "Voxel");
+      //             if (mat == heteroWater) {
+      //               voxelLogic->SetVisAttributes(waterVisAttr);
+      //             } else {
+      //               voxelLogic->SetVisAttributes(airVisAttr);
+      //             }
+      //             G4ThreeVector position(
+      //                 (ix - nx/2) * cubeSizeX,
+      //                 (iy - ny/2) * cubeSizeY,
+      //                 (iz - nz/2) * cubeSizeZ + cubeSizeZ*nz/2 + 2*cm
+      //             );
+
+      //             // Unique copy number if needed
+      //             G4int copyNo = ix * ny * nz + iy * nz + iz;
+
+      //             new G4PVPlacement(nullptr, position, voxelLogic, "Voxel", logicalworld, false, copyNo);
+      //         }
+      //     }
+      // }
     }
   } 
   if(ftarget == 1 || absorberStatus){ //homogeneous

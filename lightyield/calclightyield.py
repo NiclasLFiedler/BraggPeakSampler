@@ -12,8 +12,8 @@ def convert_to_secondary_units(y):
 
 ped = 85.4
 pe = 110.53
-na22 = 0.059409
-    
+# na22 = 0.059409
+na22 = 0.511    
 def GetPE(channel):
     return abs(((channel-ped)/(pe-ped))/na22)
 
@@ -25,6 +25,34 @@ def GetPEDev(channel):
 
 def GetPHDev(channel):
     return abs(((channel)/(pe-ped))/na22/0.2316)
+
+def mean_and_std_of_mean(values, std_devs):
+    """
+    Calculate the mean and the standard deviation of the mean
+    (not weighted).
+    
+    Parameters:
+        values (array-like): Measured values.
+        std_devs (array-like): Standard deviations of each value.
+        
+    Returns:
+        (float, float): (mean, standard deviation of the mean)
+    """
+    values = np.asarray(values)
+    std_devs = np.asarray(std_devs)
+    
+    mean = np.mean(values)
+    print(np.sum(std_devs**2))
+    test = 0
+    for i in std_devs:
+        test = test + i**2
+    print(test)
+    print(np.sum(std_devs**2))
+    print(np.sqrt(np.sum(std_devs**2)))
+    print(len(values))
+    std_of_mean = np.sqrt(np.sum(std_devs**2)) / len(values)
+    
+    return mean, std_of_mean
 
 def main():    
     #old flat
@@ -57,15 +85,15 @@ def main():
     ly_average_lat = 0
     ly_average_err_lat = 0
 
-    for index in range(5):
-        LY_pe.append(GetPE(LY_ej[index]))
-        LY_pe_err.append(GetPEDev(LY_ej_err[index]))
-        LY_ph.append(GetPH(LY_ej[index]))
-        LY_ph_err.append(GetPHDev(LY_ej_err[index]))
+    # for index in range(5):
+    #     LY_pe.append(GetPE(LY_ej[index]))
+    #     LY_pe_err.append(GetPEDev(LY_ej_err[index]))
+    #     LY_ph.append(GetPH(LY_ej[index]))
+    #     LY_ph_err.append(GetPHDev(LY_ej_err[index]))
         
-        print(f"Flat: CH {index} Light yield: {LY[index]} ± {LY_err[index]:.2f} LY_pe: {LY_pe[-1]:.2f} ± {LY_pe_err[-1]:.2f}  LY_ph: {LY_ph[-1]:.2f} ± {LY_ph_err[-1]:.2f}")
+    #     print(f"Flat: CH {index} Light yield: {LY[index]} ± {LY_err[index]:.2f} LY_pe: {LY_pe[-1]:.2f} ± {LY_pe_err[-1]:.2f}  LY_ph: {LY_ph[-1]:.2f} ± {LY_ph_err[-1]:.2f}")
 
-    exit()
+    # exit()
 
     for index in range(36):
         LY_pe.append(GetPE(LY[index]))
@@ -102,30 +130,35 @@ def main():
 
     xaxis = [i for i in range(1)] + [i for i in range(2, 23)] + [i for i in range(24, 38)]
 
-    ax1.errorbar(xaxis, LY_ph, yerr=LY_ph_err, fmt='o', capsize=5, elinewidth=2, capthick=2, markersize=8, color="orange", label='Flat light yield')
-    ax1.errorbar(xaxis, LY_ph_lat[:36], yerr=LY_ph_err_lat[:36], fmt='o', capsize=5, elinewidth=2, capthick=2, markersize=8, color="green", label='Lateral light yield')
-    ax1.errorbar([1,23], [LY_ph_lat[36], LY_ph_lat[37]], yerr=[LY_ph_err_lat[36], LY_ph_err_lat[37]], fmt='o', capsize=5, elinewidth=2, capthick=2, markersize=8, color="black", label='Window & Lateral light yield')
+    ax1.errorbar(xaxis, LY_ph, yerr=LY_ph_err, fmt='o', capsize=5, elinewidth=2, capthick=2, markersize=8, color="orange", label='Flat position')
+    ax1.errorbar(xaxis, LY_ph_lat[:36], yerr=LY_ph_err_lat[:36], fmt='o', capsize=5, elinewidth=2, capthick=2, markersize=8, color="green", label='Vertical position')
+    ax1.errorbar([1,23], [LY_ph_lat[36], LY_ph_lat[37]], yerr=[LY_ph_err_lat[36], LY_ph_err_lat[37]], fmt='o', capsize=5, elinewidth=2, capthick=2, markersize=8, color="black", label='Vertical position & window cut-out')
 
     ax1.grid()
     ax1.tick_params(axis='y')
-    
-    average_first_15 = np.mean(LY_ph[:15])
-    average_last_21 = np.mean(LY_ph[15:36])
-    print(f"average {average_first_15}" )
-    average_first_15_lat = np.mean(LY_ph_lat[:15])
-    average_last_21_lat = np.mean(LY_ph_lat[15:36])
+    print()
+    print()
+    print(LY_ph_err[:15])
+    print()
+    print()
+    average_first_15, average_first_15err = mean_and_std_of_mean(LY_ph[:15], LY_ph_err[:15])
+    print()
+    print()
+    average_last_21, average_last_21err = mean_and_std_of_mean(LY_ph[15:36], LY_ph_err[15:36])
+    average_first_15_lat, average_first_15_laterr = mean_and_std_of_mean(LY_ph_lat[:15], LY_ph_err_lat[:15])
+    average_last_21_lat, average_last_21_latererr = mean_and_std_of_mean(LY_ph_lat[15:36], LY_ph_err_lat[15:36])
     
     ax1.plot(range(16), [average_first_15] * 16, color='dodgerblue', linestyle='--')
     ax1.plot(range(16, 38), [average_last_21] * 22, color='dodgerblue', linestyle='--')
 
-    ax1.text(-1, average_first_15-3, f'{average_first_15:.2f}', color='dodgerblue', fontsize=16, va='bottom', ha='center')
-    ax1.text(38, average_last_21-3, f'{average_last_21:.2f}', color='dodgerblue', fontsize=16, va='bottom', ha='center')
+    ax1.text(-1, average_first_15-3, f'{average_first_15:.2f} \n' f'$\\pm${average_first_15err:.2f}', color='dodgerblue', fontsize=16, va='bottom', ha='center')
+    ax1.text(38, average_last_21-3, f'{average_last_21:.2f}\n' f'$\\pm${average_last_21err:.2f}', color='dodgerblue', fontsize=16, va='bottom', ha='center')
 
     ax1.plot(range(16), [average_first_15_lat] * 16, color='crimson', linestyle='--')
     ax1.plot(range(16, 38), [average_last_21_lat] * 22, color='crimson', linestyle='--')
 
-    ax1.text(-1, average_first_15_lat-3, f'{average_first_15_lat:.2f}', color='crimson', fontsize=16,va='bottom', ha='center')
-    ax1.text(38, average_last_21_lat-3, f'{average_last_21_lat:.2f}', color='crimson', fontsize=16, va='bottom', ha='center')
+    ax1.text(-1, average_first_15_lat-3, f'{average_first_15_lat:.2f}\n' f'$\\pm${average_first_15_laterr:.2f}', color='crimson', fontsize=16,va='bottom', ha='center')
+    ax1.text(38, average_last_21_lat-3, f'{average_last_21_lat:.2f}\n' f'$\\pm${average_last_21_latererr:.2f}', color='crimson', fontsize=16, va='bottom', ha='center')
 
     axX = 240
     axY = 0

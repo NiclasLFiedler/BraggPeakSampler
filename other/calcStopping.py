@@ -156,16 +156,28 @@ ICRUstoppingTotal_PMMA = [2.147E+02 ,2.463E+02 ,2.746E+02 ,3.004E+02 ,3.242E+02 
 
 ICRUstoppingTotal_Air = [1.414E+02, 1.651E+02, 1.855E+02, 2.038E+02, 2.206E+02, 2.507E+02, 2.776E+02, 3.021E+02, 3.248E+02, 3.460E+02, 3.660E+02, 3.850E+02, 4.224E+02, 4.552E+02, 4.843E+02, 5.106E+02, 5.343E+02, 5.558E+02, 5.755E+02, 5.934E+02, 6.246E+02, 6.506E+02, 6.721E+02, 6.897E+02, 7.038E+02, 7.149E+02, 7.233E+02, 7.293E+02, 7.333E+02, 7.355E+02, 7.360E+02, 7.352E+02, 7.332E+02, 7.301E+02, 7.038E+02, 6.680E+02, 6.298E+02, 5.928E+02, 5.589E+02, 5.284E+02, 5.011E+02, 4.767E+02, 4.353E+02, 4.015E+02, 3.736E+02, 3.501E+02, 3.300E+02, 3.123E+02, 2.967E+02, 2.826E+02, 2.701E+02, 2.589E+02, 2.486E+02, 2.393E+02, 2.308E+02, 2.229E+02, 1.912E+02, 1.683E+02, 1.509E+02, 1.371E+02, 1.258E+02, 1.165E+02, 1.086E+02, 1.018E+02, 9.068E+01, 8.197E+01, 7.492E+01, 6.909E+01, 6.417E+01, 5.997E+01, 5.633E+01, 5.315E+01, 5.033E+01, 4.783E+01, 4.559E+01, 4.357E+01, 4.173E+01, 4.006E+01, 3.351E+01, 2.894E+01, 2.555E+01, 2.294E+01, 1.915E+01, 1.773E+01, 1.653E+01, 1.460E+01, 1.312E+01, 1.194E+01, 1.099E+01, 1.019E+01, 9.517E+00, 8.942E+00, 8.443E+00, 8.006E+00, 7.620E+00, 7.277E+00, 6.970E+00, 6.693E+00, 6.443E+00, 5.475E+00, 4.816E+00, 4.338E+00, 3.976E+00, 3.691E+00, 3.462E+00, 3.275E+00, 3.118E+00, 2.871E+00, 2.687E+00, 2.544E+00, 2.431E+00, 2.340E+00, 2.266E+00, 2.203E+00, 2.151E+00, 2.107E+00, 2.069E+00, 2.037E+00, 2.008E+00, 1.984E+00, 1.963E+00, 1.850E+00, 1.820E+00, 1.818E+00, 1.828E+00, 1.861E+00, 1.898E+00, 1.934E+00, 1.967E+00, 1.998E+00, 2.026E+00, 2.052E+00]
 
+Geant4Lung = [207.317, 236.938, 262.307, 286.276, 308.601, 349.292, 385.741, 419.294, 450.471, 479.523, 507.014, 533.162, 584.034, 628.145, 667.156, 701.991, 733.253, 761.366, 786.757, 809.671, 849.11, 881.203, 905.603, 924.495, 938.794, 949.126, 956.046, 960.024, 961.469, 960.754, 958.205, 954.076, 948.62, 942.045, 898.031, 845.477, 792.3, 742.123, 696.341, 655.237, 618.598, 585.991, 530.978, 486.684, 450.376, 420.068, 394.349, 372.2, 352.88, 335.841, 320.67, 307.052, 294.744, 283.547, 273.307, 263.896, 225.987, 198.734, 177.943, 161.475, 147.636, 136.203, 126.376, 117.985, 104.378, 94.168, 85.9249, 79.1048, 73.3741, 68.4849, 64.2606, 60.5722, 57.3219, 54.4276, 51.8372, 49.5043, 47.3913, 45.468, 37.9436, 32.715, 28.8533, 25.8772, 21.5757, 19.9665, 18.6046, 16.4218, 14.7465, 13.4177, 12.3366, 11.439, 10.6811, 10.0324, 9.47048, 8.97886, 8.54495, 8.15905, 7.81353, 7.5023, 7.22044, 6.13329, 5.39319, 4.85649, 4.44951, 4.13044, 3.87377, 3.66302, 3.48705, 3.21047, 3.00374, 2.84409, 2.71767, 2.61556, 2.53176, 2.46209, 2.40352, 2.35385, 2.31139, 2.27485, 2.24325, 2.21504, 2.18996, 2.05142, 2.00513, 1.99145, 1.99159, 2.00765, 2.03004, 2.05293, 2.07467, 2.09488, 2.11345, 2.13055]
+
+Geant4PWO = [30.6453, 36.3445, 41.1871, 45.4843, 49.3927, 56.3776, 62.5641, 68.1969, 73.3795, 78.2047, 82.7814, 87.1078, 95.8031, 103.442, 110.345, 116.636, 122.415, 127.752, 132.702, 137.31, 145.631, 152.918, 159.323, 164.958, 169.911, 174.256, 178.048, 181.339, 184.175, 186.599, 188.65, 190.357, 191.75, 192.858, 194.939, 192.934, 188.544, 182.87, 176.621, 170.239, 163.987, 158.014, 147.152, 137.787, 129.776, 122.907, 116.973, 111.803, 107.252, 103.21, 99.5876, 96.3166, 93.3418, 90.6184, 88.1111, 85.7909, 76.2303, 69.1035, 63.461, 58.8365, 55.163, 51.998, 48.8877, 46.1436, 41.5807, 38.5634, 35.9551, 33.679, 31.683, 29.9395, 28.4142, 27.054, 25.8426, 24.7448, 23.7486, 22.8366, 22.0015, 21.2338, 18.1463, 15.9268, 14.242, 12.9174, 10.9585, 10.2118, 9.57361, 8.53863, 7.72878, 7.07857, 6.54213, 6.09747, 5.71979, 5.39466, 5.1136, 4.86604, 4.64642, 4.45015, 4.27359, 4.11391, 3.96883, 3.40435, 3.01569, 2.73141, 2.51462, 2.34358, 2.20541, 2.09166, 1.99637, 1.8463, 1.73443, 1.648, 1.57961, 1.52471, 1.47979, 1.44256, 1.4114, 1.38511, 1.36277, 1.34369, 1.32731, 1.3132, 1.30102, 1.24097, 1.22999, 1.2347, 1.24543, 1.27219, 1.2992, 1.32421, 1.34687, 1.36779, 1.38649, 1.40354]
+
 # Plot
 plt.figure(figsize=(8, 5))
 plt.plot(energies, dEdx_mass_lung, label='Bethe-Bloch Stopping Power')
 splineH2O = bethe_interpolate(ICRU_E, ICRUstoppingTotal_H2o)
 splinePMMA = bethe_interpolate(ICRU_E, ICRUstoppingTotal_PMMA)
 splineAir = bethe_interpolate(ICRU_E, ICRUstoppingTotal_Air)
+splineLung = bethe_interpolate(ICRU_E, Geant4Lung)
+splinePWO = bethe_interpolate(ICRU_E, Geant4PWO)
 
+sLung = [Geant4Lung[i]*0.248 + (1-0.248)*ICRUstoppingTotal_Air[i] for i in range(len(Geant4Lung))]
+splineLungInf = bethe_interpolate(ICRU_E, sLung)
+
+plt.plot(energies, splinePWO(np.log10(energies)), label='ICRU Stopping Power (PWO)')
 plt.plot(energies, splineH2O(np.log10(energies)), label='ICRU Stopping Power (H2O)')
 plt.plot(energies, splinePMMA(np.log10(energies)), label='ICRU Stopping Power (PMMA)')
 plt.plot(energies, splineAir(np.log10(energies)), label='ICRU Stopping Power (Air)')
+plt.plot(energies, splineLung(np.log10(energies)), label='ICRU Stopping Power (Lung)')
+plt.plot(energies, splineLungInf(np.log10(energies)), label='ICRU Stopping Power (Lung Inf)')
 #plt.plot(ICRU_E, ICRUstoppingTotal_H2o, 'o', label='ICRU Stopping Power')
 #plt.plot(ICRU_E, [rho*Stopping for Stopping in ICRUstoppingTotal], 'o', label='ICRU Stopping Power')
 plt.xlabel('Kinetic Energy [MeV]')
@@ -180,20 +192,36 @@ plt.show()
 plt.close()
 
 def FillProb(energy):
-    S_l = stopping_power_lung(energy)*density_lung
-    S_Air = splineAir(np.log10(energy))*density_air
-    S_pmma = splinePMMA(np.log10(energy))*density_pmma
-    S_h2o = splineH2O(np.log10(energy))*density
+    #S_l = stopping_power_lung(energy)*density_lung
+    S_l = splineLung(np.log10(energy))
+    S_l = splineLungInf(np.log10(energy))
+    S_Air = splineAir(np.log10(energy))
+    S_pmma = splinePMMA(np.log10(energy))
+    S_h2o = splineH2O(np.log10(energy))
     #S_pmma = S_h2o
-    return (S_l-S_Air)/(S_pmma-S_Air)
+    return (S_l-S_Air)/(S_h2o-S_Air)
 
 def CalcPmod(energy):
-    S_l = stopping_power_lung(energy)*density_lung
+    #S_l = stopping_power_lung(energy)*density_lung
+    S_l = splineLung(np.log10(energy))*density_lung
+    S_l = splineLungInf(np.log10(energy))*0.26
     S_h2o = splineH2O(np.log10(energy))*density
     S_Air = splineAir(np.log10(energy))*density_air
     S_pmma = splinePMMA(np.log10(energy))*density_pmma
     #S_pmma = S_h2o
-    return S_h2o/S_l*FillProb(energy)*(1-FillProb(energy))*(S_pmma-S_Air)**2/S_h2o**2
+    w = FillProb(energy)
+    return w*(1-w)*(S_h2o)**2/(S_h2o*S_l)
+
+def CalcD(energy, pmod):
+    #S_l = stopping_power_lung(energy)*density_lung
+    S_l = splineLung(np.log10(energy))*density_lung
+    S_l = splineLungInf(np.log10(energy))*0.26
+    S_h2o = splineH2O(np.log10(energy))*density
+    S_Air = splineAir(np.log10(energy))*density_air
+    S_pmma = splinePMMA(np.log10(energy))*density_pmma
+    #S_pmma = S_h2o
+    w = FillProb(energy)
+    return pmod/(w*(1-w)*(S_h2o)**2/(S_h2o*S_l))
 
 plt.plot(energies, [FillProb(energ) for index, energ in enumerate(energies)], 'o', label='ICRU Stopping Power')
 plt.xlabel('Kinetic Energy [MeV]')
@@ -204,10 +232,10 @@ plt.grid(True)
 plt.tight_layout()
 plt.show()
 
-plt.plot(energies, [CalcPmod(energ) for index, energ in enumerate(energies)], 'o', label='ICRU Stopping Power')
+plt.plot(energies, [CalcD(energ, 300) for index, energ in enumerate(energies)], 'o', label='ICRU Stopping Power')
 plt.xlabel('Kinetic Energy [MeV]')
-plt.ylabel('Pmod/d')
-plt.ylim(0,1)
+plt.ylabel('d / um')
+#plt.ylim(0,1)
 plt.legend()
 plt.grid(True)
 plt.tight_layout()

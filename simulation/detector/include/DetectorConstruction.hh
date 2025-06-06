@@ -109,8 +109,7 @@ class DetectorConstruction : public G4VUserDetectorConstruction
     G4Material* PMMA = nullptr;
     
     G4TessellatedSolid *solidHolder, *solidLung;  
-    G4Box *solidDetector, *solidAbsorber, *solidworld, *solidHomo, *solidVoxel, *solidContainer;
-    G4SubtractionSolid *solidAluFoil, *solidAluFoilAbs, *solidTeflonFoil, *solidTeflonFoilAbs;
+    G4Box *solidDetector, *solidAbsorber, *solidworld, *solidHomo, *solidVoxel, *solidContainer, *solidAluFoil, *solidAluFoilAbs, *solidTeflonFoil, *solidTeflonFoilAbs;
     G4EllipticalTube *solidNozzle, *solidIsocentre;
     G4LogicalVolume *logicalDetector, *logicalAbsorber, *logicalworld, *logicalHolder, *logicalNozzle, *logicalIsocentre, *logicalHomo, *logicalLung, *logicalVoxel, *logicalContainer,*logicalAluFoil,*logicalAluFoilAbs, *logicalTeflonFoil,*logicalTeflonFoilAbs, *logicalSiPM;
     G4VPhysicalVolume *physDetector, *physAbsorber, *physworld, *physHolder, *physNozzle, *physIsocentre, *physHomo, *physLung, *physContainer, *physAluFoil, *physAluFoilAbs, *physTeflonFoil, *physTeflonFoilAbs, *physSiPM, *physSiPMAbs, *physLGAlu;

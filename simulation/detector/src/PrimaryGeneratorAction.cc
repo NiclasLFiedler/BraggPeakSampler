@@ -76,34 +76,73 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event* anEvent)
   }
   else if(particle->GetParticleName() == "proton"){
 
-    G4NistManager* nist = G4NistManager::Instance();
+    // G4NistManager* nistManager = G4NistManager::Instance();
 
-    // Define material (you can use G4_Al, G4_WATER, G4_Si, etc.)
-    G4Material* material = nist->FindOrBuildMaterial("G4_WATER");
-    material->GetIonisation()->SetMeanExcitationEnergy(79.7*eV);
-    // heteroWater = new G4Material("heteroWater", 1.00*g/cm3,2);
-    // heteroWater->AddElement(elH, 2);
-    // heteroWater->AddElement(elO, 1);
-    // heteroWater->GetIonisation()->SetMeanExcitationEnergy(79.7*eV);
-  
+    // // Define material (you can use G4_Al, G4_WATER, G4_Si, etc.)
+    // G4Material* material = nistManager->FindOrBuildMaterial("G4_WATER");
+    // // material->GetIonisation()->SetMeanExcitationEnergy(79.7*eV);
+
+    // G4Element *elH = nistManager->FindOrBuildElement("H");    // 1
+    // G4Element *elB = nistManager->FindOrBuildElement("B");    // 5
+    // G4Element *elC = nistManager->FindOrBuildElement("C");    // 6
+    // G4Element *elN = nistManager->FindOrBuildElement("N");    // 7
+    // G4Element *elO = nistManager->FindOrBuildElement("O");    // 8
+    // G4Element *elF = nistManager->FindOrBuildElement("F");    // 9
+    // G4Element *elNa = nistManager->FindOrBuildElement("Na");  // 11
+    // G4Element *elMg = nistManager->FindOrBuildElement("Mg");  // 12
+    // G4Element *elAl = nistManager->FindOrBuildElement("Al");  // 13
+    // G4Element *elSi = nistManager->FindOrBuildElement("Si");  // 14
+    // G4Element *elP = nistManager->FindOrBuildElement("P");    // 15
+    // G4Element *elS = nistManager->FindOrBuildElement("S");    // 16
+    // G4Element *elCl = nistManager->FindOrBuildElement("Cl");  // 17
+    // G4Element *elAr = nistManager->FindOrBuildElement("Ar");  // 18
+    // G4Element *elK = nistManager->FindOrBuildElement("K");    // 19
+    // G4Element *elCa = nistManager->FindOrBuildElement("Ca");  // 20
+    // G4Element *elFe = nistManager->FindOrBuildElement("Fe");  // 26
+    // G4Element *elZn = nistManager->FindOrBuildElement("Zn");  // 30
+    // G4Element *elBa = nistManager->FindOrBuildElement("Ba");  // 56
+    // G4Element *elCe = nistManager->FindOrBuildElement("Ce");  // 56
+    // G4Element *elGd = nistManager->FindOrBuildElement("Gd");  // 64
+    // G4Element *elW = nistManager->FindOrBuildElement("W");    // 74
+    // G4Element *elPb = nistManager->FindOrBuildElement("Pb");  // 82
+
+    // material = new G4Material("lungTissue", 1.05*g/cm3,13);
+    // material->AddElement(elH, 0.101278);
+    // material->AddElement(elC, 0.102310);
+    // material->AddElement(elN, 0.028650);
+    // material->AddElement(elO, 0.757072);
+    // material->AddElement(elNa, 0.001840);
+    // material->AddElement(elMg, 0.000730);
+    // material->AddElement(elP, 0.000800);
+    // material->AddElement(elS, 0.002250);
+    // material->AddElement(elCl, 0.002660);
+    // material->AddElement(elK, 0.001940);
+    // material->AddElement(elCa, 0.000090);
+    // material->AddElement(elFe, 0.000370);
+    // material->AddElement(elZn, 0.000010);
+    // material->GetIonisation()->SetMeanExcitationEnergy(75.3*eV);
+
+    // material = nistManager->FindOrBuildMaterial("G4_PbWO4");
+    // material->GetIonisation()->SetBirksConstant(0.008694);
+    // material->GetIonisation()->SetMeanExcitationEnergy(600.7*eV);
+
     // Particle: proton
-    G4ParticleDefinition* particle = G4Proton::ProtonDefinition();
+    // G4ParticleDefinition* particle = G4Proton::ProtonDefinition();
   
-    // EM calculator
-    G4EmCalculator emCal;
+    // // EM calculator
+    // G4EmCalculator emCal;
 
-    std::cout << "Energy [MeV]\tStopping Power [MeV mm^2 / g]" << std::endl;
-    std::vector<G4double> energies = {0.001*MeV, 0.0015*MeV, 0.002*MeV, 0.0025*MeV, 0.003*MeV, 0.004*MeV, 0.005*MeV, 0.006*MeV, 0.007*MeV, 0.008*MeV, 0.009*MeV, 0.01*MeV, 0.0125*MeV, 0.015*MeV, 0.0175*MeV, 0.02*MeV, 0.0225*MeV, 0.025*MeV, 0.0275*MeV, 0.03*MeV, 0.035*MeV, 0.04*MeV, 0.045*MeV, 0.05*MeV, 0.055*MeV, 0.06*MeV, 0.065*MeV, 0.07*MeV, 0.075*MeV, 0.08*MeV, 0.085*MeV, 0.09*MeV, 0.095*MeV, 0.1*MeV, 0.125*MeV, 0.15*MeV, 0.175*MeV, 0.2*MeV, 0.225*MeV, 0.25*MeV, 0.275*MeV, 0.3*MeV, 0.35*MeV, 0.4*MeV, 0.45*MeV, 0.5*MeV, 0.55*MeV, 0.6*MeV, 0.65*MeV, 0.7*MeV, 0.75*MeV, 0.8*MeV, 0.85*MeV, 0.9*MeV, 0.95*MeV, 1.0*MeV, 1.25*MeV, 1.5*MeV, 1.75*MeV, 2.0*MeV, 2.25*MeV, 2.5*MeV, 2.75*MeV, 3.0*MeV, 3.5*MeV, 4.0*MeV, 4.5*MeV, 5.0*MeV, 5.5*MeV, 6.0*MeV, 6.5*MeV, 7.0*MeV, 7.5*MeV, 8.0*MeV, 8.5*MeV, 9.0*MeV, 9.5*MeV, 10.0*MeV, 12.5*MeV, 15.0*MeV, 17.5*MeV, 20.0*MeV, 25.0*MeV, 27.5*MeV, 30.0*MeV, 35.0*MeV, 40.0*MeV, 45.0*MeV, 50.0*MeV, 55.0*MeV, 60.0*MeV, 65.0*MeV, 70.0*MeV, 75.0*MeV, 80.0*MeV, 85.0*MeV, 90.0*MeV, 95.0*MeV, 100.0*MeV, 125.0*MeV, 150.0*MeV, 175.0*MeV, 200.0*MeV, 225.0*MeV, 250.0*MeV, 275.0*MeV, 300.0*MeV, 350.0*MeV, 400.0*MeV, 450.0*MeV, 500.0*MeV, 550.0*MeV, 600.0*MeV, 650.0*MeV, 700.0*MeV, 750.0*MeV, 800.0*MeV, 850.0*MeV, 900.0*MeV, 950.0*MeV, 1000.0*MeV, 1500.0*MeV, 2000.0*MeV, 2500.0*MeV, 3000.0*MeV, 4000.0*MeV, 5000.0*MeV, 6000.0*MeV, 7000.0*MeV, 8000.0*MeV, 9000.0*MeV, 10000.0*MeV};
+    // std::cout << "Energy [MeV]\tStopping Power [MeV mm^2 / g]" << std::endl;
+    // std::vector<G4double> energies = {0.001*MeV, 0.0015*MeV, 0.002*MeV, 0.0025*MeV, 0.003*MeV, 0.004*MeV, 0.005*MeV, 0.006*MeV, 0.007*MeV, 0.008*MeV, 0.009*MeV, 0.01*MeV, 0.0125*MeV, 0.015*MeV, 0.0175*MeV, 0.02*MeV, 0.0225*MeV, 0.025*MeV, 0.0275*MeV, 0.03*MeV, 0.035*MeV, 0.04*MeV, 0.045*MeV, 0.05*MeV, 0.055*MeV, 0.06*MeV, 0.065*MeV, 0.07*MeV, 0.075*MeV, 0.08*MeV, 0.085*MeV, 0.09*MeV, 0.095*MeV, 0.1*MeV, 0.125*MeV, 0.15*MeV, 0.175*MeV, 0.2*MeV, 0.225*MeV, 0.25*MeV, 0.275*MeV, 0.3*MeV, 0.35*MeV, 0.4*MeV, 0.45*MeV, 0.5*MeV, 0.55*MeV, 0.6*MeV, 0.65*MeV, 0.7*MeV, 0.75*MeV, 0.8*MeV, 0.85*MeV, 0.9*MeV, 0.95*MeV, 1.0*MeV, 1.25*MeV, 1.5*MeV, 1.75*MeV, 2.0*MeV, 2.25*MeV, 2.5*MeV, 2.75*MeV, 3.0*MeV, 3.5*MeV, 4.0*MeV, 4.5*MeV, 5.0*MeV, 5.5*MeV, 6.0*MeV, 6.5*MeV, 7.0*MeV, 7.5*MeV, 8.0*MeV, 8.5*MeV, 9.0*MeV, 9.5*MeV, 10.0*MeV, 12.5*MeV, 15.0*MeV, 17.5*MeV, 20.0*MeV, 25.0*MeV, 27.5*MeV, 30.0*MeV, 35.0*MeV, 40.0*MeV, 45.0*MeV, 50.0*MeV, 55.0*MeV, 60.0*MeV, 65.0*MeV, 70.0*MeV, 75.0*MeV, 80.0*MeV, 85.0*MeV, 90.0*MeV, 95.0*MeV, 100.0*MeV, 125.0*MeV, 150.0*MeV, 175.0*MeV, 200.0*MeV, 225.0*MeV, 250.0*MeV, 275.0*MeV, 300.0*MeV, 350.0*MeV, 400.0*MeV, 450.0*MeV, 500.0*MeV, 550.0*MeV, 600.0*MeV, 650.0*MeV, 700.0*MeV, 750.0*MeV, 800.0*MeV, 850.0*MeV, 900.0*MeV, 950.0*MeV, 1000.0*MeV, 1500.0*MeV, 2000.0*MeV, 2500.0*MeV, 3000.0*MeV, 4000.0*MeV, 5000.0*MeV, 6000.0*MeV, 7000.0*MeV, 8000.0*MeV, 9000.0*MeV, 10000.0*MeV};
 
-    for (G4double energy : energies) {
-        G4double dedx = emCal.ComputeTotalDEDX(energy, particle, material)*10; // in MeV/mm
-        G4double rho = material->GetDensity(); // in g/cm3
-        rho = 1;
+    // for (G4double energy : energies) {
+    //     G4double dedx = emCal.ComputeTotalDEDX(energy, particle, material)*10; // in MeV/mm
+    //     G4double rho = material->GetDensity()/ (g/cm3); // in g/cm3
   
-        G4double massStoppingPower = dedx / rho; // in MeV cm^2 / g
+    //     G4double massStoppingPower = dedx / rho; // in MeV cm^2 / g
   
-        std::cout << massStoppingPower << std::endl;
-    }
+    //     std::cout << massStoppingPower << std::endl;
+    // }
 
     //G4ParticleDefinition* particle = G4Gamma::GammaDefinition();
     fParticleGun->SetParticleDefinition(particle);

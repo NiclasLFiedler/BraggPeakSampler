@@ -195,7 +195,7 @@ thicknesses = [50,100,150,200]
 
 #pmods = [100, 200, 500]
 
-#thicknesses = [50, 100]
+thicknesses = [200]
 
 combination = []
 combination.append([0,0,0])
@@ -214,7 +214,8 @@ bPlotMeans = True
 lineWidth = 2
 capSize = 3
 
-output = "outputComp2mm"
+#output = "outputDratio"
+output = "output"
 
 notargetX = []
 notargetY = []
@@ -297,8 +298,8 @@ for comb in combination:
         f2 = interp1d(notargetX, notargetY, kind='cubic', fill_value="extrapolate")
 
         popt, pcov =  curve_fit(lambda x, amp, mean, stddev: right_sided_convolution(f, lambda x2: gaussian(x2, amp, mean, stddev), x), x_data, y_data, p0 = [1, 2, 0.2], bounds=((0.8, 0, 0), (1.3, 10, 2)))
-        popt2, pcov2 =  curve_fit(lambda x, amp, mean, stddev: right_sided_convolution(f2, lambda x2: gaussian(x2, amp, mean, stddev), x), x_data, y_data, p0 = [1, 2, 0.2], bounds=((0.8, 0, 0), (1.3, 10, 2)))
-        print(popt)
+        popt2, pcov2 =  curve_fit(lambda x, amp, mean, stddev: right_sided_convolution(f2, lambda x2: gaussian(x2, amp, mean, stddev), x), x_data, y_data, p0 = [*popt], bounds=((0.4, 0, 0), (1.3, 10, 2)))
+        #print(popt)
         t_conv = popt[1]
         sigmat_conv = popt[2]
         pmod_conv = popt[2]**2/popt[1]*10**4
@@ -310,7 +311,7 @@ for comb in combination:
     # Step 2: Plot using Matplotlib
     if comb[2] != 0:
         labeltext = f"{comb[0]} um, {comb[1]} mm, Fit: {params.R0:.3f} mm, {params.sigma:.3f} mm, {t:.3f} cm, {sigmat:.3f} cm, {pmod:.3f} um | Conv: {t_conv:.3f} cm, {sigmat_conv:.3f} cm, {pmod_conv:.3f} um, | Conv2: {t_conv2:.3f} cm, {sigmat_conv2:.3f} cm, {pmod_conv2:.3f} um ||  Diff: {(pmod/comb[0]-1)*100:.2f} % | {(pmod_conv/comb[0]-1)*100:.2f} % | {(pmod_conv2/comb[0]-1)*100:.2f} %"
-        ax.plot(z, right_sided_convolution(f, lambda x2: gaussian(x2, *popt), z), label='Right-sided convolved (Gaussian)')
+        ax.plot(z, right_sided_convolution(f2, lambda x2: gaussian(x2, *popt), z), label='Right-sided convolved (Gaussian)')
     else:
         labeltext = f"{comb[0]} um, {comb[1]} mm, {params.R0:.3f} mm, {params.sigma:.3f} mm, {t:.3f} cm, {sigmat:.3f} cm, {pmod:.3f} um, Diff: {0} %"
     
