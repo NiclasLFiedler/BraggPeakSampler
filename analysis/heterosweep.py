@@ -195,7 +195,7 @@ thicknesses = [50,100,150,200]
 
 #pmods = [100, 200, 500]
 
-thicknesses = [200]
+#thicknesses = [200]
 
 combination = []
 combination.append([0,0,0])

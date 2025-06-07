@@ -692,8 +692,8 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
 
       G4double cubeSizeX = 0.15 * mm, cubeSizeY = 0.15 * mm;
       // G4double cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.75)*0.001;
-      // G4double cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7900)*0.001;
-      G4double cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7355)*0.001;
+      G4double cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7900)*0.001;
+      // G4double cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7355)*0.001;
       G4int nx = 180, ny = 180, nz = static_cast<int>(std::round(heteroThickness/cubeSizeZ));
       // nz = 3;
       // nx = 3;
