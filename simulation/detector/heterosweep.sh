@@ -32,7 +32,7 @@ for value1 in 0; do  # Change these as needed
    done
 done
 
-for value1 in 100 200 300 400 500 600 700 800; do  # Change these as needed
+for value1 in 200 300 400 500 600 700 800; do  # Change these as needed
     for value2 in 50 100 150 200; do  # Change these as needed
         echo "Setting config.json: param1=$value1, param2=$value2"
         
