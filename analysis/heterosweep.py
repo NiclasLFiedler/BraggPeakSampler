@@ -44,8 +44,8 @@ class fit_params:
 
 def right_sided_convolution(f, g, z_values):
     def convole(z):
-        if(len(z_values)<100):
-            zlin = np.linspace(0,40,400)
+        if(len(z_values)<200):
+            zlin = np.linspace(0,40,4000)
             combined = np.concatenate([zlin, z_values])
             zFull = np.sort(combined)
         else:
@@ -193,9 +193,9 @@ Fitfiles = []
 pmods = [100,200,300,400,500,600,700,800]
 thicknesses = [50,100,150,200]
 
-#pmods = [100, 200, 500]
+#pmods = [100]
 
-#thicknesses = [200]
+#thicknesses = [50]
 
 combination = []
 combination.append([0,0,0])
@@ -214,8 +214,18 @@ bPlotMeans = True
 lineWidth = 2
 capSize = 3
 
-#output = "outputDratio"
-output = "output"
+#output = "output05_Sratio"
+#output = "output05_Dratio"
+
+#output = "output10_Sratio_10k"
+#output = "output10_Sratio_100k"
+output = "output10_Sratio_1M"
+
+#output = "output10_Dratio_10k"
+#output = "output10_Dratio_100k"
+output = "output10_Dratio_1M"
+
+print(f"Output: {output}")
 
 notargetX = []
 notargetY = []
@@ -223,6 +233,10 @@ z = np.linspace(0, 40, 4001)
 f = []
 f2 = []
 popt = []
+abserror = 0
+diffsum = 0
+num = 0
+
 for comb in combination:
     meansfile = f"../data/heterosweep/{output}/{comb[0]}um_{comb[1]}mmMeans.root"
     fitfile = f"../data/heterosweep/{output}/{comb[0]}um_{comb[1]}mmFit.root"
@@ -297,13 +311,21 @@ for comb in combination:
         f = interp1d(notargetX, notargetY, kind='linear', fill_value="extrapolate")
         f2 = interp1d(notargetX, notargetY, kind='cubic', fill_value="extrapolate")
 
-        popt, pcov =  curve_fit(lambda x, amp, mean, stddev: right_sided_convolution(f, lambda x2: gaussian(x2, amp, mean, stddev), x), x_data, y_data, p0 = [1, 2, 0.2], bounds=((0.8, 0, 0), (1.3, 10, 2)))
-        popt2, pcov2 =  curve_fit(lambda x, amp, mean, stddev: right_sided_convolution(f2, lambda x2: gaussian(x2, amp, mean, stddev), x), x_data, y_data, p0 = [*popt], bounds=((0.4, 0, 0), (1.3, 10, 2)))
-        #print(popt)
+        popt, pcov =  curve_fit(lambda x, amp, mean, stddev: right_sided_convolution(f, lambda x2: gaussian(x2, amp, mean, stddev), x), x_data, y_data, p0 = [1, t, sigmat], bounds=((0.9, 0, 0), (1.1, 10, 2)), maxfev=int(1e8))
+        popt2, pcov2 =  curve_fit(lambda x, amp, mean, stddev: right_sided_convolution(f2, lambda x2: gaussian(x2, amp, mean, stddev), x), x_data, y_data, p0 = [*popt], bounds=((0.9, 0, 0), (1.1, 10, 2)), maxfev=int(1e8))
+        
+        perr = np.sqrt(np.diag(pcov))
+
         t_conv = popt[1]
         sigmat_conv = popt[2]
         pmod_conv = popt[2]**2/popt[1]*10**4
-        
+    
+        t_sig_conv = perr[1]
+        sigmat_sig_conv = perr[2]
+        pmod_sig_conv = np.sqrt((2*popt[2]/popt[1]*sigmat_sig_conv)**2+((popt[2]/popt[1]*t_sig_conv)**2)**2)*10**4
+        #print(t_sig_conv, sigmat_sig_conv, pmod_sig_conv)
+
+
         t_conv2 = popt2[1]
         sigmat_conv2 = popt2[2]
         pmod_conv2 = popt2[2]**2/popt2[1]*10**4
@@ -311,23 +333,31 @@ for comb in combination:
     # Step 2: Plot using Matplotlib
     if comb[2] != 0:
         labeltext = f"{comb[0]} um, {comb[1]} mm, Fit: {params.R0:.3f} mm, {params.sigma:.3f} mm, {t:.3f} cm, {sigmat:.3f} cm, {pmod:.3f} um | Conv: {t_conv:.3f} cm, {sigmat_conv:.3f} cm, {pmod_conv:.3f} um, | Conv2: {t_conv2:.3f} cm, {sigmat_conv2:.3f} cm, {pmod_conv2:.3f} um ||  Diff: {(pmod/comb[0]-1)*100:.2f} % | {(pmod_conv/comb[0]-1)*100:.2f} % | {(pmod_conv2/comb[0]-1)*100:.2f} %"
+
+        labeltext = f"${t_conv:.3f}\\pm {t_sig_conv:.2e}$ & ${sigmat_conv:.3f}\\pm{sigmat_sig_conv:.2e}$ & ${pmod_conv:.3f}\\pm{pmod_sig_conv:.2e}$ & ${(pmod_conv/comb[0]-1)*100:.2f} \\pm {(pmod_sig_conv/comb[0])*100:.3f}$ \\\\"
+
+        diffsum += abs((pmod_conv/comb[0]-1))*100
+        abserror += abs(pmod_conv-comb[0])
+        num += 1
+
         ax.plot(z, right_sided_convolution(f2, lambda x2: gaussian(x2, *popt), z), label='Right-sided convolved (Gaussian)')
     else:
         labeltext = f"{comb[0]} um, {comb[1]} mm, {params.R0:.3f} mm, {params.sigma:.3f} mm, {t:.3f} cm, {sigmat:.3f} cm, {pmod:.3f} um, Diff: {0} %"
     
     #ax.step(x, depth_dose_distribution(x, params.Phi0, params.R0, params.sigma, params.epsilon), where='mid', label=labeltext, linewidth=1, color=colors[comb[2]])
-    
     print(labeltext)
     # texText = f"{comb[0]} & {comb[1]} & {popt[1]:.2f}" " $\\pm$ " f"{popt[2]:.2f} & {R0:.2f}" " $\\pm$ " f"{sigmaR0:.2f} & {Pmod:.2f} \\\\"
     # print(texText)
 
-ax.plot(notargetX, f(notargetX))
+print(f"dev %: {diffsum/num:.3f}")
+print(f"abs diff {abserror/num:.3f}")
+ax.plot(notargetX, f2(notargetX))
 #ax.set_yscale('log')
 #ax.set_xlim(175, 225)
 # Add labels and title
-ax.set_xlabel('Energy / MeV')
+ax.set_xlabel('Depth / cm')
 ax.set_ylabel('Counts')
-ax.set_title('Modulation power analysis from total energy distribution')
+ax.set_title('Modulation power analysis from total energy distribution for DR-Model')
 
 # Add a legend
 #ax.legend(fontsize=12)

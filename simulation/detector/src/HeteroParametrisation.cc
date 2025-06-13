@@ -31,7 +31,7 @@ class HeteroParameterisation : public G4VPVParameterisation {
     
         G4Material* ComputeMaterial(G4int copyNo, G4VPhysicalVolume*, const G4VTouchable*) {
             if (fMaterials.count(copyNo) == 0) {
-                G4Material* mat = (G4UniformRand() < 0.248) ? fMat1 : fMat2;
+                G4Material* mat = (G4UniformRand() < 0.2476) ? fMat1 : fMat2;
                 // G4Material* mat = (G4UniformRand() < 0.2251) ? fMat1 : fMat2;
                 fMaterials[copyNo] = mat;
             }

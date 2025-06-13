@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from scipy.signal import find_peaks
 
+plt.rcParams.update({'font.size': 30, 'figure.figsize': (20, 10)})
+
 class BPSData:
     def __init__(self):
         self.channel = []
@@ -25,10 +27,10 @@ def process_files():
     for i in range(1):
         #filename = f'data/2504/{path}/bps_pwo_lateral_{i}_na22.his.txt'
         if(i == 0):
-            #filename = f'data/ej_1505/bps_ej200_flat.his.txt'
+            filename = f'data/ej_1505/bps_ej200_flat.his.txt'
             #filename = f'data/ej_1505/bps_ej200.his.txt'
             #filename = f'data/ej_1505/bps_ej200_lateral.his.txt'
-            filename = f'data/ej_1505/bps_ej200_window.his.txt'
+            #filename = f'data/ej_1505/bps_ej200_window.his.txt'
             #filename = f'data/ej_1505/bps_ej200_window_lateral.his.txt'
         elif(i == 1):
             filename = f'data/2504/{path}/bps_pwo_lateral_window_0_na22.his.txt'
@@ -63,12 +65,12 @@ def fit_second_peak(BPSData, plot=True):
 
     print(peaks)
     sorted_peaks = sorted(peaks)
-    second_peak_idx = sorted_peaks[0]
+    second_peak_idx = sorted_peaks[2]
     peak_channel = channel[second_peak_idx]
-    peak_channel = 1000 #for window
+    #peak_channel = 1000 #for window
 
-    window = 150 #for lateral 100 / 700
-    window_right = 200
+    window = 500 #for lateral 100 / 700
+    window_right = 100
     mask = (channel > peak_channel - window) & (channel < peak_channel + window+window_right)
     x_fit = channel[mask]
     y_fit = count[mask]
@@ -83,16 +85,16 @@ def fit_second_peak(BPSData, plot=True):
     if plot:
         plt.figure(figsize=(15, 10))
         plt.step(channel, count, label="Data")
-        plt.plot(x_fit, gaussian(x_fit, *popt), 'r--', label="Gaussian Fit")
-        plt.axvline(popt[1], color='g', linestyle=':', label=f"Mean = {popt[1]:.2f} ± {popt[2]:.2f}")
+        plt.plot(x_fit, gaussian(x_fit, *popt), 'r--', linewidth=4, label="Gaussian Fit")
+        plt.axvline(popt[1], color='g', linestyle=':', linewidth=4 ,label=f"Mean = {popt[1]:.2f} ± {popt[2]:.2f}")
         plt.legend()
         plt.xlabel("Channel")
         plt.ylabel("Counts")
-        plt.title("Ligth yield measurement and Gaussian fit")
+        plt.title("Flat position")
         plt.grid(True)
         plt.yscale('log')
         plt.tight_layout()
-        plt.savefig("data/ej_1505/bps_ej200_window.pdf", format='pdf')
+        plt.savefig("data/ej_1505/bps_ej200_flat.pdf", format='pdf')
         plt.show()
 
     return popt  # [amplitude, mean, stddev]
