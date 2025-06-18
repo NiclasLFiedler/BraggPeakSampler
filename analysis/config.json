@@ -1,6 +1,6 @@
 {
   "detectorSelect": 3,
-  "targetSelect": 2,
+  "targetSelect": 0,
   "detectors": [
     {
       "detectorID": 0,
@@ -189,20 +189,20 @@
       "detectorID": 3,
       "comment": "test Detector",
       "datasetSelect": 1,
-      "detectorType": "h2o",
+      "detectorType": "ej212",
       "beamEnergy": 220,
-      "nLayers": 450,
+      "nLayers": 32,
       "crystalSize": [
-        500,
-        500,
-        1
+        50,
+        50,
+        4
       ],
-      "gapSizeZ": 0.01,
+      "gapSizeZ": 1,
       "secondaryLayerStatus": false,
       "nSecondaryLayers": 0,
       "secLayerSizeZ": 0,
-      "absorberStatus": false,
-      "absorberSize": 0,
+      "absorberStatus": true,
+      "absorberSize": 200,
       "reversedStatus": false,
       "normStatus": true,
       "simulationStatus": true,

@@ -53,7 +53,7 @@ void analysis(){
     int heteroThickness                 = allConfigs["heteroThickness"];
 
     bool bScintSim = false;
-    bool bSavepdf = false;
+    bool bSavepdf = true;
     bool bPhotons = false;
 
 

@@ -23,21 +23,21 @@ def process_files():
     bps_list = []
 
     # Loop over 15 files named BPS_CH$(number).txt
-    path = "lateral"
+    path = "flat"
     for i in range(1):
-        #filename = f'data/2504/{path}/bps_pwo_lateral_{i}_na22.his.txt'
-        if(i == 0):
-            filename = f'data/ej_1505/bps_ej200_flat.his.txt'
+        filename = f'data/2504/{path}/bps_pwo_{i}_na22.his.txt'
+        #if(i == 0):
+        #    filename = f'data/ej_1505/bps_ej200_flat.his.txt'
             #filename = f'data/ej_1505/bps_ej200.his.txt'
             #filename = f'data/ej_1505/bps_ej200_lateral.his.txt'
             #filename = f'data/ej_1505/bps_ej200_window.his.txt'
             #filename = f'data/ej_1505/bps_ej200_window_lateral.his.txt'
-        elif(i == 1):
-            filename = f'data/2504/{path}/bps_pwo_lateral_window_0_na22.his.txt'
-        elif(i == 2):
-            filename = f'data/2504/{path}/bps_pwo_lateral_21_na22.his.txt'
-        elif(i == 3):
-            filename = f'data/2504/{path}/bps_pwo_lateral_window_21_na22.his.txt'
+        #elif(i == 1):
+        #    filename = f'data/2504/{path}/bps_pwo_lateral_window_0_na22.his.txt'
+        #elif(i == 2):
+        #    filename = f'data/2504/{path}/bps_pwo_lateral_21_na22.his.txt'
+        #elif(i == 3):
+        #    filename = f'data/2504/{path}/bps_pwo_lateral_window_21_na22.his.txt'
         bps_data = BPSData()  # Create a new BPSData object for each file
         if os.path.exists(filename):
             with open(filename, 'r') as file:
@@ -65,12 +65,12 @@ def fit_second_peak(BPSData, plot=True):
 
     print(peaks)
     sorted_peaks = sorted(peaks)
-    second_peak_idx = sorted_peaks[2]
+    second_peak_idx = sorted_peaks[0]
     peak_channel = channel[second_peak_idx]
     #peak_channel = 1000 #for window
 
-    window = 500 #for lateral 100 / 700
-    window_right = 100
+    window = 160 #for lateral 100 / 700
+    window_right = 0
     mask = (channel > peak_channel - window) & (channel < peak_channel + window+window_right)
     x_fit = channel[mask]
     y_fit = count[mask]
@@ -90,11 +90,11 @@ def fit_second_peak(BPSData, plot=True):
         plt.legend()
         plt.xlabel("Channel")
         plt.ylabel("Counts")
-        plt.title("Flat position")
+        plt.title("PbWO4: Flat position")
         plt.grid(True)
         plt.yscale('log')
         plt.tight_layout()
-        plt.savefig("data/ej_1505/bps_ej200_flat.pdf", format='pdf')
+        plt.savefig(f"data/2504/flat/bps_na_flat.pdf", format='pdf')
         plt.show()
 
     return popt  # [amplitude, mean, stddev]
