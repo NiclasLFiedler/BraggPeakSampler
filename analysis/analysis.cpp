@@ -53,7 +53,7 @@ void analysis(){
     int heteroThickness                 = allConfigs["heteroThickness"];
 
     bool bScintSim = false;
-    bool bSavepdf = true;
+    bool bSavepdf = false;
     bool bPhotons = false;
 
 
@@ -375,9 +375,7 @@ void analysis(){
     cout << "Detected pileups: " << pileup_counter << endl;
     cout << "Detected prepeak steps: " << prepeak_step_counter << endl;
     cout << "Number of lower coincidence particles: " << coinc_layer_counter << endl;
-    c1->cd(nLayers+1);
-
-    
+    c1->cd(nLayers+1);    
 
     sprintf(histdesc, "Norm. energy depth dose distribution %s", target_data[fileSelect]);
     plotter.GraphError(detector->MeansGraph(), "Depth [cm]", "Norm. Energy Dose [MeV]", histdesc);
@@ -392,6 +390,7 @@ void analysis(){
     TFile *	hfile = new TFile(file,"RECREATE");
 
     c1->Write("ALL");
+    //c1->Close();
     TCanvas *c2 = new TCanvas("c2", title, 4000, 2000);
     if(bSavepdf){
         for(int i = 0; i < nLayers; i++){
@@ -484,7 +483,7 @@ void analysis(){
     sprintf(heteroPath, "../data/modulation/output/%ium_%immMeans.root", pmod, heteroThickness);
     std::cout << "Out Path: " << heteroPath << std::endl;
     TFile* heteroFile = new TFile(heteroPath, "RECREATE");
-    //detector->TotalEnergyHist()->Write();
+    detector->TotalEnergyHist()->Write();
     heteroFile->Close();
     
     c2->Close();

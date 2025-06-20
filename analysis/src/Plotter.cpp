@@ -122,7 +122,7 @@ void Plotter::Histogram2D(TH2D* hist, TString x_title, TString y_title){
 void Plotter::GraphError(TGraphErrors* graph, TString x_title, TString y_title, TString title) {
     gStyle->SetEndErrorSize(5);
     gPad->SetGrid();
-    
+    std::cout << "Graph Error: " << title << std::endl;
     graph->SetTitle(title);
     graph->SetLineWidth(2);
     graph->SetMarkerStyle(20);

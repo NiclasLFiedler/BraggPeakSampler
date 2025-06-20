@@ -286,6 +286,7 @@ void DetectorConstruction::DefineMaterials()
   EJ256_MPT->AddConstProperty("SCINTILLATIONTIMECONSTANT1", ScintillationFastTime);
   
   EJ256->SetMaterialPropertiesTable(EJ256_MPT);
+  
   G4Material* EJ212 = new G4Material("EJ212", 1.023*g/cm3, 2);
   EJ212->AddElement(elC, 91.5*perCent);
   EJ212->AddElement(elH, 8.5*perCent);
@@ -311,6 +312,38 @@ void DetectorConstruction::DefineMaterials()
   EJ212_MPT->AddConstProperty("SCINTILLATIONTIMECONSTANT1", ScintillationFastTime);
 
   EJ212->SetMaterialPropertiesTable(EJ212_MPT);
+
+  G4Material* EJ200 = new G4Material("EJ200", 1.023*g/cm3, 2);
+  G4double numAtoms = 5.17e+22 + 4.69e+22; 
+  std::cout << "Number of atoms in EJ200: " << numAtoms << std::endl;
+  std::cout << "Carbon atoms: " << 4.69e+22/numAtoms << std::endl;
+  std::cout << "Hydrogen atoms: " << 5.17e+22/numAtoms << std::endl;
+
+  EJ200->AddElement(elH, 10);
+  EJ200->AddElement(elC, 9);
+  
+  EJ200->GetIonisation()->SetMeanExcitationEnergy(64.7*eV);
+  EJ200->GetIonisation()->SetBirksConstant(0.154*mm/MeV);
+
+  nEntries = 3;
+  G4double PhotonEnergyEJ200[nEntries] = {2.48*eV, 2.88*eV, 3.1*eV};
+  G4double RefractiveIndexEJ200[nEntries] = {1.58, 1.58, 1.58};
+  G4double ScintillationEJ200[nEntries] = {0.01, 1.0, 0.1};
+  ScintillationYield = 10000 / MeV;
+  ScintillationFastTime = 2.1 * ns;
+
+  G4MaterialPropertiesTable* EJ200_MPT = new G4MaterialPropertiesTable();
+  EJ200_MPT->AddProperty("RINDEX", PhotonEnergyEJ200, RefractiveIndexEJ200, nEntries);
+  
+  EJ200_MPT->AddProperty("SCINTILLATIONCOMPONENT1", PhotonEnergyEJ200, ScintillationEJ200, nEntries);
+  EJ200_MPT->AddProperty("ABSLENGTH", {2.48*eV, 2.88*eV, 3.1*eV}, {380*cm, 380*cm, 380*cm});
+  EJ200_MPT->AddConstProperty("SCINTILLATIONYIELD", ScintillationYield);
+  EJ200_MPT->AddConstProperty("RESOLUTIONSCALE", 1.0);
+  EJ200_MPT->AddConstProperty("SCINTILLATIONYIELD1", 1.0);
+  EJ200_MPT->AddConstProperty("SCINTILLATIONTIMECONSTANT1", ScintillationFastTime);
+
+  EJ200->SetMaterialPropertiesTable(EJ200_MPT);
+
 
   Teflon = new G4Material("Teflon", 2.2*g/cm3, 2);
   Teflon->AddElement(elC, 2);
@@ -406,6 +439,9 @@ void DetectorConstruction::DefineMaterials()
   }
   else if(detectorType == "ej212"){
     detMaterial = EJ212;
+  }
+  else if(detectorType == "ej200"){
+    detMaterial = EJ200;
   }
   else if(detectorType == "h2o"){
     detMaterial = heteroWater;
@@ -758,7 +794,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
     G4double targetX = solidAluFoil->GetXHalfLength()*2;
     G4double targetY = solidAluFoil->GetYHalfLength()*2;
 
-    solidHomo =  new G4Box("solidHomo", targetX/2, targetY/2, heteroThickness/2);
+    solidHomo =  new G4Box("solidHomo", targetX/2, targetY/2, absorberSize/2);
     logicalHomo = new G4LogicalVolume(solidHomo, homoMaterial, "logicalHomo");
     
     if(absorberSize == 0) absorberSize = 0.1;

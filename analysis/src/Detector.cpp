@@ -76,6 +76,7 @@ void Detector::Process(){
         CalcPosition(layer);
     }
     FillMeansGraph();
+    return;
 }
 
 void Detector::CalcDose(int layer){
@@ -97,8 +98,8 @@ void Detector::CalcDose(int layer){
     }
     crystals.at(layer).dose.stddev = sqrt(fdeviationSq);
     
-    //crystals.at(layer).dose.dose*=1/detectorProperties->GetLayerSizeZ(layer);
-    //crystals.at(layer).dose.stddev*=1/detectorProperties->GetLayerSizeZ(layer);
+    crystals.at(layer).dose.dose*=1/detectorProperties->GetLayerSizeZ(layer);
+    crystals.at(layer).dose.stddev*=1/detectorProperties->GetLayerSizeZ(layer);
     
     if(detectorProperties->GetNormStatus()){
         crystals.at(layer).dose.dose*=1/h_edep_coinc[0]->GetEntries();

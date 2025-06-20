@@ -189,7 +189,7 @@
       "detectorID": 3,
       "comment": "test Detector",
       "datasetSelect": 1,
-      "detectorType": "ej212",
+      "detectorType": "ej200",
       "beamEnergy": 220,
       "nLayers": 32,
       "crystalSize": [
@@ -247,7 +247,7 @@
       "heteroThickness": 0
     }
   ],
-  "pmod": 800,
-  "heteroThickness": 200,
-  "plotEnable": 0
+  "pmod": 0,
+  "heteroThickness": 0,
+  "plotEnable": 1
 }

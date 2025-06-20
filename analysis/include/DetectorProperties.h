@@ -61,6 +61,10 @@ struct DetectorProperties {
     double p_ej212 = 1.743;
     double kB_ej212 = 0.154;
 
+    double alpha_ej200 = 2.483e-2;
+    double p_ej200 = 1.743;
+    double kB_ej200 = 0.154;
+
     double alpha_teflon = 1.459e-2;
     double p_teflon = 1.733;
     double kB_teflon = 0;
@@ -85,6 +89,7 @@ struct DetectorProperties {
             {"ej256", {alpha_ej256, p_ej256, kB_ej256}},
             {"ej254", {alpha_ej254, p_ej254, kB_ej254}},
             {"ej212", {alpha_ej212, p_ej212, kB_ej212}},
+            {"ej200", {alpha_ej200, p_ej200, kB_ej200}},
             {"teflon", {alpha_teflon, p_teflon, kB_teflon}},
             {"alu", {alpha_alu, p_alu, kB_alu}},
             {"pmma", {alpha_pmma, p_pmma, kB_pmma}}
