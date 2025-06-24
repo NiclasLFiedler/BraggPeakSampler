@@ -144,12 +144,13 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event* anEvent)
     //     std::cout << massStoppingPower << std::endl;
     // }
 
-    //G4ParticleDefinition* particle = G4Gamma::GammaDefinition();
+    // G4ParticleDefinition* particle = G4Gamma::GammaDefinition();
     fParticleGun->SetParticleDefinition(particle);
     G4double energy = 220*MeV;
     //G4double energy = 0.662*MeV;
     fParticleGun->SetParticleEnergy(G4RandGauss::shoot(energy, energy*0.005));
     fParticleGun->SetParticleEnergy(energy);
+
     G4LogicalVolume* logicalWorld = G4LogicalVolumeStore::GetInstance()->GetVolume("logicalWorld");
     G4LogicalVolume* logicalNozzle = G4LogicalVolumeStore::GetInstance()->GetVolume("logicalNozzle");
     G4LogicalVolume* logicalIsocentre = G4LogicalVolumeStore::GetInstance()->GetVolume("logicalIsocentre");

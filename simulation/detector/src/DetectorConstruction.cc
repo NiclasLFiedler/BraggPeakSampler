@@ -56,36 +56,34 @@ DetectorConstruction::DetectorConstruction()
     json allConfigs;
     configFile >> allConfigs;
     
-    const auto& config = allConfigs["detectors"][int(allConfigs["detectorSelect"])];
-    
-    ftarget                      = allConfigs["targetSelect"];
+    const auto& config                                = allConfigs["detectors"][int(allConfigs["detectorSelect"])];
+    ftarget                                           = allConfigs["targetSelect"];
 
-    detectorType            = config["detectorType"];
-    //double beamEnergy                   = config["beamEnergy"]*MeV;
-    fLayers                         = config["nLayers"];
-    std::vector<double> crystalSize     = config["crystalSize"];
+    detectorType                                      = config["detectorType"];
+    //double beamEnergy                               = config["beamEnergy"]*MeV;
+    fLayers                                           = config["nLayers"];
+    std::vector<double> crystalSize                   = config["crystalSize"];
+    gapSizeZ                                          = config["gapSizeZ"];
+    secondaryLayerStatus                              = config["secondaryLayerStatus"];
+    fLayersCut                                        = config["nSecondaryLayers"];
+    absSizeZ                                          = config["secLayerSizeZ"];
+    absorberStatus                                    = config["absorberStatus"];
+    absorberSize                                      = config["absorberSize"];
+    std::vector<double> fteflonThickness              = config["teflonThickness"];
+    std::vector<double> faluThickness                 = config["aluThickness"];
+    teflonThickness                                   = fteflonThickness;
+    aluThickness                                      = faluThickness;
+    absorberType                                      = config["absorberType"];
+    targetThickness                                   = config["targetThickness"];
     
-    detSizeX = crystalSize.at(0) * mm;
+    pmod                                              = allConfigs["pmod"];
+    heteroThickness                                   = allConfigs["heteroThickness"];
+    
+
+    detSizeX = crystalSize.at(0)* mm;
     detSizeY = crystalSize.at(1)* mm;
     detSizeZ = crystalSize.at(2)* mm;
 
-    G4cout << "Detector size: " << detSizeX << " x " << detSizeY << " x " << detSizeZ << G4endl;
-    G4cout << "Detector size: " << detSizeX << " x " << detSizeY << " x " << detSizeZ << G4endl;
-    G4cout << "Detector size: " << detSizeX << " x " << detSizeY << " x " << detSizeZ << G4endl;
-    G4cout << "Detector size: " << detSizeX << " x " << detSizeY << " x " << detSizeZ << G4endl;
-
-    gapSizeZ                     = config["gapSizeZ"];
-    secondaryLayerStatus           = config["secondaryLayerStatus"];
-    fLayersCut                      = config["nSecondaryLayers"];
-    absSizeZ                        = config["secLayerSizeZ"];
-    
-    absorberStatus                 = config["absorberStatus"];
-    absorberSize                 = config["absorberSize"];
-    std::vector<double> teflonThickness = config["teflonThickness"];
-    std::vector<double> aluThickness    = config["aluThickness"];
-    pmod                 = allConfigs["pmod"];
-    heteroThickness                 = allConfigs["heteroThickness"];
-    
   switch(ftarget) {
     case 1:
       G4cout << "Simulation with homogeneous target" << G4endl;
@@ -288,8 +286,12 @@ void DetectorConstruction::DefineMaterials()
   EJ256->SetMaterialPropertiesTable(EJ256_MPT);
   
   G4Material* EJ212 = new G4Material("EJ212", 1.023*g/cm3, 2);
-  EJ212->AddElement(elC, 91.5*perCent);
-  EJ212->AddElement(elH, 8.5*perCent);
+  G4double numH = 5.17e+22;
+  G4double numC = 4.69e+22;
+  G4double massEJ212 = numH*elH->GetAtomicMassAmu()+numC*elC->GetAtomicMassAmu();
+  
+  EJ212->AddElement(elC, numC*elC->GetAtomicMassAmu()/massEJ212);
+  EJ212->AddElement(elH, numH*elH->GetAtomicMassAmu()/massEJ212);
   
   EJ212->GetIonisation()->SetMeanExcitationEnergy(64.7*eV);
   EJ212->GetIonisation()->SetBirksConstant(0.154*mm/MeV);
@@ -314,13 +316,12 @@ void DetectorConstruction::DefineMaterials()
   EJ212->SetMaterialPropertiesTable(EJ212_MPT);
 
   G4Material* EJ200 = new G4Material("EJ200", 1.023*g/cm3, 2);
-  G4double numAtoms = 5.17e+22 + 4.69e+22; 
-  std::cout << "Number of atoms in EJ200: " << numAtoms << std::endl;
-  std::cout << "Carbon atoms: " << 4.69e+22/numAtoms << std::endl;
-  std::cout << "Hydrogen atoms: " << 5.17e+22/numAtoms << std::endl;
-
-  EJ200->AddElement(elH, 10);
-  EJ200->AddElement(elC, 9);
+  numH = 5.17e+22;
+  numC = 4.69e+22;
+  G4double massEJ200 = numH*elH->GetAtomicMassAmu()+numC*elC->GetAtomicMassAmu();
+  
+  EJ200->AddElement(elC, numC*elC->GetAtomicMassAmu()/massEJ200);
+  EJ200->AddElement(elH, numH*elH->GetAtomicMassAmu()/massEJ200);
   
   EJ200->GetIonisation()->SetMeanExcitationEnergy(64.7*eV);
   EJ200->GetIonisation()->SetBirksConstant(0.154*mm/MeV);
@@ -449,7 +450,19 @@ void DetectorConstruction::DefineMaterials()
   else{
     detMaterial = nistManager->FindOrBuildMaterial("G4_PbWO4");
   }
-  // detMaterial=DSB_Gd;
+
+  
+  if(absorberType == "pmma"){
+    absorberMaterial = PMMA;
+  }
+  else if(absorberType == "h2o"){
+    absorberMaterial = heteroWater;
+  }
+  else{
+    absorberMaterial = heteroWater;
+  }
+
+
   G4cout << "Mean excitation energy: " << detMaterial->GetIonisation()->GetMeanExcitationEnergy() << G4endl;
   G4cout << "Birks constant: " << detMaterial->GetIonisation()->GetBirksConstant() << G4endl;
 }
@@ -790,30 +803,22 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
       // }
     }
   } 
-  if(ftarget == 1 || absorberStatus){ //homogeneous
-    G4double targetX = solidAluFoil->GetXHalfLength()*2;
-    G4double targetY = solidAluFoil->GetYHalfLength()*2;
+  if(ftarget == 1){ //homogeneous
+    solidHomo =  new G4Box("solidHomo", detSizeX/2, detSizeY/2, targetThickness/2);
+    logicalHomo = new G4LogicalVolume(solidHomo, absorberMaterial, "logicalHomo");    
+    physHomo = new G4PVPlacement(nullptr, G4ThreeVector(0.,0., heteroThickness/2+dBeamSpot/2), logicalHomo,"physHomo", logicalworld, false, 0, fCheckOverlaps);
 
-    solidHomo =  new G4Box("solidHomo", targetX/2, targetY/2, absorberSize/2);
-    logicalHomo = new G4LogicalVolume(solidHomo, homoMaterial, "logicalHomo");
-    
-    if(absorberSize == 0) absorberSize = 0.1;
-    G4Box *solidAbsorberPlate =  new G4Box("solidAbsorberPlate", targetX/2, targetY/2, absorberSize/2);
-    G4LogicalVolume* logicalAbsorberPlate = new G4LogicalVolume(solidAbsorberPlate, homoMaterial, "logicalAbsorberPlate");
-    
-    if(absorberStatus){
-      G4PVPlacement* physAbsorberPlate = new G4PVPlacement(nullptr, G4ThreeVector(0.,0., -d_IsocentreDetector-absorberSize/2-detSizeZ/2-gapSizeZ), logicalAbsorberPlate,"physAbsorberPlate", logicalworld, false, 0, fCheckOverlaps);
-      //physHomo = new G4PVPlacement(nullptr, G4ThreeVector(0.,0.,absorberSize/2+dBeamSpot/2), logicalHomo,"physHomo", logicalworld, false, 0, fCheckOverlaps);
-    }
-    else{
-      physHomo = new G4PVPlacement(nullptr, G4ThreeVector(0.,0., heteroThickness/2+dBeamSpot/2), logicalHomo,"physHomo", logicalworld, false, 0, fCheckOverlaps);
-    }
     G4VisAttributes* visHomo = new G4VisAttributes(G4Colour(0.0, 1.0, 1.0, 0.5)); // Red for the detector
     visHomo->SetVisibility(true);
     visHomo->SetForceSolid(true); // Ensure the detector is solid
     logicalHomo->SetVisAttributes(visHomo);
   }
-  
+
+  if(absorberStatus == 1){
+    solidPassiveAbsorber =  new G4Box("solidPassiveAbsorber", detSizeX/2, detSizeY/2, absorberSize/2);
+    logicalPassiveAbsorber = new G4LogicalVolume(solidPassiveAbsorber, absorberMaterial, "logicalPassiveAbsorber");
+    physPassiveAbsorber = new G4PVPlacement(nullptr, G4ThreeVector(0.,0., -d_IsocentreDetector-absorberSize/2-detSizeZ/2-gapSizeZ), logicalPassiveAbsorber,"physPassiveAbsorber", logicalworld, false, 0, fCheckOverlaps);
+  }
   solidNozzle = new G4EllipticalTube("solidNozzle", FWHMNozzleX/2, FWHMNozzleY/2, dBeamSpot/2);
   logicalNozzle = new G4LogicalVolume(solidNozzle, worldMat, "logicalNozzle");
   logicalNozzle->SetVisAttributes(G4Color::Red());

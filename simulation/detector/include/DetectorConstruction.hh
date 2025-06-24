@@ -45,6 +45,9 @@ class DetectorConstruction : public G4VUserDetectorConstruction
     G4double voxelXY;
     G4double voxelZ;
     std::string detectorType;
+    std::string absorberType;
+    std::vector<double> teflonThickness;
+    std::vector<double> aluThickness;
     G4int NbOfSlices; //781 max
     G4int nbofvoxelsX;
     G4int nbofvoxelsY;
@@ -60,6 +63,7 @@ class DetectorConstruction : public G4VUserDetectorConstruction
     G4double detSizeY = 0;
     G4double gapSizeZ = 0;
     G4double absorberSize = 0;
+    G4double targetThickness = 0;
     G4int heteroThickness = 0;
     G4int pmod = 0;
 
@@ -92,6 +96,7 @@ class DetectorConstruction : public G4VUserDetectorConstruction
     static G4ThreadLocal G4GlobalMagFieldMessenger*  fMagFieldMessenger;
                                          // magnetic field messenger
     G4Material *detMaterial = nullptr;
+    G4Material *absorberMaterial = nullptr;
     G4Material *worldMat = nullptr;
     G4Material *urethandimethacrylat = nullptr;
     G4Material *methacrylatmonomere = nullptr;
@@ -109,10 +114,11 @@ class DetectorConstruction : public G4VUserDetectorConstruction
     G4Material* PMMA = nullptr;
     
     G4TessellatedSolid *solidHolder, *solidLung;  
-    G4Box *solidDetector, *solidAbsorber, *solidworld, *solidHomo, *solidVoxel, *solidContainer, *solidAluFoil, *solidAluFoilAbs, *solidTeflonFoil, *solidTeflonFoilAbs;
+    G4Box *solidDetector, *solidAbsorber, *solidworld, *solidHomo, *solidVoxel, *solidContainer, *solidAluFoil, *solidAluFoilAbs, *solidTeflonFoil, *solidTeflonFoilAbs, *solidPassiveAbsorber;
     G4EllipticalTube *solidNozzle, *solidIsocentre;
-    G4LogicalVolume *logicalDetector, *logicalAbsorber, *logicalworld, *logicalHolder, *logicalNozzle, *logicalIsocentre, *logicalHomo, *logicalLung, *logicalVoxel, *logicalContainer,*logicalAluFoil,*logicalAluFoilAbs, *logicalTeflonFoil,*logicalTeflonFoilAbs, *logicalSiPM;
-    G4VPhysicalVolume *physDetector, *physAbsorber, *physworld, *physHolder, *physNozzle, *physIsocentre, *physHomo, *physLung, *physContainer, *physAluFoil, *physAluFoilAbs, *physTeflonFoil, *physTeflonFoilAbs, *physSiPM, *physSiPMAbs, *physLGAlu;
+    G4LogicalVolume *logicalDetector, *logicalAbsorber, *logicalworld, *logicalHolder, *logicalNozzle, *logicalIsocentre, *logicalHomo, *logicalLung, *logicalVoxel, *logicalContainer,*logicalAluFoil,*logicalAluFoilAbs, *logicalTeflonFoil,*logicalTeflonFoilAbs, *logicalSiPM, *logicalPassiveAbsorber;
+    G4VPhysicalVolume *physDetector, *physAbsorber, *physworld, *physHolder, *physNozzle, *physIsocentre, *physHomo, *physLung, *physContainer, *physAluFoil, *physAluFoilAbs, *physTeflonFoil, *physTeflonFoilAbs, *physSiPM, *physSiPMAbs, *physLGAlu, *physPassiveAbsorber;
+    
     G4PVParameterised* phantom_phys; 
 
     G4OpticalSurface *wrappingSurface, *dielectricSurface;

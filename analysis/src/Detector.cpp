@@ -32,6 +32,7 @@ Detector::Detector(DetectorProperties* detectorProperties)
     crystals = std::vector<Crystal>(detectorProperties->GetNLayers());
 
     CalcWETConv();
+    CalcAbsorber();
     cout << "Detector Constructed" << endl;
 }
 
@@ -119,7 +120,7 @@ void Detector::CalcPosition(int layer){
         crystals.at(layer).pos.depth += crystals.at(layer-1).pos.depth+(detectorProperties->GetTeflonThickness(layer)/2+detectorProperties->GetTeflonThickness(layer-1)/2)*WETConvTeflon+(detectorProperties->GetAluThickness(layer)/2+detectorProperties->GetAluThickness(layer-1)/2)*WETConvAlu;
     }
     if(layer == 1){
-        crystals.at(layer).pos.depth += detectorProperties->GetAbsorberSize();
+        crystals.at(layer).pos.depth += absorberConv;
     }
 
     crystals.at(layer).pos.stddev = sqrt(std::pow((detectorProperties->GetLayerSizeZ(layer)/sqrt(12)*WETConv),2) + std::pow(crystals.at(layer).pos.depth*0.005*(detectorProperties->GetP("h2o")-detectorProperties->GetP()), 2));
@@ -147,6 +148,7 @@ void Detector::Info(){
     PrintVector(detectorProperties->GetAluThickness());
     std::cout << "Teflon Thickness: ";
     PrintVector(detectorProperties->GetTeflonThickness());
+    std::cout << "Absorber Type: " << detectorProperties->GetAbsorberType() <<  std::endl;
     std::cout << "Absorber Size: " << detectorProperties->GetAbsorberSize() << " mm" <<  std::endl;
     std::cout << "Number of Secondary Layers " << detectorProperties->GetNSecondaryLayers() << std::endl;
     std::cout << "Secondary Layer Size in z: " << detectorProperties->GetSecondaryLayerSizeZ() << " mm" <<  std::endl;
@@ -170,5 +172,21 @@ void Detector::PrintVector(const std::vector<double>& vec) {
         }
     }
     std::cout << "}" << std::endl;
+    return;
+}
+
+void Detector::CalcAbsorber(){
+    double Rw = detectorProperties->materials["h2o"].R;
+    double alphaw = detectorProperties->materials["h2o"].alpha;
+    double pw = detectorProperties->materials["h2o"].p;
+    
+    std::string absorberType = detectorProperties->GetAbsorberType();
+    double absorbersize = detectorProperties->GetAbsorberSize();
+
+    double Rm = detectorProperties->materials[absorberType].R;
+    double alpham = detectorProperties->materials[absorberType].alpha;
+    double pm = detectorProperties->materials[absorberType].p;
+
+    absorberConv = Rw-std::pow((Rm-absorbersize)/alpham, pw/pm)*alphaw;
     return;
 }

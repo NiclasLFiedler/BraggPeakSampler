@@ -41,7 +41,7 @@ public:
     void CalcWETConv();
     void FillMeansGraph();
     void Info();
-
+    void CalcAbsorber();
     int nLayers = 0;
     int nSecLayers= 0;
     
@@ -49,6 +49,7 @@ public:
     double WETConvTeflon = 0; 
     double WETConvAlu = 0;
     double WETConvPMMA = 0;
+    double absorberConv = 0;
     double energy = 0;
     double layerSizeX= 0;
     double layerSizeY= 0;

@@ -11,6 +11,7 @@ struct MaterialProperties {
     double alpha;
     double p;
     double kB;
+    double R;
 };
 
 struct DetectorProperties {
@@ -23,6 +24,7 @@ struct DetectorProperties {
     std::vector<double> TeflonThickness;
     std::vector<double> LayerSizeZ;
     std::vector<double> AluThickness;
+    std::string absorberType;
     double absorberSizeZ;
     double gapSizeZ;
     double SeclayerSizeZ;
@@ -36,68 +38,80 @@ struct DetectorProperties {
     bool ReversedStatus;
 
     std::unordered_map<std::string, MaterialProperties> materials;
-
-    double alpha_h2o = 2.585e-2;
-    double p_h2o = 1.738;
-    double kB_h2o = 1.738; //https://link.springer.com/article/10.1140/epjc/s10052-023-11242-2
-
-    double alpha_pbwo4 = 7.275e-3;
-    double p_pbwo4 = 1.690;
-    double kB_pbwo4 = 0.01268; //https://arxiv.org/pdf/0911.3041
-
-    double alpha_dsb = 1.030e-2;
-    double p_dsb = 1.713;
-    double kB_dsb = 0.01268; //https://arxiv.org/pdf/0911.3041
-
-    double alpha_ej256 = 2.393e-2;
-    double p_ej256 = 1.742;
-    double kB_ej256 = 0.154; //cite pöschl
     
-    double alpha_ej254 = 2.495e-2;
-    double p_ej254 = 1.743;
-    double kB_ej254 = 0.154;
-
-    double alpha_ej212 = 2.483e-2;
-    double p_ej212 = 1.743;
-    double kB_ej212 = 0.154;
-
-    double alpha_ej200 = 2.483e-2;
-    double p_ej200 = 1.743;
-    double kB_ej200 = 0.154;
-
-    double alpha_teflon = 1.459e-2;
-    double p_teflon = 1.733;
-    double kB_teflon = 0;
-
-    double alpha_alu = 1.326-2;
-    double p_alu = 1.723;
-    double kB_alu = 0;
-
-    double alpha_pmma = 2.173e-2;
-    double p_pmma = 1.742;
-    double kB_pmma = 0;
-
-    double alpha_air = 2.456e1;
-    double p_air = 1.736;
-    double kB_air = 0;
-
-    DetectorProperties(){
-        materials = {
-            {"h2o", {alpha_h2o, p_h2o, kB_h2o}},
-            {"pbwo4", {alpha_pbwo4, p_pbwo4, kB_pbwo4}},
-            {"dsb", {alpha_dsb, p_dsb, kB_dsb}},
-            {"ej256", {alpha_ej256, p_ej256, kB_ej256}},
-            {"ej254", {alpha_ej254, p_ej254, kB_ej254}},
-            {"ej212", {alpha_ej212, p_ej212, kB_ej212}},
-            {"ej200", {alpha_ej200, p_ej200, kB_ej200}},
-            {"teflon", {alpha_teflon, p_teflon, kB_teflon}},
-            {"alu", {alpha_alu, p_alu, kB_alu}},
-            {"pmma", {alpha_pmma, p_pmma, kB_pmma}}
-        };
-
-    }
+    DetectorProperties(){}
     ~DetectorProperties() = default;
 
+    void Process(){
+        double alpha_h2o = 2.585e-2;
+        double p_h2o = 1.738;
+        double kB_h2o = 1.738; //https://link.springer.com/article/10.1140/epjc/s10052-023-11242-2
+        double R_h2o = CalcRange(alpha_h2o, p_h2o, energy);
+    
+        double alpha_pbwo4 = 7.275e-3;
+        double p_pbwo4 = 1.690;
+        double kB_pbwo4 = 0.01268; //https://arxiv.org/pdf/0911.3041
+        double R_pbwo4 = CalcRange(alpha_pbwo4, p_pbwo4, energy);
+    
+        double alpha_dsb = 1.030e-2;
+        double p_dsb = 1.713;
+        double kB_dsb = 0.01268; //https://arxiv.org/pdf/0911.3041
+        double R_dsb = CalcRange(alpha_dsb, p_dsb, energy);
+    
+        double alpha_ej256 = 2.393e-2;
+        double p_ej256 = 1.742;
+        double kB_ej256 = 0.154; //cite pöschl
+        double R_ej256 = CalcRange(alpha_ej256, p_ej256, energy);
+        
+        double alpha_ej254 = 2.495e-2;
+        double p_ej254 = 1.743;
+        double kB_ej254 = 0.154;
+        double R_ej254 = CalcRange(alpha_ej254, p_ej254, energy);
+        
+        double alpha_ej212 = 2.483e-2;
+        double p_ej212 = 1.743;
+        double kB_ej212 = 0.154;
+        double R_ej212 = CalcRange(alpha_ej212, p_ej212, energy);
+        
+        double alpha_ej200 = 2.483e-2;
+        double p_ej200 = 1.743;
+        double kB_ej200 = 0.154;
+        double R_ej200 = CalcRange(alpha_ej200, p_ej200, energy);
+        
+        double alpha_teflon = 1.459e-2;
+        double p_teflon = 1.733;
+        double kB_teflon = 0;
+        double R_teflon = CalcRange(alpha_teflon, p_teflon, energy);
+        
+        double alpha_alu = 1.326-2;
+        double p_alu = 1.723;
+        double kB_alu = 0;
+        double R_alu = CalcRange(alpha_alu, p_alu, energy);
+        
+        double alpha_pmma = 2.173e-2;
+        double p_pmma = 1.742;
+        double kB_pmma = 0;
+        double R_pmma = CalcRange(alpha_pmma, p_pmma, energy);
+        
+        double alpha_air = 2.456e1;
+        double p_air = 1.736;
+        double kB_air = 0;
+        double R_air = CalcRange(alpha_air, p_air, energy);
+
+        materials = {
+            {"h2o", {alpha_h2o, p_h2o, kB_h2o, R_h2o}},
+            {"pbwo4", {alpha_pbwo4, p_pbwo4, kB_pbwo4, R_pbwo4}},
+            {"dsb", {alpha_dsb, p_dsb, kB_dsb, R_dsb}},
+            {"ej256", {alpha_ej256, p_ej256, kB_ej256, R_ej256}},
+            {"ej254", {alpha_ej254, p_ej254, kB_ej254, R_ej254}},
+            {"ej212", {alpha_ej212, p_ej212, kB_ej212, R_ej212}},
+            {"ej200", {alpha_ej200, p_ej200, kB_ej200, R_ej200}},
+            {"teflon", {alpha_teflon, p_teflon, kB_teflon, R_teflon}},
+            {"alu", {alpha_alu, p_alu, kB_alu, R_alu}},
+            {"pmma", {alpha_pmma, p_pmma, kB_pmma, R_pmma}},
+            {"air", {alpha_air, p_air, kB_air, R_air}}
+        };
+    }
     void SetScintillator(std::string fscintillator){
         scintillator = fscintillator;
         return;
@@ -137,6 +151,11 @@ struct DetectorProperties {
         }
         AluThickness = fAluThickness;
         return;
+    }
+
+    void SetAbsorberType(std::string fabsorberType){
+        absorberType = fabsorberType;
+        return; 
     }
 
     void SetAbsorberSize(double fabsorberSizeZ){
@@ -186,6 +205,8 @@ struct DetectorProperties {
 
     std::string GetScintillator(){return scintillator; }
 
+    std::string GetAbsorberType(){return absorberType; }
+
     double GetBeamEnergy(){return energy; }
 
     int GetNLayers(){return nLayers; }
@@ -214,6 +235,7 @@ struct DetectorProperties {
     double GetTeflonThickness(int layer){return TeflonThickness.at(layer)*1/10000; }
 
     std::vector<double> GetAluThickness(){return AluThickness; }
+
     double GetAluThickness(int layer){return AluThickness.at(layer)*1/10000; }
 
     double GetAbsorberSize(){return absorberSizeZ; }
@@ -250,6 +272,11 @@ struct DetectorProperties {
 
     double GetAlpha(std::string mat){
         return materials[mat].alpha; 
+    }
+
+    double CalcRange(double alpha, double p, double energy) {
+        double range = (alpha * std::pow(energy, p));
+        return range;
     }
 };
 

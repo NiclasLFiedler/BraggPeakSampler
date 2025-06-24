@@ -156,8 +156,12 @@ void DetectorConstruction::DefineMaterials()
   EJ254->GetIonisation()->SetMeanExcitationEnergy(64.7*eV);
 
   G4Material* EJ212 = new G4Material("EJ212", 1.023*g/cm3, 2);
-  EJ212->AddElement(elC, 91.5*perCent);
-  EJ212->AddElement(elH, 8.5*perCent);
+  G4double numH = 5.17e+22;
+  G4double numC = 4.69e+22;
+  G4double massEJ212 = numH*elH->GetAtomicMassAmu()+numC*elC->GetAtomicMassAmu();
+  
+  EJ212->AddElement(elC, numC*elC->GetAtomicMassAmu()/massEJ212);
+  EJ212->AddElement(elH, numH*elH->GetAtomicMassAmu()/massEJ212);
   
   EJ212->GetIonisation()->SetMeanExcitationEnergy(64.7*eV);
   EJ212->GetIonisation()->SetBirksConstant(0.154*mm/MeV);

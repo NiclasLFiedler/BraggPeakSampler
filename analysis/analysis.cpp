@@ -32,6 +32,7 @@ void analysis(){
     
     int datasetSelect                   = config["datasetSelect"];
     std::string detectortype            = config["detectorType"];
+    std::string absorberType            = config["absorberType"];
     double beamEnergy                   = config["beamEnergy"];
     int nLayers                         = config["nLayers"];
     std::vector<double> crystalSize     = config["crystalSize"];
@@ -174,6 +175,7 @@ void analysis(){
     detectorProperties->SetGapSizeZ(gapSizeZ);
     detectorProperties->SetTeflonThickness(teflonThickness);
     detectorProperties->SetAluThickness(aluThickness);
+    detectorProperties->SetAbsorberType(absorberType);
     detectorProperties->SetAbsorberSize(absorberSize);
     detectorProperties->SetNSecondaryLayers(nSecLayers);
     detectorProperties->SetSecondaryLayerSizeZ(secLayerSizeZ);
@@ -183,6 +185,8 @@ void analysis(){
     detectorProperties->SetSimulationStatus(simulationStatus);
     detectorProperties->SetCalibrationStatus(!simulationStatus);
     
+    detectorProperties->Process();
+
     Calibration* calib = new Calibration(detectorProperties);
     calib->energy_extrapolation(co60, muon);
     
