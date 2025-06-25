@@ -119,7 +119,7 @@ void Detector::CalcPosition(int layer){
     if(layer > 0){
         crystals.at(layer).pos.depth += crystals.at(layer-1).pos.depth+(detectorProperties->GetTeflonThickness(layer)/2+detectorProperties->GetTeflonThickness(layer-1)/2)*WETConvTeflon+(detectorProperties->GetAluThickness(layer)/2+detectorProperties->GetAluThickness(layer-1)/2)*WETConvAlu;
     }
-    if(layer == 1){
+    if(detectorProperties->GetAbsorberStatus() && layer == 1){
         crystals.at(layer).pos.depth += absorberConv;
     }
 

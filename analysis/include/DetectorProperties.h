@@ -36,6 +36,7 @@ struct DetectorProperties {
     bool NormStatus;
     bool CalibStatus;
     bool ReversedStatus;
+    bool AbsorberStatus;
 
     std::unordered_map<std::string, MaterialProperties> materials;
     
@@ -203,6 +204,11 @@ struct DetectorProperties {
         return;
     }
 
+    void SetAbsorberStatus(bool fAbsorberStatus){
+        AbsorberStatus= fAbsorberStatus;
+        return;
+    }
+
     std::string GetScintillator(){return scintillator; }
 
     std::string GetAbsorberType(){return absorberType; }
@@ -255,6 +261,8 @@ struct DetectorProperties {
     bool GetSimulationStatus(){return SimulationStatus; }
 
     bool GetReversedStatus(){return ReversedStatus; }
+
+    bool GetAbsorberStatus(){return AbsorberStatus; }
 
     double GetBirksConstant(){return materials[GetScintillator()].kB; }
 

@@ -184,6 +184,7 @@ void analysis(){
     detectorProperties->SetReversedStatus(reversedStatus);
     detectorProperties->SetSimulationStatus(simulationStatus);
     detectorProperties->SetCalibrationStatus(!simulationStatus);
+    detectorProperties->SetAbsorberStatus(absorberStatus);
     
     detectorProperties->Process();
 
@@ -274,7 +275,6 @@ void analysis(){
 		    datatree->GetEntry(e);
 
             if(prevEvent != event){
-                //particles.push_back(proton);
                 proton.ProcessEDep();
                 for(int ch = 0; ch<nLayers; ch++){
                     if(proton.GetEDep(ch) > 0.0){
@@ -293,21 +293,7 @@ void analysis(){
             }
             prevEvent = event; 
         }
-        cout << "Data acquisition finished" << endl;
-        // cout << "Calculating energy depositions for coincidences." << endl;
-        // for(Particle p : particles){
-        //     p.ProcessEDep();
-        //     for(int ch = 0; ch<nLayers; ch++){
-        //         if(p.GetEDep(ch) > 0.0){
-        //             detector->EnergyHist(ch)->Fill(p.GetEDep(ch));
-        //         }
-        //         if(p.Coincidence(ch) && p.GetEDep(ch) > 0.0){
-        //             detector->CoincEnergyHist(ch)->Fill(p.GetEDep(ch));
-        //             detector->TotalEnergyHist()->Fill(p.total_edep);
-        //         }
-        //     }
-        // }
-        cout << "Calculating finished" << endl;
+        cout << "Data acquisition & Histograms finished" << endl;
         if(bScintSim){
             photontree->GetEntry(0);
             prevEvent = eventPhotons;
