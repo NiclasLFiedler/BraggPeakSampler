@@ -266,6 +266,10 @@ struct DetectorProperties {
 
     double GetBirksConstant(){return materials[GetScintillator()].kB; }
 
+    double GetR(){
+        return materials[GetScintillator()].R; 
+    }
+
     double GetP(){
         return materials[GetScintillator()].p; 
     }

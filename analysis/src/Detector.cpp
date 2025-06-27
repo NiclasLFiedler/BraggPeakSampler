@@ -31,7 +31,17 @@ Detector::Detector(DetectorProperties* detectorProperties)
 
     crystals = std::vector<Crystal>(detectorProperties->GetNLayers());
 
+    Rw = detectorProperties->materials["h2o"].R;
+    alphaw = detectorProperties->materials["h2o"].alpha;
+    pw = detectorProperties->materials["h2o"].p;
+
+    Rm = detectorProperties->GetR();
+    alpham = detectorProperties->GetAlpha();
+    pm = detectorProperties->GetP();
+
     CalcWETConv();
+    std::cout << "WET Conversion Factors: " << std::endl;
+    std::cout << "WETConv: " << WETConv << std::endl;
     CalcAbsorber();
     cout << "Detector Constructed" << endl;
 }
@@ -111,8 +121,19 @@ void Detector::CalcDose(int layer){
 }
 
 void Detector::CalcPosition(int layer){
-    crystals.at(layer).pos.depth = (detectorProperties->GetLayerSizeZ(layer-1)/2+detectorProperties->GetLayerSizeZ(layer)/2)*WETConv;
+    double depth = 0;
 
+    // for (int i = 0; i <= layer; i++){
+    //     if (i == 0){
+    //         depth += detectorProperties->GetLayerSizeZ(i)/2;
+    //     }
+    //     else{
+    //         depth += detectorProperties->GetLayerSizeZ(i-1)/2+detectorProperties->GetLayerSizeZ(i)/2 + detectorProperties->GetGapSizeZ();
+    //     }
+    // }
+    // crystals.at(layer).pos.depth = CalcWET(depth);
+    
+    crystals.at(layer).pos.depth = (detectorProperties->GetLayerSizeZ(layer-1)/2+detectorProperties->GetLayerSizeZ(layer)/2)*WETConv;
     if(layer == 0){
         crystals.at(layer).pos.depth += (detectorProperties->GetTeflonThickness(layer)/2)*WETConvTeflon+(detectorProperties->GetAluThickness(layer)/2)*WETConvAlu;
     }
@@ -124,6 +145,7 @@ void Detector::CalcPosition(int layer){
     }
 
     crystals.at(layer).pos.stddev = sqrt(std::pow((detectorProperties->GetLayerSizeZ(layer)/sqrt(12)*WETConv),2) + std::pow(crystals.at(layer).pos.depth*0.005*(detectorProperties->GetP("h2o")-detectorProperties->GetP()), 2));
+    std::cout << "Layer " << layer << " Position: " << crystals.at(layer).pos.depth << " mm " << "Depth: " << depth << " conv  " << crystals.at(layer).pos.depth/depth << std::endl;
     return;
 }
 
@@ -176,17 +198,22 @@ void Detector::PrintVector(const std::vector<double>& vec) {
 }
 
 void Detector::CalcAbsorber(){
-    double Rw = detectorProperties->materials["h2o"].R;
-    double alphaw = detectorProperties->materials["h2o"].alpha;
-    double pw = detectorProperties->materials["h2o"].p;
-    
     std::string absorberType = detectorProperties->GetAbsorberType();
     double absorbersize = detectorProperties->GetAbsorberSize();
 
-    double Rm = detectorProperties->materials[absorberType].R;
-    double alpham = detectorProperties->materials[absorberType].alpha;
-    double pm = detectorProperties->materials[absorberType].p;
+    double RAbs = detectorProperties->materials[absorberType].R;
+    double alphaAbs = detectorProperties->materials[absorberType].alpha;
+    double pAbs = detectorProperties->materials[absorberType].p;
 
-    absorberConv = Rw-std::pow((Rm-absorbersize)/alpham, pw/pm)*alphaw;
+    absorberConv = Rw-std::pow((RAbs-absorbersize)/alphaAbs, pw/pAbs)*alphaw;
     return;
+}
+
+double Detector::CalcWET(double depth){
+    if(Rm-depth <= 0){
+        return Rw+std::pow(std::abs(Rm-depth)/alpham, pw/pm)*alphaw;;
+    }
+    else{
+        return Rw-std::pow((Rm-depth)/alpham, pw/pm)*alphaw;
+    }
 }

@@ -35,6 +35,7 @@ public:
     TH1D* CoincPhotonHist(const int channel);
     TH1D* TotalEnergyHist();
     TGraphErrors* MeansGraph();
+    double CalcWET(double depth);
     void Process();
     void CalcDose(int layer);
     void CalcPosition(int layer);
@@ -44,11 +45,20 @@ public:
     void CalcAbsorber();
     int nLayers = 0;
     int nSecLayers= 0;
-    
+
     double WETConv = 0;
     double WETConvTeflon = 0; 
     double WETConvAlu = 0;
     double WETConvPMMA = 0;
+   
+    double Rw = 0;
+    double alphaw = 0;
+    double pw = 0;
+    
+    double Rm = 0;
+    double alpham = 0;
+    double pm = 0;
+   
     double absorberConv = 0;
     double energy = 0;
     double layerSizeX= 0;
