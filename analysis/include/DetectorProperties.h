@@ -290,6 +290,10 @@ struct DetectorProperties {
         double range = (alpha * std::pow(energy, p));
         return range;
     }
+
+    MaterialProperties GetMaterial(std::string mat){
+        return materials[mat];
+    }
 };
 
 #endif

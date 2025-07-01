@@ -1,4 +1,6 @@
 #include "../include/Detector.h"
+#include "../include/DetectorProperties.h"
+
 
 Detector::Detector(DetectorProperties* detectorProperties)
     : detectorProperties(detectorProperties) {
@@ -122,27 +124,42 @@ void Detector::CalcDose(int layer){
 
 void Detector::CalcPosition(int layer){
     double depth = 0;
+    if(layer != 0){
+        depth = crystals.at(layer-1).pos.depth;
+    }
+    double aluthick = 0.04;
+    double teflonthick = 0.5;
 
-    // for (int i = 0; i <= layer; i++){
-    //     if (i == 0){
-    //         depth += detectorProperties->GetLayerSizeZ(i)/2;
-    //     }
-    //     else{
-    //         depth += detectorProperties->GetLayerSizeZ(i-1)/2+detectorProperties->GetLayerSizeZ(i)/2 + detectorProperties->GetGapSizeZ();
-    //     }
-    // }
-    // crystals.at(layer).pos.depth = CalcWET(depth);
-    
-    crystals.at(layer).pos.depth = (detectorProperties->GetLayerSizeZ(layer-1)/2+detectorProperties->GetLayerSizeZ(layer)/2)*WETConv;
     if(layer == 0){
-        crystals.at(layer).pos.depth += (detectorProperties->GetTeflonThickness(layer)/2)*WETConvTeflon+(detectorProperties->GetAluThickness(layer)/2)*WETConvAlu;
+        depth += CalcWET(depth, aluthick/2, detectorProperties->GetMaterial("alu"));
+        std::cout << depth << std::endl;
+        depth += CalcWET(depth, teflonthick/2, detectorProperties->materials["teflon"]);
+        std::cout << depth << std::endl;
+        depth += CalcWET(depth, detectorProperties->GetLayerSizeZ(layer)/2, detectorProperties->materials[detectorProperties->GetScintillator()]);
+        std::cout << depth << std::endl;
     }
-    if(layer > 0){
-        crystals.at(layer).pos.depth += crystals.at(layer-1).pos.depth+(detectorProperties->GetTeflonThickness(layer)/2+detectorProperties->GetTeflonThickness(layer-1)/2)*WETConvTeflon+(detectorProperties->GetAluThickness(layer)/2+detectorProperties->GetAluThickness(layer-1)/2)*WETConvAlu;
+    else{
+        depth += CalcWET(depth, aluthick, detectorProperties->materials["alu"]);
+        std::cout << depth << std::endl;
+        depth += CalcWET(depth, teflonthick, detectorProperties->materials["teflon"]);
+        std::cout << depth << std::endl;
+        depth += CalcWET(depth, detectorProperties->GetLayerSizeZ(layer-1)/2+detectorProperties->GetLayerSizeZ(layer)/2, detectorProperties->materials
+        [detectorProperties->GetScintillator()]);
+        std::cout << depth << std::endl;
     }
-    if(detectorProperties->GetAbsorberStatus() && layer == 1){
-        crystals.at(layer).pos.depth += absorberConv;
-    }
+    crystals.at(layer).pos.depth = depth;
+    
+
+    // crystals.at(layer).pos.depth = (detectorProperties->GetLayerSizeZ(layer-1)/2+detectorProperties->GetLayerSizeZ(layer)/2)*WETConv;
+    // if(layer == 0){
+    //     crystals.at(layer).pos.depth += (detectorProperties->GetTeflonThickness(layer)/2)*WETConvTeflon+(detectorProperties->GetAluThickness(layer)/2)*WETConvAlu;
+    // }
+    // if(layer > 0){
+    //     crystals.at(layer).pos.depth += crystals.at(layer-1).pos.depth+(detectorProperties->GetTeflonThickness(layer)/2+detectorProperties->GetTeflonThickness(layer-1)/2)*WETConvTeflon+(detectorProperties->GetAluThickness(layer)/2+detectorProperties->GetAluThickness(layer-1)/2)*WETConvAlu;
+    // }
+    // if(detectorProperties->GetAbsorberStatus() && layer == 1){
+    //     crystals.at(layer).pos.depth += absorberConv;
+    // }
 
     crystals.at(layer).pos.stddev = sqrt(std::pow((detectorProperties->GetLayerSizeZ(layer)/sqrt(12)*WETConv),2) + std::pow(crystals.at(layer).pos.depth*0.005*(detectorProperties->GetP("h2o")-detectorProperties->GetP()), 2));
     std::cout << "Layer " << layer << " Position: " << crystals.at(layer).pos.depth << " mm " << "Depth: " << depth << " conv  " << crystals.at(layer).pos.depth/depth << std::endl;
@@ -216,4 +233,10 @@ double Detector::CalcWET(double depth){
     else{
         return Rw-std::pow((Rm-depth)/alpham, pw/pm)*alphaw;
     }
+}
+
+double Detector::CalcWET(double z0, double delta, MaterialProperties mat){
+    MaterialProperties h2o = detectorProperties->materials["h2o"];
+    std::cout << z0/h2o.alpha << " " <<  mat.p/h2o.p << std::endl;
+    return h2o.alpha*std::pow(std::pow((z0/h2o.alpha), mat.p/h2o.p)+delta/mat.alpha, h2o.p/mat.p);
 }

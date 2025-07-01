@@ -23,7 +23,6 @@ struct Crystal {
 
 class Detector {
 public:
-
     Detector(DetectorProperties * detectorProperties);
 
     ~Detector() = default;
@@ -36,6 +35,7 @@ public:
     TH1D* TotalEnergyHist();
     TGraphErrors* MeansGraph();
     double CalcWET(double depth);
+    double CalcWET(double z0, double delta, MaterialProperties mat);
     void Process();
     void CalcDose(int layer);
     void CalcPosition(int layer);
