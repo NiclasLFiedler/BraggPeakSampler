@@ -5,6 +5,7 @@
 #include <TPaveStats.h>
 #include <TH1D.h>
 #include <TString.h>
+#include <vector>
 
 class Plotter {
 private:
@@ -13,6 +14,7 @@ private:
 public:
     Plotter(int coincidence_time);
     void Legend(TH1D* hist=nullptr);
+    void Legend(std::vector<TH1D*> hist);
     void Legend(TGraphErrors* graph=nullptr);
     void Legend(TH1D* hist, TLine* line, double bestfit, const char* param, const char* unit, double offset);
     void Histogram1D(TH1D* hist, TString x_title, TString y_title);

@@ -48,12 +48,12 @@ struct DetectorProperties {
         double p_h2o = 1.738;
         double kB_h2o = 1.738; //https://link.springer.com/article/10.1140/epjc/s10052-023-11242-2
         double R_h2o = CalcRange(alpha_h2o, p_h2o, energy);
-    
+        std::cout << "Range in H2O: " << R_h2o << " mm" << std::endl;
         double alpha_pbwo4 = 7.275e-3;
         double p_pbwo4 = 1.690;
         double kB_pbwo4 = 0.01268; //https://arxiv.org/pdf/0911.3041
         double R_pbwo4 = CalcRange(alpha_pbwo4, p_pbwo4, energy);
-    
+        std::cout << "Range in PbWO4: " << R_pbwo4 << " mm" << std::endl;
         double alpha_dsb = 1.030e-2;
         double p_dsb = 1.713;
         double kB_dsb = 0.01268; //https://arxiv.org/pdf/0911.3041
@@ -84,7 +84,7 @@ struct DetectorProperties {
         double kB_teflon = 0;
         double R_teflon = CalcRange(alpha_teflon, p_teflon, energy);
         
-        double alpha_alu = 1.326-2;
+        double alpha_alu = 1.326e-2;
         double p_alu = 1.723;
         double kB_alu = 0;
         double R_alu = CalcRange(alpha_alu, p_alu, energy);
@@ -112,6 +112,7 @@ struct DetectorProperties {
             {"pmma", {alpha_pmma, p_pmma, kB_pmma, R_pmma}},
             {"air", {alpha_air, p_air, kB_air, R_air}}
         };
+
     }
     void SetScintillator(std::string fscintillator){
         scintillator = fscintillator;

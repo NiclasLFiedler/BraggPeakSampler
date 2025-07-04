@@ -24,6 +24,7 @@ class TrackerSD : public G4VSensitiveDetector
     void Reset() { hitsCount = 0; }
 
     std::vector<std::vector<double>> entryPosMap;
+    std::vector<std::vector<double>> exitPosMap;
     std::vector<G4int> hitMap;
     G4int fLayers = 0;
   private:

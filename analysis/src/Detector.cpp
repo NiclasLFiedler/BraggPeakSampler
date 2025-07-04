@@ -9,7 +9,9 @@ Detector::Detector(DetectorProperties* detectorProperties)
     Char_t histname[100];
     int binningEdep[3] = {1000, 0, 40};
     int binningPhotons[3] = {200, 0, 50};
-    
+    int binningEntry[3] = {100, -static_cast<int>(detectorProperties->GetLayerSizeX())/2, static_cast<int>(detectorProperties->GetLayerSizeX())/2};
+    std::cout << "Layer Size X: " << detectorProperties->GetLayerSizeX() << std::endl;
+
     sprintf(histdesc, "Total energy deposition %s", detectorProperties->GetTarget());
     h_total_edep = new TH1D("h_total_edep", histdesc, 230*100, 0, 230);
     
@@ -21,14 +23,26 @@ Detector::Detector(DetectorProperties* detectorProperties)
         h_edep_all.push_back(new TH1D(histname, histdesc, binningEdep[0], binningEdep[1], binningEdep[2]));
         sprintf(histname, "h_edep_coinc_%i", layer);
         h_edep_coinc.push_back(new TH1D(histname, histdesc, binningEdep[0], binningEdep[1], binningEdep[2]));
+        
         sprintf(histname, "h_stopped_%i", layer);
         sprintf(histdesc, "Energy deposition of stopped particle in CH%i", layer);
         h_stopped.push_back(new TH1D(histname, histdesc, binningEdep[0], binningEdep[1], binningEdep[2]));
+
         sprintf(histname, "h_photons_%i", layer);
         sprintf(histdesc, "Number of photons in SiPM%i", layer);
-        h_photons.push_back(new TH1D(histname, histdesc, binningPhotons[0], binningPhotons[0], binningPhotons[0]));
+        h_photons.push_back(new TH1D(histname, histdesc, binningPhotons[0], binningPhotons[1], binningPhotons[2]));
         sprintf(histname, "h_photons_coinc_%i", layer);
-        h_photons_coinc.push_back(new TH1D(histname, histdesc, binningPhotons[0], binningPhotons[0], binningPhotons[0]));
+        h_photons_coinc.push_back(new TH1D(histname, histdesc, binningPhotons[0], binningPhotons[1], binningPhotons[2]));
+
+        sprintf(histname, "h_entry_%i", layer);
+        sprintf(histdesc, "Number of entry protons layer %i", layer);
+        h_entry.push_back(new TH1D(histname, histdesc, binningEntry[0], binningEntry[1], binningEntry[2]));
+        sprintf(histname, "h_exit_%i", layer);
+        sprintf(histdesc, "Number of exit protons layer %i", layer);
+        h_exit.push_back(new TH1D(histname, histdesc, binningEntry[0], binningEntry[1], binningEntry[2]));
+        sprintf(histname, "h_angle_%i", layer);
+        sprintf(histdesc, "Angle of protons in layer %i", layer);
+        h_angle.push_back(new TH1D(histname, histdesc, binningEntry[0], binningEntry[1], binningEntry[2]));
     }
 
     crystals = std::vector<Crystal>(detectorProperties->GetNLayers());
@@ -44,7 +58,6 @@ Detector::Detector(DetectorProperties* detectorProperties)
     CalcWETConv();
     std::cout << "WET Conversion Factors: " << std::endl;
     std::cout << "WETConv: " << WETConv << std::endl;
-    CalcAbsorber();
     cout << "Detector Constructed" << endl;
 }
 
@@ -66,6 +79,18 @@ TH1D* Detector::PhotonHist(const int channel){
 
 TH1D* Detector::CoincPhotonHist(const int channel){
     return h_photons_coinc.at(channel);
+}
+
+TH1D* Detector::EntryHist(const int channel){
+    return h_entry.at(channel);
+}
+
+TH1D* Detector::ExitHist(const int channel){
+    return h_exit.at(channel);
+}
+
+TH1D* Detector::AngleHist(const int channel){
+    return h_angle.at(channel);
 }
 
 TH1D* Detector::TotalEnergyHist(){
@@ -127,25 +152,25 @@ void Detector::CalcPosition(int layer){
     if(layer != 0){
         depth = crystals.at(layer-1).pos.depth;
     }
-    double aluthick = 0.04;
-    double teflonthick = 0.5;
+    double aluthick = 0.5;
+    double teflonthick = 0.02;
 
     if(layer == 0){
-        depth += CalcWET(depth, aluthick/2, detectorProperties->GetMaterial("alu"));
-        std::cout << depth << std::endl;
-        depth += CalcWET(depth, teflonthick/2, detectorProperties->materials["teflon"]);
-        std::cout << depth << std::endl;
-        depth += CalcWET(depth, detectorProperties->GetLayerSizeZ(layer)/2, detectorProperties->materials[detectorProperties->GetScintillator()]);
-        std::cout << depth << std::endl;
+        depth = CalcWET(depth, aluthick/2, detectorProperties->GetMaterial("alu"));
+        depth = CalcWET(depth, teflonthick/2, detectorProperties->GetMaterial("teflon"));
+        depth = CalcWET(depth, detectorProperties->GetLayerSizeZ(layer)/2, detectorProperties->GetMaterial(detectorProperties->GetScintillator()));
     }
     else{
-        depth += CalcWET(depth, aluthick, detectorProperties->materials["alu"]);
-        std::cout << depth << std::endl;
-        depth += CalcWET(depth, teflonthick, detectorProperties->materials["teflon"]);
-        std::cout << depth << std::endl;
-        depth += CalcWET(depth, detectorProperties->GetLayerSizeZ(layer-1)/2+detectorProperties->GetLayerSizeZ(layer)/2, detectorProperties->materials
-        [detectorProperties->GetScintillator()]);
-        std::cout << depth << std::endl;
+        depth = CalcWET(depth, detectorProperties->GetLayerSizeZ(layer-1)/2, detectorProperties->GetMaterial(detectorProperties->GetScintillator()));
+        depth = CalcWET(depth, teflonthick/2, detectorProperties->GetMaterial("teflon"));
+        if(detectorProperties->GetAbsorberStatus() && layer == 1){
+            depth = CalcWET(depth, detectorProperties->GetAbsorberSize(), detectorProperties->GetMaterial(detectorProperties->GetAbsorberType()));
+        } 
+        depth = CalcWET(depth, aluthick/2, detectorProperties->GetMaterial("alu"));
+        depth = CalcWET(depth, aluthick/2, detectorProperties->GetMaterial("alu"));
+        depth = CalcWET(depth, teflonthick/2, detectorProperties->GetMaterial("teflon"));
+        depth = CalcWET(depth, detectorProperties->GetLayerSizeZ(layer)/2, detectorProperties->materials[detectorProperties->GetScintillator()]);
+
     }
     crystals.at(layer).pos.depth = depth;
     
@@ -162,7 +187,6 @@ void Detector::CalcPosition(int layer){
     // }
 
     crystals.at(layer).pos.stddev = sqrt(std::pow((detectorProperties->GetLayerSizeZ(layer)/sqrt(12)*WETConv),2) + std::pow(crystals.at(layer).pos.depth*0.005*(detectorProperties->GetP("h2o")-detectorProperties->GetP()), 2));
-    std::cout << "Layer " << layer << " Position: " << crystals.at(layer).pos.depth << " mm " << "Depth: " << depth << " conv  " << crystals.at(layer).pos.depth/depth << std::endl;
     return;
 }
 
@@ -214,29 +238,7 @@ void Detector::PrintVector(const std::vector<double>& vec) {
     return;
 }
 
-void Detector::CalcAbsorber(){
-    std::string absorberType = detectorProperties->GetAbsorberType();
-    double absorbersize = detectorProperties->GetAbsorberSize();
-
-    double RAbs = detectorProperties->materials[absorberType].R;
-    double alphaAbs = detectorProperties->materials[absorberType].alpha;
-    double pAbs = detectorProperties->materials[absorberType].p;
-
-    absorberConv = Rw-std::pow((RAbs-absorbersize)/alphaAbs, pw/pAbs)*alphaw;
-    return;
-}
-
-double Detector::CalcWET(double depth){
-    if(Rm-depth <= 0){
-        return Rw+std::pow(std::abs(Rm-depth)/alpham, pw/pm)*alphaw;;
-    }
-    else{
-        return Rw-std::pow((Rm-depth)/alpham, pw/pm)*alphaw;
-    }
-}
-
 double Detector::CalcWET(double z0, double delta, MaterialProperties mat){
     MaterialProperties h2o = detectorProperties->materials["h2o"];
-    std::cout << z0/h2o.alpha << " " <<  mat.p/h2o.p << std::endl;
-    return h2o.alpha*std::pow(std::pow((z0/h2o.alpha), mat.p/h2o.p)+delta/mat.alpha, h2o.p/mat.p);
+    return h2o.alpha*std::pow((std::pow((z0/h2o.alpha), mat.p/h2o.p)+delta/mat.alpha), h2o.p/mat.p);
 }

@@ -15,6 +15,7 @@ TrackerSD::TrackerSD(const G4String& name, const G4String& hitsCollectionName, G
   collectionName.insert(hitsCollectionName);
   fLayers = layers;
   entryPosMap = std::vector<std::vector<double>>(fLayers, std::vector<double>(3, 0.0));
+  exitPosMap = std::vector<std::vector<double>>(fLayers, std::vector<double>(3, 0.0));
   hitMap = std::vector<G4int>(fLayers, 0);
 }
 
@@ -38,6 +39,8 @@ void TrackerSD::Initialize(G4HCofThisEvent* hce)
 
 G4bool TrackerSD::ProcessHits(G4Step* aStep, G4TouchableHistory*)
 {
+  if (!aStep->GetPreStepPoint()->GetTouchableHandle()->GetVolume()) return true;
+
   G4Track* track = aStep->GetTrack();
   G4int NDet = aStep->GetPreStepPoint()->GetTouchable()->GetCopyNumber(2);
   if (track->GetDefinition() == G4OpticalPhoton::OpticalPhotonDefinition()){
@@ -48,23 +51,28 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep, G4TouchableHistory*)
   auto newHit = new TrackerHit();
   newHit->SetTrackID(aStep->GetTrack()->GetTrackID());
   G4double eDep = aStep->GetTotalEnergyDeposit();
+
   if (track->GetDefinition() == G4Proton::ProtonDefinition()) {
-    // G4double energy = aStep->GetPreStepPoint()->GetKineticEnergy();
-    if (aStep->GetPreStepPoint()->GetStepStatus() == fGeomBoundary) {
-      G4ThreeVector entryPosition = aStep->GetPreStepPoint()->GetPosition();
-      // G4cout << "Layer: " << NDet << " EDep: " << eDep << " Process: " << aStep->GetPostStepPoint()->GetProcessDefinedStep()->GetProcessName() << G4endl;
-      if(entryPosMap.at(NDet).at(0) != 0){
-        // G4cout << "Already filled" << G4endl;
-      }
-      else{
-        entryPosMap.at(NDet) = {entryPosition.x(), entryPosition.y(), entryPosition.z()};
-      }
+    if (aStep->IsFirstStepInVolume())
+    {
+      hitMap.at(NDet)++;
+      G4ThreeVector posIn = aStep->GetPreStepPoint()->GetPosition();
+      G4double xIn = posIn.x();
+      G4double yIn = posIn.y();
+      G4double zIn = posIn.z();
+      entryPosMap.at(NDet) = {xIn, yIn, zIn};
     }
-    // newHit->SetNDet(NDet);
-    // newHit->SetEdep(energy);
-    // fHitsCollection->insert(newHit);
+    if (aStep->IsLastStepInVolume())
+    {
+      hitMap.at(NDet)++;
+      G4ThreeVector posOut = aStep->GetPostStepPoint()->GetPosition();
+      G4double xOut = posOut.x();
+      G4double yOut = posOut.y();
+      G4double zOut = posOut.z();
+      exitPosMap.at(NDet) = {xOut, yOut, zOut};
+    }
   }
-  // aStep->GetTrack()->SetTrackStatus(fStopAndKill);
+
   newHit->SetNDet(NDet);
   newHit->SetEdep(eDep);
   fHitsCollection->insert(newHit);
@@ -86,5 +94,6 @@ void TrackerSD::ClearHits()
 {
   hitMap = std::vector<G4int>(fLayers, 0);
   entryPosMap = std::vector<std::vector<double>>(fLayers, std::vector<double>(3, 0.0));
+  exitPosMap = std::vector<std::vector<double>>(fLayers, std::vector<double>(3, 0.0));
   return;
 }

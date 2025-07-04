@@ -21,6 +21,10 @@ RunAction::RunAction()
   analysisManager->CreateNtupleDColumn(1, "EntryPosX");
   analysisManager->CreateNtupleDColumn(1, "EntryPosY");
   analysisManager->CreateNtupleDColumn(1, "EntryPosZ");
+  analysisManager->CreateNtupleDColumn(1, "ExitPosX");
+  analysisManager->CreateNtupleDColumn(1, "ExitPosY");
+  analysisManager->CreateNtupleDColumn(1, "ExitPosZ");
+  analysisManager->CreateNtupleDColumn(1, "AngleZ");
   analysisManager->FinishNtuple(1);
 }
 

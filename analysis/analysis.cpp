@@ -53,7 +53,7 @@ void analysis(){
     int pmod                            = allConfigs["pmod"];
     int heteroThickness                 = allConfigs["heteroThickness"];
 
-    bool bScintSim = false;
+    bool bScintSim = true;
     bool bSavepdf = false;
     bool bPhotons = false;
 
@@ -91,6 +91,10 @@ void analysis(){
     Double_t EntryPosX = 0;
     Double_t EntryPosY = 0;
     Double_t EntryPosZ = 0;
+    Double_t ExitPosX = 0;
+    Double_t ExitPosY = 0;
+    Double_t ExitPosZ = 0;
+    Double_t phi = 0;
     Int_t TrackID;
     
     
@@ -136,6 +140,10 @@ void analysis(){
                 photontree->SetBranchAddress("EntryPosX", &EntryPosX);
                 photontree->SetBranchAddress("EntryPosY", &EntryPosY);
                 photontree->SetBranchAddress("EntryPosZ", &EntryPosZ);
+                photontree->SetBranchAddress("ExitPosX", &ExitPosX);
+                photontree->SetBranchAddress("ExitPosY", &ExitPosY);
+                photontree->SetBranchAddress("ExitPosZ", &ExitPosZ);
+                photontree->SetBranchAddress("AngleZ", &phi);
             }
             else{
                 cout << "Error: Failed to retrieve tree 'ptree' from file!" << endl;
@@ -298,27 +306,40 @@ void analysis(){
             photontree->GetEntry(0);
             prevEvent = eventPhotons;
             proton.Clear();
-            int photonEntries = photontree->GetEntries();
+            int64_t photonEntries = photontree->GetEntries();
             cout << "Photon Entries " << photonEntries << endl; 
             for(int64_t e = 0; e<photonEntries; e++){
 		        photontree->GetEntry(e);
-                if(prevEvent != eventPhotons){
-                    ScintParticles.push_back(proton);
-                    proton.Clear();
+                detector->EntryHist(NDetPhotons)->Fill(EntryPosX);
+                if( EntryPosX > 10){
+                    // std::cout << "EntryPosX: " << EntryPosX << " NDetPhotons: " << NDetPhotons << " Event: " << eventPhotons << std::endl;
                 }
-                proton.SetNPhotons(NDetPhotons, NPhotons);
-                prevEvent = event; 
-            }
-            for(Particle p : ScintParticles){
-                for(int ch = 0; ch<nLayers; ch++){
-                    if(p.GetNPhotons(ch) > 0){
-                        detector->PhotonHist(ch)->Fill(p.GetNPhotons(ch));
-                        if(p.CoincidencePhotons(ch)){
-                            detector->CoincPhotonHist(ch)->Fill(p.GetNPhotons(ch));
-                        }
-                    }
-                }
-            }
+                // std::cout << "Photon Event: " << eventPhotons << " NDetPhotons: " << NDetPhotons << " EntryPosX: " << EntryPosX << std::endl;
+                detector->ExitHist(NDetPhotons)->Fill(ExitPosX);
+                detector->AngleHist(NDetPhotons)->Fill(phi);
+            }    
+            
+            
+            
+            
+            
+                // if(prevEvent != eventPhotons){
+                    // ScintParticles.push_back(proton);
+                    // proton.Clear();
+                // }
+                // proton.SetNPhotons(NDetPhotons, NPhotons);
+                // prevEvent = event; 
+            // }
+            // for(Particle p : ScintParticles){
+                // for(int ch = 0; ch<nLayers; ch++){
+                    // if(p.GetNPhotons(ch) > 0){
+                        // detector->PhotonHist(ch)->Fill(p.GetNPhotons(ch));
+                        // if(p.CoincidencePhotons(ch)){
+                            // detector->CoincPhotonHist(ch)->Fill(p.GetNPhotons(ch));
+                        // }
+                    // }
+                // }
+            // }
         }
     }
     cout << "Processing Detector" << endl;
@@ -477,4 +498,46 @@ void analysis(){
     heteroFile->Close();
     
     c2->Close();
+
+    sprintf(title, "Bragg Sampler %s Analysis", filename);
+    TCanvas *c3 = new TCanvas("c3", title, 10, 10, 1900, 1000);
+    c3->SetFillColor(0);
+	c3->SetGrid();
+	c3->SetBorderMode(0);
+	c3->SetBorderSize(2);
+	c3->SetFrameBorderMode(0);   
+    c3->Divide(2, 1);
+    c3->cd(1);
+    
+    plotter.Histogram1D(detector->EntryHist(0), "EntryX / cm", "Counts");
+    for(int i = 1; i<nLayers; i++){
+        detector->EntryHist(i)->SetLineColor(i+1);
+        detector->EntryHist(i)->Draw("HIST SAME");
+    }
+    plotter.Legend(detector->h_entry);
+    c3->cd(2);
+
+    plotter.Histogram1D(detector->ExitHist(0), "ExitX / cm", "Counts");
+    for(int i = 1; i<nLayers; i++){
+        detector->ExitHist(i)->SetLineColor(i+1);
+        detector->ExitHist(i)->Draw("HIST SAME");
+    }
+    plotter.Legend(detector->h_exit);
+    c3->cd(2);
+
+    plotter.Histogram1D(detector->AngleHist(0), "Angle", "Counts");
+    for(int i = 1; i<nLayers; i++){
+        detector->AngleHist(i)->SetLineColor(i+1);
+        detector->AngleHist(i)->Draw("HIST SAME");
+    }
+    plotter.Legend(detector->h_angle);
+
+    TFile *fout = new TFile("histograms.root", "RECREATE");
+    for (int i = 0; i < nLayers; ++i) {
+        detector->EntryHist(i)->Write(Form("h_entry_%d", i));
+        detector->ExitHist(i)->Write(Form("h_exit_%d", i));
+        detector->EntryHist(i)->Write(Form("h_angle_%d", i));
+    }
+    fout->Close();
+    
 }

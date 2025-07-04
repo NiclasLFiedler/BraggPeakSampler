@@ -27,6 +27,31 @@ void Plotter::Legend(TH1D* hist){
     return;
 }
 
+void Plotter::Legend(std::vector<TH1D*> hist){
+    gPad->Update(); // Necessary to update the pad
+
+    Char_t legendinfo[100];
+    // Double_t statsX1, statsX2, statsY1, statsY2;
+    // TPaveStats *stats = (TPaveStats*)hist->FindObject("stats");
+
+    // statsX1 = stats->GetX1NDC();
+    // statsY1 = stats->GetY1NDC();
+    // statsX2 = stats->GetX2NDC();
+    // statsY2 = stats->GetY2NDC();
+
+    // TLegend *legend = new TLegend(statsX1, statsY2 - 0.8, statsX2, statsY2 - 0.8 - (statsY2 - statsY1));
+    // legend->SetTextSize(0.05);
+    TLegend *legend = new TLegend();
+    int i = 0;
+    for(auto& hist : hist){
+        sprintf(legendinfo, "Layer %i", i);
+        legend->AddEntry(hist, legendinfo, "f1");
+        i++;
+    }
+    legend->Draw();
+    return;
+}
+
 void Plotter::Legend(TGraphErrors* graph){
     gPad->Update(); // Necessary to update the pad
     Char_t legendinfo[100];

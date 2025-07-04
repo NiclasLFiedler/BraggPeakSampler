@@ -33,6 +33,9 @@ public:
     TH1D* PhotonHist(const int channel);
     TH1D* CoincPhotonHist(const int channel);
     TH1D* TotalEnergyHist();
+    TH1D* EntryHist(const int channel);
+    TH1D* ExitHist(const int channel);
+    TH1D* AngleHist(const int channel);
     TGraphErrors* MeansGraph();
     double CalcWET(double depth);
     double CalcWET(double z0, double delta, MaterialProperties mat);
@@ -85,6 +88,9 @@ public:
     std::vector<TH1D*> h_stopped;
     std::vector<TH1D*> h_photons;
     std::vector<TH1D*> h_photons_coinc;
+    std::vector<TH1D*> h_entry;
+    std::vector<TH1D*> h_exit;
+    std::vector<TH1D*> h_angle;
 
     std::vector<Crystal> crystals;
 

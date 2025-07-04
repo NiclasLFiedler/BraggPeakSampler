@@ -53,18 +53,39 @@ void EventAction::EndOfEventAction(const G4Event* event)
   SiPMSD* sipmSD = (SiPMSD*)SDmanager->FindSensitiveDetector("SiPMSD");
   TrackerSD* trackerSD = (TrackerSD*)SDmanager->FindSensitiveDetector("TrackerDetectorSD");
   if (sipmSD) {      
-    std::vector<G4int> hitMap = sipmSD->hitMap;
-    // std::vector<G4int> hitMap = trackerSD->hitMap;
+    //std::vector<G4int> hitMap = sipmSD->hitMap;
+    std::vector<G4int> hitMap = trackerSD->hitMap;
     std::vector<std::vector<double>> entryPosMap = trackerSD->entryPosMap;
+    std::vector<std::vector<double>> exitPosMap = trackerSD->exitPosMap;
     if (!hitMap.empty()){
       for(int channel = 0; channel<hitMap.size(); channel++) {
         if(hitMap.at(channel) == 0) continue;
         analysisManager->FillNtupleIColumn(1, 0, eventID);
         analysisManager->FillNtupleIColumn(1, 1, channel);
 	      analysisManager->FillNtupleIColumn(1, 2, hitMap.at(channel));
+        
         analysisManager->FillNtupleDColumn(1, 3, entryPosMap.at(channel).at(0));
         analysisManager->FillNtupleDColumn(1, 4, entryPosMap.at(channel).at(1));
         analysisManager->FillNtupleDColumn(1, 5, entryPosMap.at(channel).at(2));
+        
+        analysisManager->FillNtupleDColumn(1, 6, exitPosMap.at(channel).at(0));
+        analysisManager->FillNtupleDColumn(1, 7, exitPosMap.at(channel).at(1));
+        analysisManager->FillNtupleDColumn(1, 8, exitPosMap.at(channel).at(2));
+
+        G4ThreeVector entry = {entryPosMap.at(channel).at(0), 
+                               entryPosMap.at(channel).at(1), 
+                               entryPosMap.at(channel).at(2)};
+        G4ThreeVector exit  = {exitPosMap.at(channel).at(0), 
+                               exitPosMap.at(channel).at(1), 
+                               exitPosMap.at(channel).at(2)};
+
+        G4cout << "Entry: " << entry << ", Exit: " << exit << G4endl;
+        G4ThreeVector trackVec = exit - entry;
+        G4ThreeVector referenceDirection(0, 0, -1);
+        G4double angle = trackVec.angle(referenceDirection); 
+        
+        analysisManager->FillNtupleDColumn(1, 9, angle);
+
         analysisManager->AddNtupleRow(1);
       }
     }

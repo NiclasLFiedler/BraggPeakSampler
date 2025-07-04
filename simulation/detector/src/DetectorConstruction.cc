@@ -551,9 +551,11 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   
   physworld = new G4PVPlacement(nullptr, G4ThreeVector(), logicalworld, "physworld", nullptr, false, 0, fCheckOverlaps);  
   
-  G4double ThicknessTeflon = 1*nm;
-  G4double ThicknessAlu = 1*nm;
-  
+  G4double ThicknessTeflon = 0.25*mm;
+  G4double ThicknessAlu = 0.01*mm;
+  //ThicknessTeflon = 1*nm;
+  //ThicknessAlu = 1*nm;
+
   G4double SiPMSizeYZ = 3.7*mm;
   if(SiPMSizeYZ>detSizeZ) SiPMSizeYZ = detSizeZ;
   G4double SiPMSizeX = ThicknessTeflon;

@@ -64,7 +64,7 @@ int main(int argc,char** argv)
 
   // Set user action classes
   runManager->SetUserInitialization(new ActionInitialization());
-
+  // runManager->Initialize();
   // Initialize visualization with the default graphics system
   auto visManager = new G4VisExecutive();
 
