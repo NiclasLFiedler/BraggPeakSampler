@@ -743,13 +743,10 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
 
       G4double cubeSizeX = 0.15 * mm, cubeSizeY = 0.15 * mm;
       // G4double cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.75)*0.001;
-      G4double cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7900)*0.001;
-      // G4double cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7355)*0.001;
+      // G4double cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7900)*0.001;
+      
+      G4double cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7355)*0.001;
       G4int nx = 180, ny = 180, nz = static_cast<int>(std::round(heteroThickness/cubeSizeZ));
-      // nz = 3;
-      // nx = 3;
-      // ny = 3;
-      // cubeSizeX = 5 * mm, cubeSizeY = 5 * mm, cubeSizeZ = 5 * mm;
       auto voxelSolid = new G4Box("Voxel", cubeSizeX/2, cubeSizeY/2, cubeSizeZ/2);
 
       std::cout << "pmod: " << pmod << std::endl;
@@ -775,34 +772,6 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
       new G4PVParameterised(
         "Voxel", voxelLogic, voxelContainerLV, kUndefined, nVoxels, parameterisation
       );
-      // // Place voxels in a grid
-      // for (G4int ix = 0; ix < nx; ix++) {
-      //     for (G4int iy = 0; iy < ny; iy++) {
-      //         for (G4int iz = 0; iz < nz; iz++) {
-      //             // Randomly assign material
-      //             // G4Material* mat = (G4UniformRand() < 0.248) ? homoMaterial : worldMat;
-      //             G4Material* mat = (G4UniformRand() < 0.2251) ? heteroWater : heteroAir;
-
-      //             // Define voxel logical volume with assigned material
-      //             auto voxelLogic = new G4LogicalVolume(voxelSolid, mat, "Voxel");
-      //             if (mat == heteroWater) {
-      //               voxelLogic->SetVisAttributes(waterVisAttr);
-      //             } else {
-      //               voxelLogic->SetVisAttributes(airVisAttr);
-      //             }
-      //             G4ThreeVector position(
-      //                 (ix - nx/2) * cubeSizeX,
-      //                 (iy - ny/2) * cubeSizeY,
-      //                 (iz - nz/2) * cubeSizeZ + cubeSizeZ*nz/2 + 2*cm
-      //             );
-
-      //             // Unique copy number if needed
-      //             G4int copyNo = ix * ny * nz + iy * nz + iz;
-
-      //             new G4PVPlacement(nullptr, position, voxelLogic, "Voxel", logicalworld, false, copyNo);
-      //         }
-      //     }
-      // }
     }
   } 
   if(ftarget == 1){ //homogeneous
