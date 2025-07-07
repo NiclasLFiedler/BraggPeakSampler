@@ -748,7 +748,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
       G4double cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7355)*0.001;
       G4int nx = 180, ny = 180, nz = static_cast<int>(std::round(heteroThickness/cubeSizeZ));
       auto voxelSolid = new G4Box("Voxel", cubeSizeX/2, cubeSizeY/2, cubeSizeZ/2);
-
+ 
       std::cout << "pmod: " << pmod << std::endl;
       std::cout << "heteroThickness: " << heteroThickness << std::endl;
       std::cout << "voxelZ: " << cubeSizeZ << std::endl;
