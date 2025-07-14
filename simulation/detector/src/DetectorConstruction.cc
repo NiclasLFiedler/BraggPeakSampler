@@ -553,8 +553,8 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   
   G4double ThicknessTeflon = 0.25*mm;
   G4double ThicknessAlu = 0.01*mm;
-  //ThicknessTeflon = 1*nm;
-  //ThicknessAlu = 1*nm;
+  ThicknessTeflon = 1*nm;
+  ThicknessAlu = 1*nm;
 
   G4double SiPMSizeYZ = 3.7*mm;
   if(SiPMSizeYZ>detSizeZ) SiPMSizeYZ = detSizeZ;
@@ -746,9 +746,9 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
       // G4double cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7900)*0.001;
       
       G4double cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7355)*0.001;
-      G4int nx = 180, ny = 180, nz = static_cast<int>(std::round(heteroThickness/cubeSizeZ));
+      G4int nx = 150, ny = 150, nz = static_cast<int>(std::round(heteroThickness/cubeSizeZ));
       auto voxelSolid = new G4Box("Voxel", cubeSizeX/2, cubeSizeY/2, cubeSizeZ/2);
- 
+      nz = 2;
       std::cout << "pmod: " << pmod << std::endl;
       std::cout << "heteroThickness: " << heteroThickness << std::endl;
       std::cout << "voxelZ: " << cubeSizeZ << std::endl;

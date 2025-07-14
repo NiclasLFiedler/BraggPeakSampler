@@ -290,9 +290,9 @@ void analysis(){
                     }
                     if(proton.Coincidence(ch) && proton.GetEDep(ch) > 0.0){
                         detector->CoincEnergyHist(ch)->Fill(proton.GetEDep(ch));
-                        detector->TotalEnergyHist()->Fill(proton.total_edep);
                     }
                 }
+                detector->TotalEnergyHist()->Fill(proton.total_edep);
                 proton.Clear();
             }
 
@@ -346,7 +346,12 @@ void analysis(){
     detector->Process();
 
     for(int i = 0;  i < nLayers; i++){
+        if(detector->crystals.at(i).dose.dose > 0){
         std::cout << "Channel: " << i << " Total Energy Dose: " << detector->crystals.at(i).dose.dose << " +- " << detector->crystals.at(i).dose.stddev << " ~" << detector->crystals.at(i).dose.stddev/detector->crystals.at(i).dose.dose*100 << "%" <<std::endl;
+        }
+        else{
+            std::cout << "Channel: " << i << " Total Energy Dose: " << detector->crystals.at(i).dose.dose << " +- " << detector->crystals.at(i).dose.stddev << std::endl;
+        }
     }
     //------------------------End of Analysis-------------------//
 
@@ -536,7 +541,7 @@ void analysis(){
     for (int i = 0; i < nLayers; ++i) {
         detector->EntryHist(i)->Write(Form("h_entry_%d", i));
         detector->ExitHist(i)->Write(Form("h_exit_%d", i));
-        detector->EntryHist(i)->Write(Form("h_angle_%d", i));
+        detector->AngleHist(i)->Write(Form("h_angle_%d", i));
     }
     fout->Close();
     

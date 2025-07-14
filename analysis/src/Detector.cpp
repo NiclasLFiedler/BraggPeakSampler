@@ -9,8 +9,8 @@ Detector::Detector(DetectorProperties* detectorProperties)
     Char_t histname[100];
     int binningEdep[3] = {1000, 0, 40};
     int binningPhotons[3] = {200, 0, 50};
-    int binningEntry[3] = {100, -static_cast<int>(detectorProperties->GetLayerSizeX())/2, static_cast<int>(detectorProperties->GetLayerSizeX())/2};
-    std::cout << "Layer Size X: " << detectorProperties->GetLayerSizeX() << std::endl;
+    int binningEntry[3] = {200, -static_cast<int>(detectorProperties->GetLayerSizeX())/2, static_cast<int>(detectorProperties->GetLayerSizeX())/2};
+    int binningAngle[3] = {400, 0, 4};
 
     sprintf(histdesc, "Total energy deposition %s", detectorProperties->GetTarget());
     h_total_edep = new TH1D("h_total_edep", histdesc, 230*100, 0, 230);
@@ -42,7 +42,7 @@ Detector::Detector(DetectorProperties* detectorProperties)
         h_exit.push_back(new TH1D(histname, histdesc, binningEntry[0], binningEntry[1], binningEntry[2]));
         sprintf(histname, "h_angle_%i", layer);
         sprintf(histdesc, "Angle of protons in layer %i", layer);
-        h_angle.push_back(new TH1D(histname, histdesc, binningEntry[0], binningEntry[1], binningEntry[2]));
+        h_angle.push_back(new TH1D(histname, histdesc, binningAngle[0], binningAngle[1], binningAngle[2]));
     }
 
     crystals = std::vector<Crystal>(detectorProperties->GetNLayers());
@@ -138,12 +138,10 @@ void Detector::CalcDose(int layer){
     
     crystals.at(layer).dose.dose*=1/detectorProperties->GetLayerSizeZ(layer);
     crystals.at(layer).dose.stddev*=1/detectorProperties->GetLayerSizeZ(layer);
-    
     if(detectorProperties->GetNormStatus()){
         crystals.at(layer).dose.dose*=1/h_edep_coinc[0]->GetEntries();
         crystals.at(layer).dose.stddev*=1/h_edep_coinc[0]->GetEntries();
     }
-
     return;
 }
 
@@ -155,25 +153,31 @@ void Detector::CalcPosition(int layer){
     double aluthick = 0.5;
     double teflonthick = 0.02;
 
+    aluthick = 0;
+    teflonthick = 0;
+
+    double delta = 0;
     if(layer == 0){
         depth = CalcWET(depth, aluthick/2, detectorProperties->GetMaterial("alu"));
         depth = CalcWET(depth, teflonthick/2, detectorProperties->GetMaterial("teflon"));
-        depth = CalcWET(depth, detectorProperties->GetLayerSizeZ(layer)/2, detectorProperties->GetMaterial(detectorProperties->GetScintillator()));
+        delta = CalcWET(depth, detectorProperties->GetLayerSizeZ(layer), detectorProperties->GetMaterial(detectorProperties->GetScintillator()));
+        
+        delta = delta-depth; 
     }
     else{
-        depth = CalcWET(depth, detectorProperties->GetLayerSizeZ(layer-1)/2, detectorProperties->GetMaterial(detectorProperties->GetScintillator()));
+        depth += crystals.at(layer-1).size/2;
         depth = CalcWET(depth, teflonthick/2, detectorProperties->GetMaterial("teflon"));
         if(detectorProperties->GetAbsorberStatus() && layer == 1){
             depth = CalcWET(depth, detectorProperties->GetAbsorberSize(), detectorProperties->GetMaterial(detectorProperties->GetAbsorberType()));
         } 
-        depth = CalcWET(depth, aluthick/2, detectorProperties->GetMaterial("alu"));
-        depth = CalcWET(depth, aluthick/2, detectorProperties->GetMaterial("alu"));
+        depth = CalcWET(depth, aluthick, detectorProperties->GetMaterial("alu"));
         depth = CalcWET(depth, teflonthick/2, detectorProperties->GetMaterial("teflon"));
-        depth = CalcWET(depth, detectorProperties->GetLayerSizeZ(layer)/2, detectorProperties->materials[detectorProperties->GetScintillator()]);
-
+        delta = CalcWET(depth, detectorProperties->GetLayerSizeZ(layer), detectorProperties->materials[detectorProperties->GetScintillator()]);
+        delta = delta-depth;
     }
-    crystals.at(layer).pos.depth = depth;
-    
+    crystals.at(layer).pos.depth = depth+delta/2;
+    crystals.at(layer).size = delta;
+    //std::cout << crystals.at(layer).pos.depth << std::endl;
 
     // crystals.at(layer).pos.depth = (detectorProperties->GetLayerSizeZ(layer-1)/2+detectorProperties->GetLayerSizeZ(layer)/2)*WETConv;
     // if(layer == 0){
@@ -186,7 +190,7 @@ void Detector::CalcPosition(int layer){
     //     crystals.at(layer).pos.depth += absorberConv;
     // }
 
-    crystals.at(layer).pos.stddev = sqrt(std::pow((detectorProperties->GetLayerSizeZ(layer)/sqrt(12)*WETConv),2) + std::pow(crystals.at(layer).pos.depth*0.005*(detectorProperties->GetP("h2o")-detectorProperties->GetP()), 2));
+    crystals.at(layer).pos.stddev = sqrt(std::pow((crystals.at(layer).size/sqrt(12)),2) + std::pow(crystals.at(layer).pos.depth*0.005*(detectorProperties->GetP("h2o")-detectorProperties->GetP()), 2));
     return;
 }
 

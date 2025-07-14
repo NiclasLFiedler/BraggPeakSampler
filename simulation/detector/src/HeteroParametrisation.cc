@@ -22,9 +22,9 @@ class HeteroParameterisation : public G4VPVParameterisation {
             int iz = copyNo % fNz;
     
             G4ThreeVector position(
-                ((ix) -fNx/2) * fDx,
-                ((iy) -fNy/2) * fDy,
-                ((iz) -fNz/2) * fDz
+                ((ix)+0.5 -fNx/2) * fDx,
+                ((iy)+0.5 -fNy/2) * fDy,
+                ((iz)+0.5 -fNz/2) * fDz
             );
             physVol->SetTranslation(position);
         }

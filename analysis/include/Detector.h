@@ -19,6 +19,7 @@ struct Position {
 struct Crystal {
     Position pos = {0,0};
     EnergyDose dose = {0,0};
+    double size = 0;
 };
 
 class Detector {

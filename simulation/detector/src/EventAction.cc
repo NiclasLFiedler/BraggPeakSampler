@@ -71,7 +71,7 @@ void EventAction::EndOfEventAction(const G4Event* event)
         analysisManager->FillNtupleDColumn(1, 6, exitPosMap.at(channel).at(0));
         analysisManager->FillNtupleDColumn(1, 7, exitPosMap.at(channel).at(1));
         analysisManager->FillNtupleDColumn(1, 8, exitPosMap.at(channel).at(2));
-
+        
         G4ThreeVector entry = {entryPosMap.at(channel).at(0), 
                                entryPosMap.at(channel).at(1), 
                                entryPosMap.at(channel).at(2)};
@@ -79,7 +79,7 @@ void EventAction::EndOfEventAction(const G4Event* event)
                                exitPosMap.at(channel).at(1), 
                                exitPosMap.at(channel).at(2)};
 
-        G4cout << "Entry: " << entry << ", Exit: " << exit << G4endl;
+    
         G4ThreeVector trackVec = exit - entry;
         G4ThreeVector referenceDirection(0, 0, -1);
         G4double angle = trackVec.angle(referenceDirection); 

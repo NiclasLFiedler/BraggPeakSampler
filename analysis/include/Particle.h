@@ -49,6 +49,7 @@ public:
     void SetHitPosition(const int channel, double x, double y, double z);
     void CalculateEDep(const int channel);
     void ProcessEDep();
+    void ProcessSimulationEDep();
 
     std::vector<double> GetHitPosition(const int channel);
     std::vector<Double_t> GetTrace(int channel);

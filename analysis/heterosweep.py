@@ -193,7 +193,7 @@ Fitfiles = []
 pmods = [100,200,300,400,500,600,700,800]
 thicknesses = [50,100,150,200]
 
-#pmods = [100]
+#pmods = [100, 200, 300]
 
 #thicknesses = [50]
 
@@ -225,6 +225,7 @@ output = "output10_Sratio_1M"
 #output = "output10_Dratio_100k"
 output = "output10_Dratio_1M"
 
+output = "output"
 print(f"Output: {output}")
 
 notargetX = []
@@ -312,8 +313,8 @@ for comb in combination:
         f2 = interp1d(notargetX, notargetY, kind='cubic', fill_value="extrapolate")
 
         popt, pcov =  curve_fit(lambda x, amp, mean, stddev: right_sided_convolution(f, lambda x2: gaussian(x2, amp, mean, stddev), x), x_data, y_data, p0 = [1, t, sigmat], bounds=((0.9, 0, 0), (1.1, 10, 2)), maxfev=int(1e8))
-        popt2, pcov2 =  curve_fit(lambda x, amp, mean, stddev: right_sided_convolution(f2, lambda x2: gaussian(x2, amp, mean, stddev), x), x_data, y_data, p0 = [*popt], bounds=((0.9, 0, 0), (1.1, 10, 2)), maxfev=int(1e8))
-        
+        #popt2, pcov2 =  curve_fit(lambda x, amp, mean, stddev: right_sided_convolution(f2, lambda x2: gaussian(x2, amp, mean, stddev), x), x_data, y_data, p0 = [*popt], bounds=((0.9, 0, 0), (1.1, 10, 2)), maxfev=int(1e8))
+        popt2, pcov2 = popt, pcov
         perr = np.sqrt(np.diag(pcov))
 
         t_conv = popt[1]
@@ -340,7 +341,7 @@ for comb in combination:
         abserror += abs(pmod_conv-comb[0])
         num += 1
 
-        ax.plot(z, right_sided_convolution(f2, lambda x2: gaussian(x2, *popt), z), label='Right-sided convolved (Gaussian)')
+        ax.plot(z, right_sided_convolution(f, lambda x2: gaussian(x2, *popt), z), label='Right-sided convolved (Gaussian)')
     else:
         labeltext = f"{comb[0]} um, {comb[1]} mm, {params.R0:.3f} mm, {params.sigma:.3f} mm, {t:.3f} cm, {sigmat:.3f} cm, {pmod:.3f} um, Diff: {0} %"
     

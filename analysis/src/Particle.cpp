@@ -33,7 +33,7 @@ void Particle::Clear() {
 
 void Particle::SumEDep(){
     total_edep = 0;
-    for(int i=0; i<traces.size(); i++){
+    for(int i=0; i<Deposition.size(); i++){
         total_edep += GetEDep(i);
     }
 }
@@ -175,6 +175,11 @@ void Particle::ProcessEDep(){
     for(int ch=0; ch<traces.size(); ch++){            
         CalculateEDep(ch);
     }
+    SumEDep();
+    return;
+}
+
+void Particle::ProcessSimulationEDep(){
     SumEDep();
     return;
 }

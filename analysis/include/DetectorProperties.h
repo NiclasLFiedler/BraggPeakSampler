@@ -48,12 +48,12 @@ struct DetectorProperties {
         double p_h2o = 1.738;
         double kB_h2o = 1.738; //https://link.springer.com/article/10.1140/epjc/s10052-023-11242-2
         double R_h2o = CalcRange(alpha_h2o, p_h2o, energy);
-        std::cout << "Range in H2O: " << R_h2o << " mm" << std::endl;
+        
         double alpha_pbwo4 = 7.275e-3;
         double p_pbwo4 = 1.690;
         double kB_pbwo4 = 0.01268; //https://arxiv.org/pdf/0911.3041
         double R_pbwo4 = CalcRange(alpha_pbwo4, p_pbwo4, energy);
-        std::cout << "Range in PbWO4: " << R_pbwo4 << " mm" << std::endl;
+        
         double alpha_dsb = 1.030e-2;
         double p_dsb = 1.713;
         double kB_dsb = 0.01268; //https://arxiv.org/pdf/0911.3041

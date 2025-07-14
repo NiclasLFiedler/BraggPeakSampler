@@ -67,8 +67,8 @@ class DetectorConstruction : public G4VUserDetectorConstruction
     G4int heteroThickness = 0;
     G4int pmod = 0;
 
-    G4double FWHMNozzleX = 4.2*mm; //4.2
-    G4double FWHMNozzleY = 4.2*mm; //4.2
+    G4double FWHMNozzleX = 8.1*mm; //4.2
+    G4double FWHMNozzleY = 8.1*mm; //4.2
     G4double FWHMIsocentreX = 8.1*mm;
     G4double FWHMIsocentreY = 8.1*mm;
     

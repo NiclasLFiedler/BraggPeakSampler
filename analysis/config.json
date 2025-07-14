@@ -189,18 +189,18 @@
       "detectorID": 3,
       "comment": "test Detector",
       "datasetSelect": 1,
-      "detectorType": "pbwo4",
+      "detectorType": "h2o",
       "beamEnergy": 220,
-      "nLayers": 32,
+      "nLayers": 4000,
       "crystalSize": [
-        30,
-        30,
-        2
+        200,
+        200,
+        0.1
       ],
-      "gapSizeZ": 1,
-      "secondaryLayerStatus": true,
-      "nSecondaryLayers": 11,
-      "secLayerSizeZ": 3,
+      "gapSizeZ": 0.00001,
+      "secondaryLayerStatus": false,
+      "nSecondaryLayers": 0,
+      "secLayerSizeZ": 0,
       "absorberStatus": false,
       "absorberType": "pmma",
       "absorberSize": 0,
@@ -244,10 +244,10 @@
       "coincidenceTime": 20000,
       "coincidenceLayer": 1,
       "discardIndex": 50,
-      "targetThickness": 5
+      "targetThickness": 1
     }
   ],
-  "pmod": 100,
-  "heteroThickness": 50,
-  "plotEnable": 1
+  "pmod": 800,
+  "heteroThickness": 200,
+  "plotEnable": 0
 }
