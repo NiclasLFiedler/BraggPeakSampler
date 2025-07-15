@@ -22,7 +22,7 @@ class HeteroParameterisation : public G4VPVParameterisation {
             int iz = copyNo % fNz;
     
             G4ThreeVector position(
-                ((ix)+0.5 -fNx/2) * fDx,
+                ((ix)+0.5  -fNx/2) * fDx,
                 ((iy)+0.5 -fNy/2) * fDy,
                 ((iz)+0.5 -fNz/2) * fDz
             );

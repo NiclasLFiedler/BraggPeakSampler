@@ -1,6 +1,6 @@
 {
   "detectorSelect": 3,
-  "targetSelect": 0,
+  "targetSelect": 2,
   "detectors": [
     {
       "detectorID": 0,
@@ -191,7 +191,7 @@
       "datasetSelect": 1,
       "detectorType": "h2o",
       "beamEnergy": 220,
-      "nLayers": 4000,
+      "nLayers": 1,
       "crystalSize": [
         200,
         200,

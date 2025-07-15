@@ -562,7 +562,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   G4LogicalVolume* logicPhantom = new G4LogicalVolume(solidPhantom, homoMaterial, "phantom");
   new G4PVPlacement(nullptr, G4ThreeVector(0,0,-300*mm), logicPhantom, "Phantom", logicalworld, false, 0);
 
-  G4double layerThickness = 0.1 * mm;
+  G4double layerThickness = 0.2 * mm;
   G4int numLayers = phantomZ / layerThickness;
   G4cout << "Number of layers: " << numLayers << G4endl; 
   G4Box* solidLayer = new G4Box("Layer", phantomX/2, phantomY/2, layerThickness/2);
@@ -574,12 +574,19 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
 
   auto* phantomparameterisation = new PhantomParameterisation(numLayers, layerThickness, homoMaterial, PhantomVisAttr);
 
-  new G4PVParameterised("Layer",
-                        logicLayer,
-                        logicPhantom,
-                        kUndefined,
-                        numLayers,
-                        phantomparameterisation, true);
+  // new G4PVParameterised("Layer",
+  //                       logicLayer,
+  //                       logicPhantom,
+  //                       kUndefined,
+  //                       numLayers,
+  //                       phantomparameterisation, true);
+
+  auto* parameterisationPhantom = new HeteroParameterisation(1, 1, numLayers, 0, 0, layerThickness, heteroWater, heteroWater, PhantomVisAttr, PhantomVisAttr);
+
+  new G4PVParameterised(
+    "Layer", logicLayer, logicPhantom, kUndefined, numLayers, parameterisationPhantom
+  );
+
 
   G4double dBeamSpot = 0.1*mm;
   
