@@ -146,9 +146,9 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event* anEvent)
 
     // G4ParticleDefinition* particle = G4Gamma::GammaDefinition();
     fParticleGun->SetParticleDefinition(particle);
-    G4double energy = 220*MeV;
+    G4double energy = 90*MeV;
     //G4double energy = 0.662*MeV;
-    fParticleGun->SetParticleEnergy(G4RandGauss::shoot(energy, energy*0.005));
+    //fParticleGun->SetParticleEnergy(G4RandGauss::shoot(energy, energy*0.005));
     fParticleGun->SetParticleEnergy(energy);
 
     G4LogicalVolume* logicalWorld = G4LogicalVolumeStore::GetInstance()->GetVolume("logicalWorld");

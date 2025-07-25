@@ -15,8 +15,6 @@ file(REMOVE_RECURSE
   "CMakeFiles/idealDD.dir/src/G4STL.cc.o.d"
   "CMakeFiles/idealDD.dir/src/HeteroParametrisation.cc.o"
   "CMakeFiles/idealDD.dir/src/HeteroParametrisation.cc.o.d"
-  "CMakeFiles/idealDD.dir/src/PhantomParametrisation.cc.o"
-  "CMakeFiles/idealDD.dir/src/PhantomParametrisation.cc.o.d"
   "CMakeFiles/idealDD.dir/src/PrimaryGeneratorAction.cc.o"
   "CMakeFiles/idealDD.dir/src/PrimaryGeneratorAction.cc.o.d"
   "CMakeFiles/idealDD.dir/src/RunAction.cc.o"

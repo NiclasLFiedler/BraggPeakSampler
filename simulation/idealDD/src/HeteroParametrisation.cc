@@ -17,29 +17,23 @@ class HeteroParameterisation : public G4VPVParameterisation {
               fMat1(mat1), fMat2(mat2), fVis1(vis1), fVis2(vis2) {}
     
         void ComputeTransformation(G4int copyNo, G4VPhysicalVolume* physVol) const override {
-            int ix = copyNo / (fNy * fNz);
-            int iy = (copyNo / fNz) % fNy;
-            int iz = copyNo % fNz;
+            int iz = copyNo / (fNy * fNx);
+            int iy = (copyNo / fNx) % fNy;
+            int ix = copyNo % fNx;
     
             G4ThreeVector position(
-                ((ix)+0.5  -fNx/2) * fDx,
-                ((iy)+0.5 -fNy/2) * fDy,
-                ((iz)+0.5 -fNz/2) * fDz
+                -(0.5+ix)*fDx+(fNx * fDx)/2,
+                -(0.5+iy)*fDy+(fNy * fDy)/2,
+                -(0.5+iz)*fDz+(fNz * fDz)/2
             );
-
-        
-            // G4cout << "CopyNo = " << copyNo
-            // << ", iz = " << iz
-            // << ", Z-pos (local) = " << position.z()/mm << " mm"
-            // << G4endl;
-
+            
             physVol->SetTranslation(position);
         }
     
         G4Material* ComputeMaterial(G4int copyNo, G4VPhysicalVolume*, const G4VTouchable*) {
             if (fMaterials.count(copyNo) == 0) {
-                // G4Material* mat = (G4UniformRand() < 0.2476) ? fMat1 : fMat2;
-                G4Material* mat = (G4UniformRand() < 0.2251) ? fMat1 : fMat2;
+                G4Material* mat = (G4UniformRand() < 0.2476) ? fMat1 : fMat2;
+                // G4Material* mat = (G4UniformRand() < 0.2251) ? fMat1 : fMat2;
                 fMaterials[copyNo] = mat;
             }
             return fMaterials[copyNo];

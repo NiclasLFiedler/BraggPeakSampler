@@ -133,7 +133,7 @@ def bortfeld_fit(x, y, Phi0, R0, epsilon, sigma, weights=None):
     sigma_weights = 1 / weights
     
     params = fit_params()
-    popt, pcov = curve_fit(lambda z, Phi0, R0, sigma, epsilon: depth_dose_distribution(z, Phi0, R0, sigma, epsilon), x, y, p0=[Phi0, R0, sigma*10, 0.001*epsilon], bounds=((Phi0*0.5, R0 - 3*sigma, 0.00001*sigma, 0), (Phi0*1.5, R0 + 3.5*sigma, 10*sigma, 2)), sigma=sigma_weights, maxfev=int(1e8))
+    popt, pcov = curve_fit(lambda z, Phi0, R0, sigma, epsilon: depth_dose_distribution(z, Phi0, R0, sigma, epsilon), x, y, p0=[Phi0, R0, sigma*10, 0.001*epsilon], bounds=((Phi0*0.25, R0 - 3*sigma, 0.001*sigma, 0), (Phi0*1.5, R0 + 3.5*sigma, 10*sigma, 2)), sigma=sigma_weights, maxfev=int(1e8))
     params.curve = depth_dose_distribution(z, *popt)
     params.Phi0 = popt[0] 
     params.R0 = popt[1] 
@@ -279,8 +279,8 @@ quantities  = characterize_z_D_curve(z_spline, spline_func(z_spline))
 
 
 R0 = quantities['R80D']
-if file == "notarget":
-    R0 = range_energy_relationship(beamEnergy, a_h2o, p_h2o)
+#if file == "notarget":
+#    R0 = range_energy_relationship(beamEnergy, a_h2o, p_h2o)
 
 sigmaMono = (beta*R0**0.935)
 sigmaE0   = 0.01*beamEnergy

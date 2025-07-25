@@ -32,7 +32,7 @@ void EventAction::EndOfEventAction(const G4Event* event)
 
   if(siPMSD->fHit == 1 || siPMSD->target != 2) {
     std::vector<G4double> fEdep = trackerSD->GetEdep();
-
+    
     for(int i = 0; i < fEdep.size(); i++) {
       if(fEdep.at(i) > 0) {
 

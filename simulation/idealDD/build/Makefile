@@ -366,30 +366,6 @@ src/HeteroParametrisation.cc.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/idealDD.dir/build.make CMakeFiles/idealDD.dir/src/HeteroParametrisation.cc.s
 .PHONY : src/HeteroParametrisation.cc.s
 
-src/PhantomParametrisation.o: src/PhantomParametrisation.cc.o
-.PHONY : src/PhantomParametrisation.o
-
-# target to build an object file
-src/PhantomParametrisation.cc.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/idealDD.dir/build.make CMakeFiles/idealDD.dir/src/PhantomParametrisation.cc.o
-.PHONY : src/PhantomParametrisation.cc.o
-
-src/PhantomParametrisation.i: src/PhantomParametrisation.cc.i
-.PHONY : src/PhantomParametrisation.i
-
-# target to preprocess a source file
-src/PhantomParametrisation.cc.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/idealDD.dir/build.make CMakeFiles/idealDD.dir/src/PhantomParametrisation.cc.i
-.PHONY : src/PhantomParametrisation.cc.i
-
-src/PhantomParametrisation.s: src/PhantomParametrisation.cc.s
-.PHONY : src/PhantomParametrisation.s
-
-# target to generate assembly for a file
-src/PhantomParametrisation.cc.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/idealDD.dir/build.make CMakeFiles/idealDD.dir/src/PhantomParametrisation.cc.s
-.PHONY : src/PhantomParametrisation.cc.s
-
 src/PrimaryGeneratorAction.o: src/PrimaryGeneratorAction.cc.o
 .PHONY : src/PrimaryGeneratorAction.o
 
@@ -547,9 +523,6 @@ help:
 	@echo "... src/HeteroParametrisation.o"
 	@echo "... src/HeteroParametrisation.i"
 	@echo "... src/HeteroParametrisation.s"
-	@echo "... src/PhantomParametrisation.o"
-	@echo "... src/PhantomParametrisation.i"
-	@echo "... src/PhantomParametrisation.s"
 	@echo "... src/PrimaryGeneratorAction.o"
 	@echo "... src/PrimaryGeneratorAction.i"
 	@echo "... src/PrimaryGeneratorAction.s"

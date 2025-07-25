@@ -191,10 +191,10 @@
       "datasetSelect": 1,
       "detectorType": "h2o",
       "beamEnergy": 220,
-      "nLayers": 1,
+      "nLayers": 1000,
       "crystalSize": [
-        200,
-        200,
+        300,
+        300,
         0.1
       ],
       "gapSizeZ": 0.00001,
@@ -248,6 +248,6 @@
     }
   ],
   "pmod": 800,
-  "heteroThickness": 200,
+  "heteroThickness": 50,
   "plotEnable": 0
 }

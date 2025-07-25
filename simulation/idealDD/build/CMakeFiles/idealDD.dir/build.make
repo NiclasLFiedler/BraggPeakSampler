@@ -181,24 +181,10 @@ CMakeFiles/idealDD.dir/src/HeteroParametrisation.cc.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/idealDD.dir/src/HeteroParametrisation.cc.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/niclas/BraggPeakSampler/simulation/idealDD/src/HeteroParametrisation.cc -o CMakeFiles/idealDD.dir/src/HeteroParametrisation.cc.s
 
-CMakeFiles/idealDD.dir/src/PhantomParametrisation.cc.o: CMakeFiles/idealDD.dir/flags.make
-CMakeFiles/idealDD.dir/src/PhantomParametrisation.cc.o: /home/niclas/BraggPeakSampler/simulation/idealDD/src/PhantomParametrisation.cc
-CMakeFiles/idealDD.dir/src/PhantomParametrisation.cc.o: CMakeFiles/idealDD.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/niclas/BraggPeakSampler/simulation/idealDD/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/idealDD.dir/src/PhantomParametrisation.cc.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/idealDD.dir/src/PhantomParametrisation.cc.o -MF CMakeFiles/idealDD.dir/src/PhantomParametrisation.cc.o.d -o CMakeFiles/idealDD.dir/src/PhantomParametrisation.cc.o -c /home/niclas/BraggPeakSampler/simulation/idealDD/src/PhantomParametrisation.cc
-
-CMakeFiles/idealDD.dir/src/PhantomParametrisation.cc.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/idealDD.dir/src/PhantomParametrisation.cc.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/niclas/BraggPeakSampler/simulation/idealDD/src/PhantomParametrisation.cc > CMakeFiles/idealDD.dir/src/PhantomParametrisation.cc.i
-
-CMakeFiles/idealDD.dir/src/PhantomParametrisation.cc.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/idealDD.dir/src/PhantomParametrisation.cc.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/niclas/BraggPeakSampler/simulation/idealDD/src/PhantomParametrisation.cc -o CMakeFiles/idealDD.dir/src/PhantomParametrisation.cc.s
-
 CMakeFiles/idealDD.dir/src/PrimaryGeneratorAction.cc.o: CMakeFiles/idealDD.dir/flags.make
 CMakeFiles/idealDD.dir/src/PrimaryGeneratorAction.cc.o: /home/niclas/BraggPeakSampler/simulation/idealDD/src/PrimaryGeneratorAction.cc
 CMakeFiles/idealDD.dir/src/PrimaryGeneratorAction.cc.o: CMakeFiles/idealDD.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/niclas/BraggPeakSampler/simulation/idealDD/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building CXX object CMakeFiles/idealDD.dir/src/PrimaryGeneratorAction.cc.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/niclas/BraggPeakSampler/simulation/idealDD/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/idealDD.dir/src/PrimaryGeneratorAction.cc.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/idealDD.dir/src/PrimaryGeneratorAction.cc.o -MF CMakeFiles/idealDD.dir/src/PrimaryGeneratorAction.cc.o.d -o CMakeFiles/idealDD.dir/src/PrimaryGeneratorAction.cc.o -c /home/niclas/BraggPeakSampler/simulation/idealDD/src/PrimaryGeneratorAction.cc
 
 CMakeFiles/idealDD.dir/src/PrimaryGeneratorAction.cc.i: cmake_force
@@ -212,7 +198,7 @@ CMakeFiles/idealDD.dir/src/PrimaryGeneratorAction.cc.s: cmake_force
 CMakeFiles/idealDD.dir/src/RunAction.cc.o: CMakeFiles/idealDD.dir/flags.make
 CMakeFiles/idealDD.dir/src/RunAction.cc.o: /home/niclas/BraggPeakSampler/simulation/idealDD/src/RunAction.cc
 CMakeFiles/idealDD.dir/src/RunAction.cc.o: CMakeFiles/idealDD.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/niclas/BraggPeakSampler/simulation/idealDD/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Building CXX object CMakeFiles/idealDD.dir/src/RunAction.cc.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/niclas/BraggPeakSampler/simulation/idealDD/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building CXX object CMakeFiles/idealDD.dir/src/RunAction.cc.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/idealDD.dir/src/RunAction.cc.o -MF CMakeFiles/idealDD.dir/src/RunAction.cc.o.d -o CMakeFiles/idealDD.dir/src/RunAction.cc.o -c /home/niclas/BraggPeakSampler/simulation/idealDD/src/RunAction.cc
 
 CMakeFiles/idealDD.dir/src/RunAction.cc.i: cmake_force
@@ -226,7 +212,7 @@ CMakeFiles/idealDD.dir/src/RunAction.cc.s: cmake_force
 CMakeFiles/idealDD.dir/src/SiPMSD.cc.o: CMakeFiles/idealDD.dir/flags.make
 CMakeFiles/idealDD.dir/src/SiPMSD.cc.o: /home/niclas/BraggPeakSampler/simulation/idealDD/src/SiPMSD.cc
 CMakeFiles/idealDD.dir/src/SiPMSD.cc.o: CMakeFiles/idealDD.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/niclas/BraggPeakSampler/simulation/idealDD/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Building CXX object CMakeFiles/idealDD.dir/src/SiPMSD.cc.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/niclas/BraggPeakSampler/simulation/idealDD/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Building CXX object CMakeFiles/idealDD.dir/src/SiPMSD.cc.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/idealDD.dir/src/SiPMSD.cc.o -MF CMakeFiles/idealDD.dir/src/SiPMSD.cc.o.d -o CMakeFiles/idealDD.dir/src/SiPMSD.cc.o -c /home/niclas/BraggPeakSampler/simulation/idealDD/src/SiPMSD.cc
 
 CMakeFiles/idealDD.dir/src/SiPMSD.cc.i: cmake_force
@@ -240,7 +226,7 @@ CMakeFiles/idealDD.dir/src/SiPMSD.cc.s: cmake_force
 CMakeFiles/idealDD.dir/src/TrackerHit.cc.o: CMakeFiles/idealDD.dir/flags.make
 CMakeFiles/idealDD.dir/src/TrackerHit.cc.o: /home/niclas/BraggPeakSampler/simulation/idealDD/src/TrackerHit.cc
 CMakeFiles/idealDD.dir/src/TrackerHit.cc.o: CMakeFiles/idealDD.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/niclas/BraggPeakSampler/simulation/idealDD/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_13) "Building CXX object CMakeFiles/idealDD.dir/src/TrackerHit.cc.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/niclas/BraggPeakSampler/simulation/idealDD/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Building CXX object CMakeFiles/idealDD.dir/src/TrackerHit.cc.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/idealDD.dir/src/TrackerHit.cc.o -MF CMakeFiles/idealDD.dir/src/TrackerHit.cc.o.d -o CMakeFiles/idealDD.dir/src/TrackerHit.cc.o -c /home/niclas/BraggPeakSampler/simulation/idealDD/src/TrackerHit.cc
 
 CMakeFiles/idealDD.dir/src/TrackerHit.cc.i: cmake_force
@@ -254,7 +240,7 @@ CMakeFiles/idealDD.dir/src/TrackerHit.cc.s: cmake_force
 CMakeFiles/idealDD.dir/src/TrackerSD.cc.o: CMakeFiles/idealDD.dir/flags.make
 CMakeFiles/idealDD.dir/src/TrackerSD.cc.o: /home/niclas/BraggPeakSampler/simulation/idealDD/src/TrackerSD.cc
 CMakeFiles/idealDD.dir/src/TrackerSD.cc.o: CMakeFiles/idealDD.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/niclas/BraggPeakSampler/simulation/idealDD/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_14) "Building CXX object CMakeFiles/idealDD.dir/src/TrackerSD.cc.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/niclas/BraggPeakSampler/simulation/idealDD/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_13) "Building CXX object CMakeFiles/idealDD.dir/src/TrackerSD.cc.o"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/idealDD.dir/src/TrackerSD.cc.o -MF CMakeFiles/idealDD.dir/src/TrackerSD.cc.o.d -o CMakeFiles/idealDD.dir/src/TrackerSD.cc.o -c /home/niclas/BraggPeakSampler/simulation/idealDD/src/TrackerSD.cc
 
 CMakeFiles/idealDD.dir/src/TrackerSD.cc.i: cmake_force
@@ -275,7 +261,6 @@ idealDD_OBJECTS = \
 "CMakeFiles/idealDD.dir/src/EventAction.cc.o" \
 "CMakeFiles/idealDD.dir/src/G4STL.cc.o" \
 "CMakeFiles/idealDD.dir/src/HeteroParametrisation.cc.o" \
-"CMakeFiles/idealDD.dir/src/PhantomParametrisation.cc.o" \
 "CMakeFiles/idealDD.dir/src/PrimaryGeneratorAction.cc.o" \
 "CMakeFiles/idealDD.dir/src/RunAction.cc.o" \
 "CMakeFiles/idealDD.dir/src/SiPMSD.cc.o" \
@@ -293,7 +278,6 @@ idealDD: CMakeFiles/idealDD.dir/src/DetectorParameterisationColour.cc.o
 idealDD: CMakeFiles/idealDD.dir/src/EventAction.cc.o
 idealDD: CMakeFiles/idealDD.dir/src/G4STL.cc.o
 idealDD: CMakeFiles/idealDD.dir/src/HeteroParametrisation.cc.o
-idealDD: CMakeFiles/idealDD.dir/src/PhantomParametrisation.cc.o
 idealDD: CMakeFiles/idealDD.dir/src/PrimaryGeneratorAction.cc.o
 idealDD: CMakeFiles/idealDD.dir/src/RunAction.cc.o
 idealDD: CMakeFiles/idealDD.dir/src/SiPMSD.cc.o
@@ -339,7 +323,7 @@ idealDD: /usr/local/lib/libG4global.so
 idealDD: /usr/local/lib/libG4clhep.so
 idealDD: /usr/local/lib/libG4ptl.so.3.0.0
 idealDD: CMakeFiles/idealDD.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/niclas/BraggPeakSampler/simulation/idealDD/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_15) "Linking CXX executable idealDD"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/niclas/BraggPeakSampler/simulation/idealDD/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_14) "Linking CXX executable idealDD"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/idealDD.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

@@ -28,7 +28,6 @@
 #include "G4SystemOfUnits.hh"
 #include "DetectorParameterisationColour.hh"
 #include "HeteroParametrisation.cc"
-#include "PhantomParametrisation.cc"
 #include "G4RegularNavigation.hh"
 
 #include "Randomize.hh"
@@ -475,7 +474,7 @@ void DetectorConstruction::fillDCMcontainer(){
   
   param->SetNoVoxels(nbofvoxelsX, nbofvoxelsY, NbOfSlices);
 
-  std::vector<G4Material*> fMaterials = {heteroAir, heteroWater};
+  std::vector<G4Material*> fMaterials = {heteroAir, homoMaterial};
   param->SetMaterials(fMaterials);
 
   param->SetMaterialIndices(fMateIDs);
@@ -553,38 +552,26 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   physworld = new G4PVPlacement(nullptr, G4ThreeVector(), logicalworld, "physworld", nullptr, false, 0, fCheckOverlaps);  
   
   // Assume you use mm as the default unit
-  G4double phantomX = 30.0 * mm;
-  G4double phantomY = 30.0 * mm;
-  G4double phantomZ = 400.0 * mm; // Longer than Bragg peak range
+  G4double phantomX = 300.0 * mm;
+  G4double phantomY = 300.0 * mm;
+  G4double phantomZ = detSizeZ*fLayers; // Longer than Bragg peak range
 
 
   G4Box* solidPhantom = new G4Box("Phantom", phantomX/2, phantomY/2, phantomZ/2);
   G4LogicalVolume* logicPhantom = new G4LogicalVolume(solidPhantom, homoMaterial, "phantom");
   new G4PVPlacement(nullptr, G4ThreeVector(0,0,-300*mm), logicPhantom, "Phantom", logicalworld, false, 0);
 
-  G4double layerThickness = 0.2 * mm;
-  G4int numLayers = phantomZ / layerThickness;
-  G4cout << "Number of layers: " << numLayers << G4endl; 
-  G4Box* solidLayer = new G4Box("Layer", phantomX/2, phantomY/2, layerThickness/2);
+  G4Box* solidLayer = new G4Box("Layer", phantomX/2, phantomY/2, detSizeZ/2);
   G4LogicalVolume* logicLayer = new G4LogicalVolume(solidLayer, homoMaterial, "Layer");
   
   auto PhantomVisAttr = new G4VisAttributes(G4Colour(0.0, 0.0, 1.0)); // Blue
   PhantomVisAttr->SetVisibility(true);
   PhantomVisAttr->SetForceSolid(true);
 
-  auto* phantomparameterisation = new PhantomParameterisation(numLayers, layerThickness, homoMaterial, PhantomVisAttr);
-
-  // new G4PVParameterised("Layer",
-  //                       logicLayer,
-  //                       logicPhantom,
-  //                       kUndefined,
-  //                       numLayers,
-  //                       phantomparameterisation, true);
-
-  auto* parameterisationPhantom = new HeteroParameterisation(1, 1, numLayers, 0, 0, layerThickness, heteroWater, heteroWater, PhantomVisAttr, PhantomVisAttr);
+  auto* parameterisationPhantom = new HeteroParameterisation(1, 1, fLayers, 0, 0, detSizeZ, homoMaterial, homoMaterial, PhantomVisAttr, PhantomVisAttr);
 
   new G4PVParameterised(
-    "Layer", logicLayer, logicPhantom, kUndefined, numLayers, parameterisationPhantom
+    "Layer", logicLayer, logicPhantom, kUndefined, fLayers, parameterisationPhantom
   );
 
 
@@ -600,13 +587,12 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
       airVisAttr->SetVisibility(true);
       airVisAttr->SetForceSolid(true);
 
-      G4double cubeSizeX = 0.15 * mm, cubeSizeY = 0.15 * mm;
-      // G4double cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.75)*0.001;
-      // G4double cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7900)*0.001;
+      G4double cubeSizeX = 0.5 * mm, cubeSizeY = 0.5 * mm;
+      G4double cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7900)*0.001;
+      // G4double cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7355)*0.001;
       
-      G4double cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7355)*0.001;
       G4int nx = 170, ny = 170, nz = static_cast<int>(std::round(heteroThickness/cubeSizeZ));
-      nz  = 1;
+      //nz  = 3;
       auto voxelSolid = new G4Box("Voxel", cubeSizeX/2, cubeSizeY/2, cubeSizeZ/2);
  
       std::cout << "pmod: " << pmod << std::endl;
@@ -621,11 +607,11 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
 
       auto* parameterisation = new HeteroParameterisation(nx, ny, nz,
         cubeSizeX, cubeSizeY, cubeSizeZ,
-        heteroWater, heteroAir,
+        lungTissue, heteroAir,
         waterVisAttr, airVisAttr);
     
       int nVoxels = nx * ny * nz;
-      nz = 1;
+
       auto voxelLogic = new G4LogicalVolume(voxelSolid, heteroAir, "Voxel");
       voxelLogic->SetVisAttributes(airVisAttr);
 
@@ -638,10 +624,10 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
       logicalTracker->SetVisAttributes(waterVisAttr);
       new G4PVPlacement(nullptr, G4ThreeVector(0, 0, 2*cm -1*mm), logicalTracker, "physTracker", logicalworld, false, 0);
   } 
-  if(ftarget == 1){ //homogeneous
-    solidHomo =  new G4Box("solidHomo", detSizeX/2, detSizeY/2, targetThickness/2);
+  if(ftarget == 2 || ftarget == 0){ //homogeneous
+    solidHomo =  new G4Box("solidHomo", 300/2, 300/2, 20/2);
     logicalHomo = new G4LogicalVolume(solidHomo, absorberMaterial, "logicalHomo");    
-    physHomo = new G4PVPlacement(nullptr, G4ThreeVector(0.,0., heteroThickness/2+dBeamSpot/2), logicalHomo,"physHomo", logicalworld, false, 0, fCheckOverlaps);
+    physHomo = new G4PVPlacement(nullptr, G4ThreeVector(0.,0., 30*cm+dBeamSpot/2), logicalHomo,"physHomo", logicalworld, false, 0, fCheckOverlaps);
 
     G4VisAttributes* visHomo = new G4VisAttributes(G4Colour(0.0, 1.0, 1.0, 0.5)); // Red for the detector
     visHomo->SetVisibility(true);

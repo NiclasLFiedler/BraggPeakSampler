@@ -66,7 +66,7 @@ comp = {
 }
 
 def SP(mat):
-    return mat["density"] * (mat["Z/A"]) * np.log(2 * 0.511 / mat["I"])
+    return mat["density"] * (mat["Z/A"]) #* np.log(2 * 0.511 / mat["I"])
 
 def mSP(mat):
     return SP(mat) * 1/mat["density"]

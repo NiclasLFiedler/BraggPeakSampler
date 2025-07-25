@@ -193,9 +193,9 @@ Fitfiles = []
 pmods = [100,200,300,400,500,600,700,800]
 thicknesses = [50,100,150,200]
 
-#pmods = [100, 200, 300]
+#pmods = [100, 200]
 
-#thicknesses = [50]
+thicknesses = [50]
 
 combination = []
 combination.append([0,0,0])
@@ -223,7 +223,7 @@ output = "output10_Sratio_1M"
 
 #output = "output10_Dratio_10k"
 #output = "output10_Dratio_100k"
-output = "output10_Dratio_1M"
+#output = "output10_Dratio_1M"
 
 output = "output"
 print(f"Output: {output}")
@@ -277,8 +277,8 @@ for comb in combination:
 
 
     R0 = quantities['R80D']
-    if(comb[2] == 0):
-        R0 = range_energy_relationship(beamEnergy, a_h2o, p_h2o)
+    #if(comb[2] == 0):
+    #    R0 = range_energy_relationship(beamEnergy, a_h2o, p_h2o)
 
     sigmaMono = (beta*R0**0.935)
     sigmaE0   = 0.01*beamEnergy

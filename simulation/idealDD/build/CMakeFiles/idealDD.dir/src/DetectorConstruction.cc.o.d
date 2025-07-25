@@ -561,7 +561,6 @@ CMakeFiles/idealDD.dir/src/DetectorConstruction.cc.o: \
  /usr/local/include/Geant4/CLHEP/Random/RandPoissonQ.icc \
  /usr/local/include/Geant4/CLHEP/Random/RandStudentT.h \
  /usr/local/include/Geant4/CLHEP/Random/RandStudentT.icc \
- /home/niclas/BraggPeakSampler/simulation/idealDD/src/PhantomParametrisation.cc \
  /usr/local/include/Geant4/G4RegularNavigation.hh \
  /usr/local/include/Geant4/G4VNavigation.hh \
  /usr/local/include/Geant4/G4EmCalculator.hh \
