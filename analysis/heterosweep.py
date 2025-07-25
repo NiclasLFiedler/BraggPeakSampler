@@ -226,6 +226,7 @@ output = "output10_Sratio_1M"
 #output = "output10_Dratio_1M"
 
 output = "output"
+output = "output_1M_Sratio_ideal"
 print(f"Output: {output}")
 
 notargetX = []

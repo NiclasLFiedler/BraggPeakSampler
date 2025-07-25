@@ -591,7 +591,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
       G4double cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7900)*0.001;
       // G4double cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7355)*0.001;
       
-      G4int nx = 170, ny = 170, nz = static_cast<int>(std::round(heteroThickness/cubeSizeZ));
+      G4int nx = 100, ny = 100, nz = static_cast<int>(std::round(heteroThickness/cubeSizeZ));
       //nz  = 3;
       auto voxelSolid = new G4Box("Voxel", cubeSizeX/2, cubeSizeY/2, cubeSizeZ/2);
  
@@ -627,7 +627,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   if(ftarget == 2 || ftarget == 0){ //homogeneous
     solidHomo =  new G4Box("solidHomo", 300/2, 300/2, 20/2);
     logicalHomo = new G4LogicalVolume(solidHomo, absorberMaterial, "logicalHomo");    
-    physHomo = new G4PVPlacement(nullptr, G4ThreeVector(0.,0., 30*cm+dBeamSpot/2), logicalHomo,"physHomo", logicalworld, false, 0, fCheckOverlaps);
+    physHomo = new G4PVPlacement(nullptr, G4ThreeVector(0.,0., 8.5*cm+dBeamSpot/2), logicalHomo,"physHomo", logicalworld, false, 0, fCheckOverlaps);
 
     G4VisAttributes* visHomo = new G4VisAttributes(G4Colour(0.0, 1.0, 1.0, 0.5)); // Red for the detector
     visHomo->SetVisibility(true);
