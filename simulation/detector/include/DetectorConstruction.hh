@@ -103,9 +103,8 @@ class DetectorConstruction : public G4VUserDetectorConstruction
     G4Material *phosphinoxid = nullptr;
     G4Material *resinMaterial = nullptr;
     G4Material *lungTissue = nullptr;
-    G4Material *homoMaterial = nullptr;
-    G4Material *heteroAir = nullptr;
-    G4Material *heteroWater = nullptr;
+    G4Material *air = nullptr;
+    G4Material *water = nullptr;
     G4Material *aluminumFoil = nullptr;
     G4Material *penMaterial = nullptr;
     G4Material *Teflon = nullptr;

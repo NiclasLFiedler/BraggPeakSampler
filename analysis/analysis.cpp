@@ -53,8 +53,8 @@ void analysis(){
     int pmod                            = allConfigs["pmod"];
     int heteroThickness                 = allConfigs["heteroThickness"];
 
-    bool bScintSim = true;
-    bool bSavepdf = false;
+    bool bScintSim = false;
+    bool bSavepdf = true;
     bool bPhotons = false;
 
 

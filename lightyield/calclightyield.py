@@ -43,14 +43,14 @@ def mean_and_std_of_mean(values, std_devs):
     std_devs = np.asarray(std_devs)
     
     mean = np.mean(values)
-    print(np.sum(std_devs**2))
+    # print(np.sum(std_devs**2))
     test = 0
     for i in std_devs:
         test = test + i**2
-    print(test)
-    print(np.sum(std_devs**2))
-    print(np.sqrt(np.sum(std_devs**2)))
-    print(len(values))
+    # print(test)
+    # print(np.sum(std_devs**2))
+    # print(np.sqrt(np.sum(std_devs**2)))
+    # print(len(values))
     std_of_mean = np.sqrt(np.sum(std_devs**2)) / len(values)
     
     return mean, std_of_mean
@@ -98,9 +98,26 @@ def main():
         LY_ph.append(GetPH(LY[index]))
         LY_ph_err.append(GetPHDev(LY_err[index]))
         
-        print(f"Flat: CH {index} Light yield: {LY[index]} ± {LY_err[index]:.2f} LY_pe: {LY_pe[-1]:.2f} ± {LY_pe_err[-1]:.2f}  LY_ph: {LY_ph[-1]:.2f} ± {LY_ph_err[-1]:.2f}")
+        #print(f"Flat: CH {index} Light yield: {LY[index]} ± {LY_err[index]:.2f} LY_pe: {LY_pe[-1]:.2f} ± {LY_pe_err[-1]:.2f}  LY_ph: {LY_ph[-1]:.2f} ± {LY_ph_err[-1]:.2f}")
         ly_average = ly_average + LY_ph[-1]
         ly_average_err = ly_average_err + LY_ph_err[-1]
+
+
+    indexed_list = list(enumerate(LY[:15]))
+    
+    sorted_LY = sorted(indexed_list, key=lambda item: item[1])
+    
+    for index, value in sorted_LY:
+        print(f"Flat: CH {index} Light yield: {LY[index]} ± {LY_err[index]:.2f} LY_pe: {LY_pe[index]:.2f} ± {LY_pe_err[index]:.2f}  LY_ph: {LY_ph[index]:.2f} ± {LY_ph_err[index]:.2f}")
+
+    print()
+    indexed_list = list(enumerate(LY[15:]))
+    
+    sorted_LY = sorted(indexed_list, key=lambda item: item[1])
+    
+    for index, value in sorted_LY:
+        index += 15  
+        print(f"Flat: CH {index} Light yield: {LY[index]} ± {LY_err[index]:.2f} LY_pe: {LY_pe[index]:.2f} ± {LY_pe_err[index]:.2f}  LY_ph: {LY_ph[index]:.2f} ± {LY_ph_err[index]:.2f}")
 
     for index in range(38):
         LY_pe_lat.append(GetPE(LY_lat[index]))
@@ -108,10 +125,14 @@ def main():
         LY_pe_err_lat.append(GetPEDev(LY_lat_err[index]))
         LY_ph_err_lat.append(GetPHDev(LY_lat_err[index]))
         
-        print(f"Lateral: CH {index} Light yield: {LY_lat[index]} ± {LY_lat_err[index]:.2f} LY_pe: {LY_pe_lat[-1]:.2f} ± {LY_pe_err_lat[-1]:.2f}  LY_ph: {LY_ph_lat[-1]:.2f} ± {LY_ph_err_lat[-1]:.2f}")
+        #print(f"Lateral: CH {index} Light yield: {LY_lat[index]} ± {LY_lat_err[index]:.2f} LY_pe: {LY_pe_lat[-1]:.2f} ± {LY_pe_err_lat[-1]:.2f}  LY_ph: {LY_ph_lat[-1]:.2f} ± {LY_ph_err_lat[-1]:.2f}")
         ly_average_lat = ly_average_lat + LY_ph_lat[-1]
         ly_average_err_lat = ly_average_err_lat + LY_ph_err_lat[-1]
 
+    print()
+    for index, ly_window in enumerate(LY_ph_lat[36:]):
+        index += 36  
+        print(f"lat: CH {index} Light yield: {LY_lat[index]} ± {LY_lat_err[index]:.2f} LY_pe: {LY_pe_lat[index]:.2f} ± {LY_pe_err_lat[index]:.2f}  LY_ph: {LY_ph_lat[index]:.2f} ± {LY_ph_err_lat[index]:.2f}")
 
     print(f"\nAverage flat light yield: {ly_average/36}")
     print(f"Average flat light yield Error: {ly_average_err/36}")
@@ -133,14 +154,8 @@ def main():
 
     ax1.grid()
     ax1.tick_params(axis='y')
-    print()
-    print()
-    print(LY_ph_err[:15])
-    print()
-    print()
+
     average_first_15, average_first_15err = mean_and_std_of_mean(LY_ph[:15], LY_ph_err[:15])
-    print()
-    print()
     average_last_21, average_last_21err = mean_and_std_of_mean(LY_ph[15:36], LY_ph_err[15:36])
     average_first_15_lat, average_first_15_laterr = mean_and_std_of_mean(LY_ph_lat[:15], LY_ph_err_lat[:15])
     average_last_21_lat, average_last_21_latererr = mean_and_std_of_mean(LY_ph_lat[15:36], LY_ph_err_lat[15:36])
@@ -167,7 +182,6 @@ def main():
 
     # Define custom x-tick labels
     xtick_labels = [f'{0}'] + [f'window {0}'] + [f'{i+1}' for i in range(0,21)] +[f'window {21}'] +[f'{i+1}' for i in range(21,35)]
-    print(xtick_labels)
     ax1.set_xticks(range(38))  # Set x-ticks for all 38 entries
     ax1.set_xticklabels(xtick_labels, rotation=90, ha='right')  # Rotate labels for better readability
 

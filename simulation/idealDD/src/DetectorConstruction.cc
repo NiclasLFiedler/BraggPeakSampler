@@ -187,8 +187,8 @@ void DetectorConstruction::DefineMaterials()
   lungTissue->AddElement(elFe, 0.000370);
   lungTissue->AddElement(elZn, 0.000010);
 
-  homoMaterial = nistManager->FindOrBuildMaterial("G4_WATER"); 
-  homoMaterial->GetIonisation()->SetMeanExcitationEnergy(75*eV);
+  water = nistManager->FindOrBuildMaterial("G4_WATER"); 
+  water->GetIonisation()->SetMeanExcitationEnergy(78*eV);
 
   G4Material *SiO2 = new G4Material("SiO2", 2.65*g/cm3, 2);
   SiO2->AddElement(elSi, 1);
@@ -379,15 +379,10 @@ void DetectorConstruction::DefineMaterials()
   pbwo4MPT->AddConstProperty("SCINTILLATIONTIMECONSTANT1", 10.*ns);
 
   G4double ttt = 75.47+23.20+1.28;
-  heteroAir = new G4Material("heteroAir", 0.001225*g/cm3,3);
-  heteroAir->AddElement(elN, 75.47/ttt);
-  heteroAir->AddElement(elO, 23.20/ttt);
-  heteroAir->AddElement(elAr, 1.28/ttt);
-
-  heteroWater = new G4Material("heteroWater", 1.00*g/cm3,2);
-  heteroWater->AddElement(elH, 2);
-  heteroWater->AddElement(elO, 1);
-  heteroWater->GetIonisation()->SetMeanExcitationEnergy(75*eV);
+  Air = new G4Material("Air", 0.001225*g/cm3,3);
+  Air->AddElement(elN, 75.47/ttt);
+  Air->AddElement(elO, 23.20/ttt);
+  Air->AddElement(elAr, 1.28/ttt);
 
   aluminumFoil = new G4Material("aluminumFoil", 2.71*g/cm3,1);
   aluminumFoil->AddElement(elAl,1);
@@ -426,6 +421,7 @@ void DetectorConstruction::DefineMaterials()
   if(detectorType == "pbwo4"){
     G4cout << "Setting Materialproperties" << G4endl;
     detMaterial = nistManager->FindOrBuildMaterial("G4_PbWO4");
+    detMaterial->GetIonisation()->SetMeanExcitationEnergy(600.7*eV);
     detMaterial->GetIonisation()->SetBirksConstant(0.008694);
     detMaterial->SetMaterialPropertiesTable(pbwo4MPT);
   }
@@ -445,7 +441,7 @@ void DetectorConstruction::DefineMaterials()
     detMaterial = EJ200;
   }
   else if(detectorType == "h2o"){
-    detMaterial = heteroWater;
+    detMaterial = water;
   }
   else{
     detMaterial = nistManager->FindOrBuildMaterial("G4_PbWO4");
@@ -456,10 +452,10 @@ void DetectorConstruction::DefineMaterials()
     absorberMaterial = PMMA;
   }
   else if(absorberType == "h2o"){
-    absorberMaterial = heteroWater;
+    absorberMaterial = water;
   }
   else{
-    absorberMaterial = heteroWater;
+    absorberMaterial = water;
   }
 
 
@@ -474,7 +470,7 @@ void DetectorConstruction::fillDCMcontainer(){
   
   param->SetNoVoxels(nbofvoxelsX, nbofvoxelsY, NbOfSlices);
 
-  std::vector<G4Material*> fMaterials = {heteroAir, homoMaterial};
+  std::vector<G4Material*> fMaterials = {Air, water};
   param->SetMaterials(fMaterials);
 
   param->SetMaterialIndices(fMateIDs);
@@ -558,17 +554,17 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
 
 
   G4Box* solidPhantom = new G4Box("Phantom", phantomX/2, phantomY/2, phantomZ/2);
-  G4LogicalVolume* logicPhantom = new G4LogicalVolume(solidPhantom, homoMaterial, "phantom");
+  G4LogicalVolume* logicPhantom = new G4LogicalVolume(solidPhantom, water, "phantom");
   new G4PVPlacement(nullptr, G4ThreeVector(0,0,-300*mm), logicPhantom, "Phantom", logicalworld, false, 0);
 
   G4Box* solidLayer = new G4Box("Layer", phantomX/2, phantomY/2, detSizeZ/2);
-  G4LogicalVolume* logicLayer = new G4LogicalVolume(solidLayer, homoMaterial, "Layer");
+  G4LogicalVolume* logicLayer = new G4LogicalVolume(solidLayer, water, "Layer");
   
   auto PhantomVisAttr = new G4VisAttributes(G4Colour(0.0, 0.0, 1.0)); // Blue
   PhantomVisAttr->SetVisibility(true);
   PhantomVisAttr->SetForceSolid(true);
 
-  auto* parameterisationPhantom = new HeteroParameterisation(1, 1, fLayers, 0, 0, detSizeZ, homoMaterial, homoMaterial, PhantomVisAttr, PhantomVisAttr);
+  auto* parameterisationPhantom = new HeteroParameterisation(1, 1, fLayers, 0, 0, detSizeZ, water, water, PhantomVisAttr, PhantomVisAttr);
 
   new G4PVParameterised(
     "Layer", logicLayer, logicPhantom, kUndefined, fLayers, parameterisationPhantom
@@ -576,8 +572,8 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
 
 
   G4double dBeamSpot = 0.1*mm;
-  
-
+  G4int nx, ny, nz;
+  G4double cubeSizeX, cubeSizeY, cubeSizeZ;
   if (ftarget == 2){ //heterogenous
       auto waterVisAttr = new G4VisAttributes(G4Colour(0.0, 0.0, 1.0)); // Blue
       waterVisAttr->SetVisibility(true);
@@ -587,32 +583,37 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
       airVisAttr->SetVisibility(true);
       airVisAttr->SetForceSolid(true);
 
-      G4double cubeSizeX = 0.5 * mm, cubeSizeY = 0.5 * mm;
-      G4double cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7900)*0.001;
-      // G4double cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7355)*0.001;
+      cubeSizeX = 0.5 * mm, cubeSizeY = 0.5 * mm;
+      //cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7900)*0.001;
+  
+      cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7355)*0.001;
       
-      G4int nx = 100, ny = 100, nz = static_cast<int>(std::round(heteroThickness/cubeSizeZ));
-      //nz  = 3;
+      nx = 100;
+      ny = nx;
+      nz = static_cast<int>(std::round(heteroThickness/cubeSizeZ));
+      G4double tickness_real = nz * cubeSizeZ;
+      G4double pmod_real = static_cast<double>(0.7355)*1000*tickness_real/nz;
+      std::cout << "pmod_real: " << pmod_real << std::endl;
+      std::cout << "tickness_real: " << tickness_real << std::endl;
       auto voxelSolid = new G4Box("Voxel", cubeSizeX/2, cubeSizeY/2, cubeSizeZ/2);
- 
+
       std::cout << "pmod: " << pmod << std::endl;
       std::cout << "heteroThickness: " << heteroThickness << std::endl;
       std::cout << "voxelZ: " << cubeSizeZ << std::endl;
       std::cout << "NbOfSlices: " << nz << G4endl;
 
       auto voxelContainerSolid = new G4Box("VoxelContainer", (nx*cubeSizeX)/2, (ny*cubeSizeY)/2, (nz*cubeSizeZ)/2);
-      auto voxelContainerLV = new G4LogicalVolume(voxelContainerSolid, heteroAir, "VoxelContainerLV");
-      new G4PVPlacement(nullptr, G4ThreeVector(0,0,cubeSizeZ*nz/2 + 2*cm), voxelContainerLV,
-                  "VoxelContainer", logicalworld, false, 0);
+      auto voxelContainerLV = new G4LogicalVolume(voxelContainerSolid, Air, "VoxelContainerLV");
+      new G4PVPlacement(nullptr, G4ThreeVector(0,0,(cubeSizeZ*nz)/2+5*mm), voxelContainerLV, "VoxelContainer", logicalworld, false, 0);
 
       auto* parameterisation = new HeteroParameterisation(nx, ny, nz,
         cubeSizeX, cubeSizeY, cubeSizeZ,
-        lungTissue, heteroAir,
+        lungTissue, Air,
         waterVisAttr, airVisAttr);
     
       int nVoxels = nx * ny * nz;
 
-      auto voxelLogic = new G4LogicalVolume(voxelSolid, heteroAir, "Voxel");
+      auto voxelLogic = new G4LogicalVolume(voxelSolid, Air, "Voxel");
       voxelLogic->SetVisAttributes(airVisAttr);
 
       new G4PVParameterised(
@@ -622,12 +623,12 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
       G4Box* solidTracker = new G4Box("solidTracker", nx*cubeSizeX/2, ny*cubeSizeY/2, 1*um);
       logicalTracker = new G4LogicalVolume(solidTracker, worldMat, "logicalTracker");
       logicalTracker->SetVisAttributes(waterVisAttr);
-      new G4PVPlacement(nullptr, G4ThreeVector(0, 0, 2*cm -1*mm), logicalTracker, "physTracker", logicalworld, false, 0);
+      new G4PVPlacement(nullptr, G4ThreeVector(0, 0, 4*mm), logicalTracker, "physTracker", logicalworld, false, 0);
   } 
   if(ftarget == 2 || ftarget == 0){ //homogeneous
     solidHomo =  new G4Box("solidHomo", 300/2, 300/2, 20/2);
     logicalHomo = new G4LogicalVolume(solidHomo, absorberMaterial, "logicalHomo");    
-    physHomo = new G4PVPlacement(nullptr, G4ThreeVector(0.,0., 8.5*cm+dBeamSpot/2), logicalHomo,"physHomo", logicalworld, false, 0, fCheckOverlaps);
+    physHomo = new G4PVPlacement(nullptr, G4ThreeVector(0.,0., 20/2*mm+cubeSizeZ*nz+8*mm), logicalHomo,"physHomo", logicalworld, false, 0, fCheckOverlaps);
 
     G4VisAttributes* visHomo = new G4VisAttributes(G4Colour(0.0, 1.0, 1.0, 0.5)); // Red for the detector
     visHomo->SetVisibility(true);

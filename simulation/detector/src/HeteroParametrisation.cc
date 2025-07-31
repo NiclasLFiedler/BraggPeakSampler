@@ -22,17 +22,17 @@ class HeteroParameterisation : public G4VPVParameterisation {
             int iz = copyNo % fNz;
     
             G4ThreeVector position(
-                ((ix) -fNx/2) * fDx,
-                ((iy) -fNy/2) * fDy,
-                ((iz) -fNz/2) * fDz
+                -(0.5+ix)*fDx+(fNx * fDx)/2,
+                -(0.5+iy)*fDy+(fNy * fDy)/2,
+                -(0.5+iz)*fDz+(fNz * fDz)/2
             );
             physVol->SetTranslation(position);
         }
     
         G4Material* ComputeMaterial(G4int copyNo, G4VPhysicalVolume*, const G4VTouchable*) {
             if (fMaterials.count(copyNo) == 0) {
-                G4Material* mat = (G4UniformRand() < 0.2476) ? fMat1 : fMat2;
-                // G4Material* mat = (G4UniformRand() < 0.2251) ? fMat1 : fMat2;
+                // G4Material* mat = (G4UniformRand() < 0.2476) ? fMat1 : fMat2;
+                G4Material* mat = (G4UniformRand() < 0.2251) ? fMat1 : fMat2;
                 fMaterials[copyNo] = mat;
             }
             return fMaterials[copyNo];

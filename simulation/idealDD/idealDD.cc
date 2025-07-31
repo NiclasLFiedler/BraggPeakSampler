@@ -43,8 +43,7 @@ int main(int argc,char** argv)
   
 
   physicsList->ReplacePhysics(new G4EmStandardPhysics_option4());
-
-
+  
   G4StepLimiterPhysics* stepLimitPhys = new G4StepLimiterPhysics();
   stepLimitPhys->SetApplyToAll(true); // activates step limit for ALL particles
   physicsList->RegisterPhysics(stepLimitPhys);
@@ -57,9 +56,10 @@ int main(int argc,char** argv)
   //opticalParams->SetScintillationYieldFactor(1.0);
   //opticalParams->SetScintByParticleType(true);
 	opticalParams->SetScintTrackSecondariesFirst(true);	
-
+  
   //physicsList->RegisterPhysics(opticalPhysics);
-
+  
+  physicsList->SetDefaultCutValue(0.05 * mm);
   runManager->SetUserInitialization(physicsList);
 
   // Set user action classes
