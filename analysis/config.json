@@ -1,6 +1,6 @@
 {
   "detectorSelect": 3,
-  "targetSelect": 2,
+  "targetSelect": 0,
   "detectors": [
     {
       "detectorID": 0,
@@ -8,11 +8,11 @@
       "datasetSelect": 1,
       "detectorType": "h2o",
       "beamEnergy": 220,
-      "nLayers": 1,
+      "nLayers": 32,
       "crystalSize": [
-        1000,
-        1000,
-        600
+        30,
+        30,
+        3
       ],
       "gapSizeZ": 1,
       "secondaryLayerStatus": false,
@@ -59,7 +59,7 @@
         0
       ],
       "coincidenceTime": 20000,
-      "coincidenceLayer": 1,
+      "coincidenceLayer": 21,
       "discardIndex": 50,
       "targetThickness": 0
     },
@@ -189,18 +189,18 @@
       "detectorID": 3,
       "comment": "test Detector",
       "datasetSelect": 1,
-      "detectorType": "h2o",
+      "detectorType": "pbwo4",
       "beamEnergy": 220,
-      "nLayers": 1000,
+      "nLayers": 32,
       "crystalSize": [
-        300,
-        300,
-        0.1
+        30,
+        30,
+        2
       ],
       "gapSizeZ": 3,
-      "secondaryLayerStatus": false,
-      "nSecondaryLayers": 0,
-      "secLayerSizeZ": 0,
+      "secondaryLayerStatus": true,
+      "nSecondaryLayers": 11,
+      "secLayerSizeZ": 3,
       "absorberStatus": false,
       "absorberType": "pmma",
       "absorberSize": 0,
@@ -242,7 +242,7 @@
         0
       ],
       "coincidenceTime": 20000,
-      "coincidenceLayer": 1,
+      "coincidenceLayer": 25,
       "discardIndex": 50,
       "targetThickness": 1
     }

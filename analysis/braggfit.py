@@ -127,13 +127,13 @@ def gaussian_with_cutoff(mean, sigma, cutoff=2.5):
 def range_energy_relationship(E, alpha, p):
     return alpha*E**p
 
-def bortfeld_fit(x, y, Phi0, R0, epsilon, sigma, weights=None):    
+def bortfeld_fit(x, y, Phi0, R0, Sigma, epsilon, weights=None):    
     if weights is None:
         weights = np.ones_like(y)
     sigma_weights = 1 / weights
     
     params = fit_params()
-    popt, pcov = curve_fit(lambda z, Phi0, R0, sigma, epsilon: depth_dose_distribution(z, Phi0, R0, sigma, epsilon), x, y, p0=[Phi0, R0, sigma*10, 0.001*epsilon], bounds=((Phi0*0.25, R0 - 3*sigma, 0.001*sigma, 0), (Phi0*1.5, R0 + 3.5*sigma, 10*sigma, 2)), sigma=sigma_weights, maxfev=int(1e8))
+    popt, pcov = curve_fit(lambda z, Phi0, R0, Sigma, epsilon: depth_dose_distribution(z, Phi0, R0, Sigma, epsilon), x, y, p0=[Phi0, R0, Sigma*10, 0.1*epsilon], bounds=((Phi0*0.25, R0 - 3*Sigma, 0.001*Sigma, 0), (Phi0*1.5, R0 + 3.5*Sigma, 10*Sigma, 2)), sigma=sigma_weights, maxfev=int(1e8))
     params.curve = depth_dose_distribution(z, *popt)
     params.Phi0 = popt[0] 
     params.R0 = popt[1] 
@@ -300,7 +300,7 @@ for i in range(nbOfFits):
         x_with_err.append(gaussian_with_cutoff(mean, x_sigma[index]))
     for index, mean in enumerate(y_data1):
         y_with_err.append(gaussian_with_cutoff(mean, y_sigma1[index]))
-    params = bortfeld_fit(x_with_err, y_with_err, Phi0, R0, epsilon, sigma, weights)
+    params = bortfeld_fit(x_with_err, y_with_err, Phi0, R0, sigma, epsilon, weights)
     
     if(params.Phi0 == 0):
         continue
@@ -314,7 +314,7 @@ if(bhetero):
 else:
     ax1.errorbar(x_data, y_data1, y_sigma1, x_sigma, fmt='o', markersize=1, capsize=capSize, elinewidth=lineWidth, color="black", label="No target data points") 
 
-bestfit_params = bortfeld_fit(x_data, y_data1, Phi0, R0, epsilon, sigma, weights)
+bestfit_params = bortfeld_fit(x_data, y_data1, Phi0, R0, sigma, epsilon, weights)
 
 print(f"Phi0: {bestfit_params.Phi0}")
 print(f"R0: {bestfit_params.R0}")

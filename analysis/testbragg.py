@@ -140,6 +140,19 @@ if(bhetero):
     x_sigma2 = heterotree["x_sigma"].array().to_numpy()
     x_sigma2 = [x/10 for x in x_sigma2]
 
+# for _ in range(20):
+#     y_data1 = np.append(y_data1, 0)
+#     y_sigma1 = np.append(y_sigma1, 0)
+#     new_x = x_data[-1] + x_data[-1] - x_data[-2]
+#     x_data = np.append(x_data, new_x)
+#     x_sigma = np.append(x_sigma, 0)
+
+#     y_data2 = np.append(y_data2, 0)
+#     y_sigma2 = np.append(y_sigma2, 0)
+#     new_x = x_data2[-1] + x_data2[-1] - x_data2[-2]
+#     x_data2 = np.append(x_data2, new_x)
+#     x_sigma2 = np.append(x_sigma2, 0)
+
 #plt.style.use(['science','notebook','grid'])
 plt.rcParams.update({'font.size': 20})
 fig, ax1 = plt.subplots(figsize=(16, 8))
@@ -159,6 +172,7 @@ ax1.errorbar(x_data, y_data1, y_sigma1, x_sigma, fmt='s', markersize=1, capsize=
 ax1.errorbar(x_data2, y_data2, y_sigma2, x_sigma2, fmt='o', markersize=1, capsize=capSize, elinewidth=lineWidth, color="#cc7000", label="Hetero. data points") #Convolution
 
 f = interp1d(x_data, y_data1, kind='linear', fill_value="extrapolate")
+f = interp1d(x_data, y_data1, kind='cubic', fill_value="extrapolate")
 
 popt, pcov =  curve_fit(lambda x, amp, mean, stddev: right_sided_convolution(f, lambda x2: gaussian(x2, amp, mean, stddev), x), x_data2, y_data2, p0 = [1, 2, 0.2], bounds=((0.9, 0, 0), (1.1, 10, 1)))
 

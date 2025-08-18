@@ -129,7 +129,26 @@ def main():
         ly_average_lat = ly_average_lat + LY_ph_lat[-1]
         ly_average_err_lat = ly_average_err_lat + LY_ph_err_lat[-1]
 
+    print("ly lateral ordering")
+
+    indexed_list = list(enumerate(LY_lat[:15]))
+    
+    sorted_LY = sorted(indexed_list, key=lambda item: item[1])
+    
+    for index, value in sorted_LY:
+        print(f"Lateral: CH {index} Light yield: {LY_lat[index]} ± {LY_lat_err[index]:.2f} LY_pe: {LY_pe_lat[index]:.2f} ± {LY_pe_err_lat[index]:.2f}  LY_ph: {LY_ph_lat[index]:.2f} ± {LY_ph_err_lat[index]:.2f}")
+
     print()
+    indexed_list = list(enumerate(LY[15:]))
+    
+    sorted_LY = sorted(indexed_list, key=lambda item: item[1])
+    
+    for index, value in sorted_LY:
+        index += 15  
+        print(f"Lateral: CH {index} Light yield: {LY_lat[index]} ± {LY_lat_err[index]:.2f} LY_pe: {LY_pe_lat[index]:.2f} ± {LY_pe_err_lat[index]:.2f}  LY_ph: {LY_ph_lat[index]:.2f} ± {LY_ph_err_lat[index]:.2f}")
+
+    print("end")
+
     for index, ly_window in enumerate(LY_ph_lat[36:]):
         index += 36  
         print(f"lat: CH {index} Light yield: {LY_lat[index]} ± {LY_lat_err[index]:.2f} LY_pe: {LY_pe_lat[index]:.2f} ± {LY_pe_err_lat[index]:.2f}  LY_ph: {LY_ph_lat[index]:.2f} ± {LY_ph_err_lat[index]:.2f}")

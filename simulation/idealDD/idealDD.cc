@@ -53,10 +53,8 @@ int main(int argc,char** argv)
   opticalPhysics->SetVerboseLevel(1);
   G4OpticalParameters* opticalParams = G4OpticalParameters::Instance();
   
-  //opticalParams->SetScintillationYieldFactor(1.0);
-  //opticalParams->SetScintByParticleType(true);
+  opticalParams->SetScintByParticleType(true);
 	opticalParams->SetScintTrackSecondariesFirst(true);	
-  
   //physicsList->RegisterPhysics(opticalPhysics);
   
   physicsList->SetDefaultCutValue(0.05 * mm);

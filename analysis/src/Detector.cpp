@@ -137,23 +137,30 @@ void Detector::CalcDose(int layer){
     crystals.at(layer).dose.stddev = sqrt(fdeviationSq);
     
     
-    if(detectorProperties->GetNormStatus()){
-        crystals.at(layer).dose.dose*=1/h_edep_coinc[layer]->GetEntries();
-        crystals.at(layer).dose.stddev*=1/h_edep_coinc[layer]->GetEntries();
+    int layerEntries = h_edep_coinc[layer]->GetEntries();
+    double totalProtons = h_edep_coinc[0]->GetEntries();
+
+    // if (layerEntries < 0.01
+    //      * totalProtons) {
+    //     std::cout << "Layer " << layer << " has less than 0.01% of the total protons " << layerEntries << "  " << totalProtons << std::endl;
+    //     crystals.at(layer).dose.dose = 0; 
+    //     crystals.at(layer).dose.stddev = 0;
+    // }
+
+    std::cout << crystals.at(layer).dose.dose  << " entries " << layerEntries << std::endl;
+
+    // if(detectorProperties->GetNormStatus() && h_edep_coinc[layer]->GetEntries() > 0){
+    //     crystals.at(layer).dose.dose*=1/h_edep_coinc[layer]->GetEntries();
+    //     crystals.at(layer).dose.stddev*=1/h_edep_coinc[layer]->GetEntries();
+    // }
+
+    if(detectorProperties->GetNormStatus() && h_edep_coinc[0]->GetEntries() > 0){
+        crystals.at(layer).dose.dose*=1/h_edep_coinc[0]->GetEntries();
+        crystals.at(layer).dose.stddev*=1/h_edep_coinc[0]->GetEntries();
     }
 
     crystals.at(layer).dose.dose*=1/detectorProperties->GetLayerSizeZ(layer);
     crystals.at(layer).dose.stddev*=1/detectorProperties->GetLayerSizeZ(layer);
-    
-    int layerEntries = h_edep_coinc[layer]->GetEntries();
-    double totalProtons = h_edep_coinc[0]->GetEntries();
-
-    if (layerEntries < 0.001 * totalProtons) {
-        std::cout << "Layer " << layer << " has less than 0.01% of the total protons " << layerEntries << "  " << totalProtons << std::endl;
-        crystals.at(layer).dose.dose = 0; 
-        crystals.at(layer).dose.stddev = 0;
-    }
-    std::cout << crystals.at(layer).dose.dose  << " entries " << layerEntries << std::endl;
 
     return;
 }
