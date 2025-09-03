@@ -45,8 +45,8 @@ void analysis(){
     bool reversedStatus                 = config["reversedStatus"];
     bool normStatus                     = config["normStatus"];
     bool simulationStatus               = config["simulationStatus"];
-    std::vector<double> teflonThickness = config["teflonThickness"];
-    std::vector<double> aluThickness    = config["aluThickness"];
+    double teflonThickness = config["teflonThickness"];
+    double aluThickness    = config["aluThickness"];
     int coincidenceTime                 = config["coincidenceTime"];
     int coincidenceLayer                = config["coincidenceLayer"];
     int discard_index                   = config["discardIndex"];
