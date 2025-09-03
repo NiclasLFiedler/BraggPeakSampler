@@ -21,9 +21,9 @@ struct DetectorProperties {
     int nSecLayers;
     double energy;
     std::vector<double> crystalSize;
-    std::vector<double> TeflonThickness;
+    double TeflonThickness;
     std::vector<double> LayerSizeZ;
-    std::vector<double> AluThickness;
+    double AluThickness;
     std::string absorberType;
     double absorberSizeZ;
     double gapSizeZ;
@@ -139,18 +139,12 @@ struct DetectorProperties {
         return;
     }
 
-    void SetTeflonThickness(std::vector<double> fTeflonThickness){
-        if (fTeflonThickness.size() < nLayers) {
-            fTeflonThickness.resize(nLayers, 0);
-        }
+    void SetTeflonThickness(double fTeflonThickness){
         TeflonThickness = fTeflonThickness;
         return;
     }
 
-    void SetAluThickness(std::vector<double> fAluThickness){
-        if (fAluThickness.size() < nLayers) {
-            fAluThickness.resize(nLayers, 0);
-        }
+    void SetAluThickness(double fAluThickness){
         AluThickness = fAluThickness;
         return;
     }
@@ -239,11 +233,11 @@ struct DetectorProperties {
     double GetGapSizeZ(){return gapSizeZ; }
 
     std::vector<double> GetTeflonThickness(){return TeflonThickness; }
-    double GetTeflonThickness(int layer){return TeflonThickness.at(layer)*1/10000; }
+    double GetTeflonThickness(int layer){return TeflonThickness*1/10000; }
 
     std::vector<double> GetAluThickness(){return AluThickness; }
 
-    double GetAluThickness(int layer){return AluThickness.at(layer)*1/10000; }
+    double GetAluThickness(int layer){return AluThickness*1/10000; }
 
     double GetAbsorberSize(){return absorberSizeZ; }
 
