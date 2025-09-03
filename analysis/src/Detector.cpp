@@ -147,8 +147,6 @@ void Detector::CalcDose(int layer){
     //     crystals.at(layer).dose.stddev = 0;
     // }
 
-    std::cout << crystals.at(layer).dose.dose  << " entries " << layerEntries << std::endl;
-
     // if(detectorProperties->GetNormStatus() && h_edep_coinc[layer]->GetEntries() > 0){
     //     crystals.at(layer).dose.dose*=1/h_edep_coinc[layer]->GetEntries();
     //     crystals.at(layer).dose.stddev*=1/h_edep_coinc[layer]->GetEntries();

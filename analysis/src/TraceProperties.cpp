@@ -38,20 +38,20 @@ void TraceProperties::Process(){
     Double_t sum = 0;
     int pregate = 25;
 
-    std::vector<Double_t>::iterator max_trace;
+    std::vector<u_int16_t>::iterator max_trace;
     for (int i = 0; i < pregate; ++i){
         sum += trace.at(i);
     }
     max_trace = std::min_element(trace.begin(), trace.end());
     
-    amp = static_cast<Double_t>(-*max_trace+sum/pregate);
+    amp = static_cast<u_int16_t>(-*max_trace+sum/pregate);
     amp_idx = static_cast<int>(std::distance(trace.begin(), max_trace));
     if(amp_idx > discard_index) ampOffsetStatus = true;
     DetectPileup(30);
     return;
 }
 
-void TraceProperties::SetParameters(const std::vector<double>& ftrace, const double fchannel, const double ftime_ns, const double ftime_ps, int fdiscard_index, bool bsaveTrace){
+void TraceProperties::SetParameters(const std::vector<u_int16_t>& ftrace, const double fchannel, const double ftime_ns, const double ftime_ps, int fdiscard_index, bool bsaveTrace){
     trace=ftrace;
     discard_index = fdiscard_index;
     time_ns = ftime_ns;

@@ -45,8 +45,8 @@ void analysis(){
     bool reversedStatus                 = config["reversedStatus"];
     bool normStatus                     = config["normStatus"];
     bool simulationStatus               = config["simulationStatus"];
-    double teflonThickness = config["teflonThickness"];
-    double aluThickness    = config["aluThickness"];
+    double teflonThickness              = config["teflonThickness"];
+    double aluThickness                 = config["aluThickness"];
     int coincidenceTime                 = config["coincidenceTime"];
     int coincidenceLayer                = config["coincidenceLayer"];
     int discard_index                   = config["discardIndex"];
@@ -58,7 +58,7 @@ void analysis(){
     bool bPhotons = false;
 
 
-    const char* datasets[2] = {"MIT_05_2024", "simulation"};
+    const char* datasets[3] = {"MIT_05_2024", "simulation", "test"};
     const char* in_data[3] = {"notarget", "homotarget", "heterotarget"};
     const char* target_data[3] = {"without a target", "with the homogeneous target", "with the heterogeneous target"};
 
@@ -75,13 +75,15 @@ void analysis(){
     Char_t in_path[200];
     Char_t out_path[200];
     
-    Int_t eventCounter = 0; //store tree values measurement
+    u_int32_t eventCounter = 0; //store tree values measurement
     Int_t channel = 0;
+    Int_t board = 0;
+    int16_t charge = 0;
     uint32_t timestamp_ns = 0;
     Long64_t timestamp_ps = 0;
-    std::vector<std::vector<Double_t>> *trace = 0; //old
-    //std::vector<Double_t> *trace = 0; new
-    
+    // std::vector<std::vector<Double_t>> *trace = 0; //old
+    std::vector<u_int16_t> *trace = 0;
+
     Int_t event = 0;
     int eventPhotons = 0;
     Int_t NDet = 0;
@@ -109,24 +111,28 @@ void analysis(){
         return;
     }
     TTree *datatree;
-    datatree = (TTree*)input->Get("vtree");
+    TTree *photontree;
+
+    datatree = (TTree*)input->Get("RawData");
     if (!datatree) {
         cout << "Error: Failed to retrieve tree 'tree' from file!" << endl;
         input->Close();
         return;
     }
-    TTree *photontree;
-    photontree = (TTree*)input->Get("ptree");
+
     
     if(!simulationStatus){
-        //datatree->SetBranchAddress("EventCounter", &eventCounter); \\new
-        datatree->SetBranchAddress("BufferCounter", &eventCounter);
+        datatree->SetBranchAddress("EventCounter", &eventCounter);
         datatree->SetBranchAddress("Channel", &channel);
-        datatree->SetBranchAddress("TimeTag", &timestamp_ns);
-        datatree->SetBranchAddress("TimeStampPico", &timestamp_ps);
+        // datatree->SetBranchAddress("Board", &board);
+        // datatree->SetBranchAddress("Charge", &charge);
+        datatree->SetBranchAddress("TimeStamp", &timestamp_ns);
+        // datatree->SetBranchAddress("TimeStampPico", &timestamp_ps);
         datatree->SetBranchAddress("Trace", &trace);
     }
     else{
+        photontree = (TTree*)input->Get("ptree");
+        
         datatree->SetBranchAddress("event", &event);
         datatree->SetBranchAddress("track", &TrackID);
 	    datatree->SetBranchAddress("NDet", &NDet);
@@ -216,13 +222,20 @@ void analysis(){
 
     cout << "Dataset: " << dataset << endl;
     cout << "Input file: " << filename << endl;
+    int test = 0;
     if(!simulationStatus){
         cout << "Measurement: Getting raw data." << endl;
         for (double e = 0; e<entries; e++){
-        	datatree->GetEntry(e);
-            channel--;
+            datatree->GetEntry(e);
+            test++;
+            if(channel != 0){
+                cout << "Not 0: " << test << endl;
+                break;
+            }
+            // channel--;
+            if (board == 1) channel += 16;
             trace_props.Clear();    
-            trace_props.SetParameters(trace->at(0), channel, static_cast<double>(timestamp_ns)*2, static_cast<double>(timestamp_ps), discard_index, bsaveTrace);
+            trace_props.SetParameters(*trace, channel, static_cast<double>(timestamp_ns)*2, static_cast<double>(timestamp_ps), discard_index, bsaveTrace);
             detector->EnergyHist(channel)->Fill(calib->GetQuenchedEnergy(channel, trace_props.amp)); //todo set birks to 0 if no quenching // sometimes double accounted for
             if(trace_props.channel == 0){
                 initialEvents.insert({trace_props.time_ps, trace_props});

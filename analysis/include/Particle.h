@@ -52,7 +52,7 @@ public:
     void ProcessSimulationEDep();
 
     std::vector<double> GetHitPosition(const int channel);
-    std::vector<Double_t> GetTrace(int channel);
+    std::vector<u_int16_t> GetTrace(int channel);
     Double_t GetEDep(int channel);
     Double_t GetTimeNS(int channel);
     Double_t GetTimePS(int channel);

@@ -76,7 +76,7 @@ Double_t Particle::GetAmplitude(int channel){
     return traces.at(channel).amp;
 }
 
-std::vector<Double_t> Particle::GetTrace(int channel){
+std::vector<u_int16_t> Particle::GetTrace(int channel){
     return traces.at(channel).trace;
 }
 
