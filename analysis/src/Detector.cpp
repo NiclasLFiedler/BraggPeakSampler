@@ -170,11 +170,8 @@ void Detector::CalcPosition(int layer){
     if(layer != 0){
         depth = crystals.at(layer-1).pos.depth;
     }
-    double aluthick = 0.5;
-    double teflonthick = 0.02;
-
-    aluthick = 0;
-    teflonthick = 0;
+    double aluthick = detectorProperties->GetAluThickness();
+    double teflonthick = detectorProperties->GetTeflonThickness();
 
     double delta = 0;
     if(layer == 0){
@@ -231,10 +228,8 @@ void Detector::Info(){
     std::cout << "Crystal Size: ";
     PrintVector(detectorProperties->GetScintillatorDimensions());
     std::cout << "GapSize in z: " << detectorProperties->GetGapSizeZ() << " mm" <<  std::endl;
-    std::cout << "Aluminum Thickness: ";
-    PrintVector(detectorProperties->GetAluThickness());
-    std::cout << "Teflon Thickness: ";
-    PrintVector(detectorProperties->GetTeflonThickness());
+    std::cout << "Aluminum Thickness: " << detectorProperties->GetAluThickness() << " mm" <<  std::endl;
+    std::cout << "Teflon Thickness: " << detectorProperties->GetTeflonThickness() << " mm" << std::endl;
     std::cout << "Absorber Type: " << detectorProperties->GetAbsorberType() <<  std::endl;
     std::cout << "Absorber Size: " << detectorProperties->GetAbsorberSize() << " mm" <<  std::endl;
     std::cout << "Number of Secondary Layers " << detectorProperties->GetNSecondaryLayers() << std::endl;
