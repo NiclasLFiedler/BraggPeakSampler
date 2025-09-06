@@ -4,20 +4,20 @@
   "detectors": [
     {
       "detectorID": 0,
-      "comment": "calibration",
+      "comment": "beamtime",
       "datasetSelect": 2,
       "detectorType": "pbwo4",
       "beamEnergy": 220,
-      "nLayers": 16,
+      "nLayers": 32,
       "crystalSize": [
         30,
         30,
-        3
+        2
       ],
-      "gapSizeZ": 3,
-      "secondaryLayerStatus": false,
-      "nSecondaryLayers": 0,
-      "secLayerSizeZ": 0,
+      "gapSizeZ": 1,
+      "secondaryLayerStatus": true,
+      "nSecondaryLayers": 11,
+      "secLayerSizeZ": 3,
       "absorberStatus": false,
       "absorberType": "pmma",
       "absorberSize": 0,
@@ -26,8 +26,8 @@
       "simulationStatus": false,
       "teflonThickness": 0.5,
       "aluThickness": 0.02,
-      "coincidenceTime": 2000000,
-      "coincidenceLayer": 0,
+      "coincidenceTime": 100,
+      "coincidenceLayer": 1,
       "discardIndex": 50,
       "targetThickness": 0
     },

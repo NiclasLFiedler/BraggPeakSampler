@@ -39,14 +39,17 @@ public:
     }
 
     double GetQuenchedVar(int channel, double energy) {
+        if(!detProps->GetCalibrationStatus()) return energy/3.46;
         return GetVar(channel, energy) / std::pow(1 - detProps->GetBirksConstant() * energy / detProps->GetLayerSizeZ(channel), 4);
     }
 
     double GetQuenchedEnergy(int channel, double trace_amp) {
+        if(!detProps->GetCalibrationStatus()) return trace_amp;
         return epsilon_1 + slope.at(channel) * (trace_amp - chi_1.at(channel));
     }
 
     double GetEnergy(int channel, double QuenchedEnergy) {
+        if(!detProps->GetCalibrationStatus()) return QuenchedEnergy;
         return QuenchedEnergy / (1 - detProps->GetBirksConstant() * QuenchedEnergy / detProps->GetLayerSizeZ(channel));
     }
 
@@ -60,7 +63,7 @@ public:
 
     void energy_extrapolation(energy_ch source1, energy_ch source2){
         int j = 0;
-        if(detProps->GetSimulationStatus()) return;
+        if(!detProps->GetCalibrationStatus()) return;
         if(detProps->GetReversedStatus()) j = detProps->GetNLayers()-1;
         for(int i = 0; i<source1.CH.size(); i++){
             epsilon_1 = source1.E;

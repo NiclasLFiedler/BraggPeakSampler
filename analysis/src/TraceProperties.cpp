@@ -9,6 +9,7 @@ void TraceProperties::Clear(){
     channel = 0;
     energy_err = 0;
     amp_idx = 0;
+    charge = 0;
     time_ns = 0;
     time_ps = 0;
     discard_index = 0;
@@ -51,9 +52,10 @@ void TraceProperties::Process(){
     return;
 }
 
-void TraceProperties::SetParameters(const std::vector<u_int16_t>& ftrace, const double fchannel, const double ftime_ns, const double ftime_ps, int fdiscard_index, bool bsaveTrace){
+void TraceProperties::SetParameters(const std::vector<u_int16_t>& ftrace, const double fchannel, const Int_t fcharge, const double ftime_ns, const double ftime_ps, int fdiscard_index, bool bsaveTrace){
     trace=ftrace;
     discard_index = fdiscard_index;
+    charge = fcharge;
     time_ns = ftime_ns;
     time_ps = ftime_ps;
     channel = fchannel;

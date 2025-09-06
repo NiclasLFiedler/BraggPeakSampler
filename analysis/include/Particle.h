@@ -12,7 +12,7 @@ public:
     Double_t total_edep = 0; 
     Double_t total_edep_err = 0; 
     Double_t coinc_layer = 0;
-    
+    Int_t charge = 0;
     
     std::vector<TraceProperties> traces = {};
     std::vector<Double_t> QuenchedDeposition = {};
@@ -35,7 +35,7 @@ public:
     void SumEDep();
     void InsertInitial(TraceProperties trace);
     void Insert(TraceProperties trace);
-    void Coincidence(TraceProperties trace);
+    void Coincidence(TraceProperties trace, int channel);
     bool Coincidence(int layer);
     bool CoincidencePhotons(int layer);
     void Test();
@@ -58,6 +58,7 @@ public:
     Double_t GetTimePS(int channel);
     Double_t GetAmplitude(int channel);
     Double_t GetEDepDeviation(int channel);
+    Int_t GetCharge(int channel);
 };
 
 #endif

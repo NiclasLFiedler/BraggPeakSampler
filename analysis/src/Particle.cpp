@@ -5,6 +5,7 @@ Particle::Particle(int fnbDetectors, int fcoincidence_time, int fcoincidence_lay
     : nbDetectors(fnbDetectors), coincidence_time(fcoincidence_time), coincidence_layer(fcoincidence_layer), calibration(fcalibration){
     
     Deposition = std::vector<Double_t>(nbDetectors, 0.0);
+    //charge = std::vector<Double_t>(nbDetectors, 0.0);
     DepositionStdDev = std::vector<Double_t>(nbDetectors, 0.0);
     traces = std::vector<TraceProperties>(nbDetectors);
     QuenchedDeposition = std::vector<Double_t>(nbDetectors, 0.0);
@@ -18,6 +19,7 @@ void Particle::Clear() {
     total_edep = 0; 
     total_edep_err = 0;
     coinc_layer = 0;
+    //charge = 0;
     pileupStatus = false;
     ampOffsetStatus = false;
     missingChannel = false;
@@ -39,9 +41,9 @@ void Particle::SumEDep(){
 }
 
 void Particle::InsertInitial(TraceProperties trace){
-    if(trace.channel != 0){
-        std::cout << "Initial trace not channel 0" << std::endl;
-    }
+    // if(trace.channel != 0){
+    //     std::cout << "Initial trace not channel 0" << std::endl;
+    // }
     Insert(trace);
     return;
 }
@@ -76,6 +78,10 @@ Double_t Particle::GetAmplitude(int channel){
     return traces.at(channel).amp;
 }
 
+Int_t Particle::GetCharge(int channel){
+    return traces.at(channel).charge;
+}
+
 std::vector<u_int16_t> Particle::GetTrace(int channel){
     return traces.at(channel).trace;
 }
@@ -84,13 +90,13 @@ Double_t Particle::GetEDepDeviation(int channel){
     return DepositionStdDev.at(channel);
 }
 
-void Particle::Coincidence(TraceProperties trace){
+void Particle::Coincidence(TraceProperties trace, int channel=0){
     
     if(GetTimePS(trace.channel) != 0){
-        std::cout << "Already filled channel " << trace.channel << ", duplicate events" << std::endl;
+        std::cout << "Already filled channel " << trace.channel << ", duplicate event" << std::endl;
         return;
     }
-    if(std::abs(GetTimePS(0) - trace.time_ps) <= coincidence_time){
+    if(std::abs(GetTimePS(channel) - trace.time_ps) <= coincidence_time*1000){
         Insert(trace);
     }
     else{

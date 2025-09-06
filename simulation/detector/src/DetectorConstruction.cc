@@ -69,8 +69,8 @@ DetectorConstruction::DetectorConstruction()
     absSizeZ                                          = config["secLayerSizeZ"];
     absorberStatus                                    = config["absorberStatus"];
     absorberSize                                      = config["absorberSize"];
-    std::vector<double> fteflonThickness              = config["teflonThickness"];
-    std::vector<double> faluThickness                 = config["aluThickness"];
+    double fteflonThickness              = config["teflonThickness"];
+    double faluThickness                 = config["aluThickness"];
     teflonThickness                                   = fteflonThickness;
     aluThickness                                      = faluThickness;
     absorberType                                      = config["absorberType"];
@@ -615,7 +615,6 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   physSiPM = new G4PVPlacement(nullptr, G4ThreeVector(solidDetector->GetXHalfLength()+solidSiPM->GetXHalfLength(), 0, 0), logicalSiPM, "physSiPM", logicalTeflonFoil, false, 0, fCheckOverlaps);
 
   G4double passiveFill = 0;
-  
   for(G4int i=0; i<fLayers-fLayersCut; i++){
     if(absorberStatus) passiveFill = absorberSize+gapSizeZ;
     
@@ -624,7 +623,6 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
     if(i == 0){
       physicalPosition = G4ThreeVector(0.,0., -translation+passiveFill);
     }
-    
     physAluFoil = new G4PVPlacement(nullptr, physicalPosition, logicalAluFoil, "physAluFoil", logicalworld, false, i+fLayersCut, fCheckOverlaps);
   }  
 
@@ -652,7 +650,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   logicalAbsorber->SetVisAttributes(visAbsorber);
   logicalAluFoil->SetVisAttributes(visAluFoil);
   logicalTeflonFoil->SetVisAttributes(visTeflonFoil);
-  
+
   G4String holder="../constructs/halterung.stl";
   if(fLayers == 15){
     solidHolder = stl.Read(holder); // halterungsspacer 6 mm; spacer 2 mm; seitenanfang 15.25 mm & 6.75mm

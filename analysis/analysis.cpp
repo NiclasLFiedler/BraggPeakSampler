@@ -54,7 +54,7 @@ void analysis(){
     int heteroThickness                 = allConfigs["heteroThickness"];
 
     bool bScintSim = false;
-    bool bSavepdf = true;
+    bool bSavepdf = false;
     bool bPhotons = false;
 
 
@@ -78,10 +78,10 @@ void analysis(){
     u_int32_t eventCounter = 0; //store tree values measurement
     Int_t channel = 0;
     Int_t board = 0;
-    int16_t charge = 0;
-    uint32_t timestamp_ns = 0;
+    Int_t charge = 0;
+    uint64_t timestamp_ns = 0;
     Long64_t timestamp_ps = 0;
-    // std::vector<std::vector<Double_t>> *trace = 0; //old
+
     std::vector<u_int16_t> *trace = 0;
 
     Int_t event = 0;
@@ -114,20 +114,19 @@ void analysis(){
     TTree *photontree;
 
     datatree = (TTree*)input->Get("RawData");
+    // datatree = (TTree*)input->Get("vtree");
     if (!datatree) {
         cout << "Error: Failed to retrieve tree 'tree' from file!" << endl;
         input->Close();
         return;
     }
 
-    
     if(!simulationStatus){
         datatree->SetBranchAddress("EventCounter", &eventCounter);
         datatree->SetBranchAddress("Channel", &channel);
-        // datatree->SetBranchAddress("Board", &board);
-        // datatree->SetBranchAddress("Charge", &charge);
-        datatree->SetBranchAddress("TimeStamp", &timestamp_ns);
-        // datatree->SetBranchAddress("TimeStampPico", &timestamp_ps);
+        datatree->SetBranchAddress("Board", &board);
+        datatree->SetBranchAddress("Charge", &charge);
+        datatree->SetBranchAddress("TimeStamp", &timestamp_ps);
         datatree->SetBranchAddress("Trace", &trace);
     }
     else{
@@ -157,21 +156,47 @@ void analysis(){
         }   
     }
     
-    energy_ch muon;
-    muon.CH = {970, 905, 968, 1072.4, 1094.3, 1078.8, 983.6, 177.9, 965.5, 1035.08, 1171.35, 162.08, 172.74, 145, 101.8};
-    muon.o_CH = {100.52, 90.4, 100.65, 98.31, 107.62, 117.89, 98.19, 23.22, 99.15, 96.28, 116.67, 17.89, 19.18, 15.76, 9.33}; //old
-    muon.E = 4.95;
-    muon.o_E = 0.3433;
+    energy_ch base;
+    base.CH = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    base.o_CH = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    base.E = 0.001;
+    base.o_E = 0;
     
-    energy_ch co60;
-    co60.CH = {402.56, 401.75, 421.52, 444.63, 437.76, 428.52, 415.91, 49.03, 403.4, 417.63, 457.43, 52.08, 52.11, 47.11, 35.55};
-    co60.o_CH = {97.79, 97.82, 101.99, 99.31, 115.65, 102.12, 90.23, 11.05, 96.9, 97.69, 111.66, 20.22, 23.25, 19.32, 12.67};
-    co60.E = 1.25275;
-    co60.o_E = 0.068;
+    energy_ch na22;
+    na22.CH = {100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100};
+    // na22.CH = {2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000}; //charge
+    na22.o_CH = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    na22.E = 0.511;
+    na22.o_E = 0.01;
     
-    
+    //4 - 93.01 + 19.97; 1779.12+690.66
+    //5 - 78.576 + 9.49; 2034.19+675.6
+
+    //10 -  85.4175 + 19.5839- 1137.05 + 696.43
+    //11 -12.6472 +12.0657-
+    //12 - 28.2955 + 9.40731 +179.523 + 399.546
+    //13 -52.445 +13.3292 + 370.058 + 340.344
+    //14  - 73.2931 + 15.3272 - 1277.45 +613.614
+    //15 - 69.6274 + 16.6303 - 903.729 + 604.97
+    //16 - 98.5465 + 23.1831 - 2342.06 +991.668
+    //17 - 12.4756 + 4.49776 - 251.097 + 383.081
+    //18 - 74.8514 + 20.607 - 1047.09+596.422
+    //19 - 45.3675 + 17.5071 - 324.869 - 361.442
+    //20 - 71.723 + 20.4579 - 1022.3 + 576.937
+    //21 - 59.3453 + 33.7472 - 883.589 + 656.023
+    //22 - 4.50820e+01 + 1.44533e+01 - 691.137 + 469.948
+    //23 - 22.4054 + 4.1494 - 724.823 + 479.132
+    //24 - 5.15129e+01+1.87916e+01 -630.284 + 545.392
+    //25 - 26.7939 + 13.1999 - 310.344 + 438.827
+    //26 - 19.8751 + 5.25402 +  630.666 + 523.842
+    //27 - 55.379 + 22.6026 - 672.635 + 541.671
+    //28 - 96.4732 + 22.9196 - 2577.5 + 824.663
+    //29 - 61.937 + 21.9025 -  989.291 + 605.193
+    //30 - 85.16 + 21.75 - 1574.37 + 590.742
+    //31 - 102.57 + 17.25 - 2.97269e+03 - 1.03523e+03
+
+
     Double_t entries = datatree->GetEntries();
-    // entries = 100000;
     Int_t prevEvent = -1;
     int missing_buffer_counter = 0;
     int pileup_counter = 0;
@@ -197,13 +222,13 @@ void analysis(){
     detectorProperties->SetNormStatus(normStatus);
     detectorProperties->SetReversedStatus(reversedStatus);
     detectorProperties->SetSimulationStatus(simulationStatus);
-    detectorProperties->SetCalibrationStatus(!simulationStatus);
+    detectorProperties->SetCalibrationStatus(true);
     detectorProperties->SetAbsorberStatus(absorberStatus);
     
     detectorProperties->Process();
 
     Calibration* calib = new Calibration(detectorProperties);
-    calib->energy_extrapolation(co60, muon);
+    calib->energy_extrapolation(base, na22);
     
     detectorProperties->SetCalibration(calib);
     
@@ -227,15 +252,12 @@ void analysis(){
         cout << "Measurement: Getting raw data." << endl;
         for (double e = 0; e<entries; e++){
             datatree->GetEntry(e);
-            test++;
-            if(channel != 0){
-                cout << "Not 0: " << test << endl;
-                break;
-            }
-            // channel--;
-            if (board == 1) channel += 16;
+            if (board == 1) {
+                channel += 16;
+                timestamp_ps += 32*1000;
+            };
             trace_props.Clear();    
-            trace_props.SetParameters(*trace, channel, static_cast<double>(timestamp_ns)*2, static_cast<double>(timestamp_ps), discard_index, bsaveTrace);
+            trace_props.SetParameters(*trace, channel, charge, static_cast<double>(timestamp_ps)/1000, static_cast<double>(timestamp_ps), discard_index, bsaveTrace);
             detector->EnergyHist(channel)->Fill(calib->GetQuenchedEnergy(channel, trace_props.amp)); //todo set birks to 0 if no quenching // sometimes double accounted for
             if(trace_props.channel == 0){
                 initialEvents.insert({trace_props.time_ps, trace_props});
@@ -248,8 +270,8 @@ void analysis(){
         for(const auto& [initialTime, initialTrace] : initialEvents) {
             proton.Clear();
             proton.InsertInitial(initialTrace);
-            auto lowerTraces = postEvents.lower_bound(initialTime - coincidenceTime);
-            auto upperTraces = postEvents.upper_bound(initialTime + coincidenceTime);            
+            auto lowerTraces = postEvents.lower_bound(initialTime - coincidenceTime*1000);
+            auto upperTraces = postEvents.upper_bound(initialTime + coincidenceTime*1000);            
             for (auto coincTrace = lowerTraces; coincTrace != upperTraces; ++coincTrace) {                                
                 proton.Coincidence(coincTrace->second);
             }            
@@ -259,19 +281,19 @@ void analysis(){
             coinProton.Test();
             if(coinProton.missingChannel == true){
                 missing_buffer_counter++;
-                continue;
+                //continue;
             }
             if(coinProton.pileupStatus == true){
                 pileup_counter++;
-                continue;
+                //continue;
             }
             if(coinProton.ampOffsetStatus == true){
                 prepeak_step_counter++;
-                continue;
+                //continue;
             }
             if(coinProton.coinc_layer < coincidenceLayer){
                 coinc_layer_counter++;
-                continue;
+                //continue;
             }
             
             coinProton.SumEDep();
@@ -515,47 +537,5 @@ void analysis(){
     detector->TotalEnergyHist()->Write();
     heteroFile->Close();
     
-    c2->Close();
-
-    sprintf(title, "Bragg Sampler %s Analysis", filename);
-    TCanvas *c3 = new TCanvas("c3", title, 10, 10, 1900, 1000);
-    c3->SetFillColor(0);
-	c3->SetGrid();
-	c3->SetBorderMode(0);
-	c3->SetBorderSize(2);
-	c3->SetFrameBorderMode(0);   
-    c3->Divide(2, 1);
-    c3->cd(1);
-    
-    plotter.Histogram1D(detector->EntryHist(0), "EntryX / cm", "Counts");
-    for(int i = 1; i<nLayers; i++){
-        detector->EntryHist(i)->SetLineColor(i+1);
-        detector->EntryHist(i)->Draw("HIST SAME");
-    }
-    plotter.Legend(detector->h_entry);
-    c3->cd(2);
-
-    plotter.Histogram1D(detector->ExitHist(0), "ExitX / cm", "Counts");
-    for(int i = 1; i<nLayers; i++){
-        detector->ExitHist(i)->SetLineColor(i+1);
-        detector->ExitHist(i)->Draw("HIST SAME");
-    }
-    plotter.Legend(detector->h_exit);
-    c3->cd(2);
-
-    plotter.Histogram1D(detector->AngleHist(0), "Angle", "Counts");
-    for(int i = 1; i<nLayers; i++){
-        detector->AngleHist(i)->SetLineColor(i+1);
-        detector->AngleHist(i)->Draw("HIST SAME");
-    }
-    plotter.Legend(detector->h_angle);
-
-    TFile *fout = new TFile("histograms.root", "RECREATE");
-    for (int i = 0; i < nLayers; ++i) {
-        detector->EntryHist(i)->Write(Form("h_entry_%d", i));
-        detector->ExitHist(i)->Write(Form("h_exit_%d", i));
-        detector->AngleHist(i)->Write(Form("h_angle_%d", i));
-    }
-    fout->Close();
-    
+    c2->Close();   
 }
