@@ -57,7 +57,7 @@ void sourceCalib(){
     bool bSavepdf = true;
     bool bPhotons = false;
 
-    const char* datasets[3] = {"MIT_05_2024", "simulation", "test"};
+    const char* datasets[3] = {"MIT_05_2024", "simulation", "postCalib"};
     const char* in_data[3] = {"notarget", "homotarget", "heterotarget"};
     const char* target_data[3] = {"without a target", "with the homogeneous target", "with the heterogeneous target"};
 
@@ -103,7 +103,7 @@ void sourceCalib(){
     
     sprintf(in_path, "../data/%s/%s/input/", dataset, filename);
     sprintf(out_path, "../data/%s/%s/output/", dataset, filename);
-    sprintf(file, "%s%s.root", in_path, filename);
+    sprintf(file, "%sna2223_co67_300s.root", in_path);//, filename);
     cout << "In path: " << file << endl;
     
     TFile *input = new TFile(file, "READ");
@@ -118,7 +118,7 @@ void sourceCalib(){
     datatree = (TTree*)input->Get("RawData");
 
     Char_t backgroundpath[200];
-    sprintf(backgroundpath, "%snotargetBack.root", in_path);
+    sprintf(backgroundpath, "%sbackground.root", in_path);
     TFile *input2 = new TFile(backgroundpath, "READ");
     datatree2 = (TTree*)input2->Get("RawData");
 
@@ -239,10 +239,13 @@ void sourceCalib(){
     cout << "Measurement: Getting raw data." << endl;
 
 
-    TH1D* h_amp_0 = new TH1D("h_amp_0", "h_amp_0", 1000, 0, 5000);
-    TH1D* h_amp_1 = new TH1D("h_amp_1", "h_amp_1", 1000, 0, 5000);
-    int coincChannel = 10;
+    TH1D* h_charge_0 = new TH1D("h_charge_0", "h_charge_0", 1000, 0, 5000);
+    TH1D* h_charge_1 = new TH1D("h_charge_1", "h_charge_1", 1000, 0, 5000);
+    
+    int coincChannel = 6;
     bool useCharge = true;
+    bool useCoinc = true;
+
     for (double e = 0; e<entries; e++){
         trace_props.Clear();    
         datatree->GetEntry(e);
@@ -250,20 +253,20 @@ void sourceCalib(){
             channel += 16;
             timestamp_ps += 32*1000;
         };
-        
         trace_props.SetParameters(*trace, channel, charge, static_cast<double>(timestamp_ps)/1000, static_cast<double>(timestamp_ps), discard_index, bsaveTrace);
         detector->EnergyHist(channel)->Fill(trace_props.amp);
 
-        if(channel == coincChannel){
-            if(useCharge) h_amp_0->Fill(trace_props.charge);
-            else h_amp_0->Fill(trace_props.amp);
+        if (!useCoinc){
+            if(channel == coincChannel){
+                if(useCharge) h_charge_0->Fill(trace_props.charge);
+                else h_charge_0->Fill(trace_props.amp);
+            }
+            else if(channel == coincChannel+1)
+            {
+                if(useCharge) h_charge_1->Fill(trace_props.charge);
+                else h_charge_1->Fill(trace_props.amp);
+            }
         }
-        else if(channel == coincChannel+1)
-        {
-            if(useCharge) h_amp_1->Fill(trace_props.charge);
-            else h_amp_1->Fill(trace_props.amp);
-        }
-
         if(trace_props.channel == coincChannel){
             initialEvents.insert({trace_props.time_ps, trace_props});
         }
@@ -272,8 +275,8 @@ void sourceCalib(){
         }
     }
 
-    TH1D* h_amp_2 = new TH1D("h_amp_2", "h_amp_2", 1000, 0, 6000);
-    TH1D* h_amp_3 = new TH1D("h_amp_3", "h_amp_3", 1000, 0, 6000);
+    TH1D* h_charge_2 = new TH1D("h_charge_2", "h_charge_2", 1000, 0, 6000);
+    TH1D* h_charge_3 = new TH1D("h_charge_3", "h_charge_3", 1000, 0, 6000);
 
     for (double e = 0; e<entries; e++){
         trace_props.Clear();    
@@ -286,14 +289,15 @@ void sourceCalib(){
         trace_props.SetParameters(*trace, channel, charge, static_cast<double>(timestamp_ps)/1000, static_cast<double>(timestamp_ps), discard_index, bsaveTrace);
         //detector->EnergyHist(channel)->Fill(trace_props.amp);
 
-        if(channel == coincChannel){
-            h_amp_0->Fill(trace_props.amp,-1);
+        if (!useCoinc){
+            if(channel == coincChannel){
+                h_charge_2->Fill(trace_props.charge);
+            }
+            else if(channel == coincChannel+1)
+            {
+                h_charge_3->Fill(trace_props.charge);
+            }
         }
-        else if(channel == coincChannel+1)
-        {
-            h_amp_1->Fill(trace_props.amp,-1);
-        }
-
         if(trace_props.channel == coincChannel){
             // initialEvents.insert({trace_props.time_ps, trace_props});
         }
@@ -317,24 +321,33 @@ void sourceCalib(){
         particles.push_back(proton);
     }
 
-
-    for(auto coinProton : particles){
-        coinProton.Test();
-        if(coinProton.GetCharge(coincChannel+1) != 0){
-            if(useCharge){
-                // h_amp_0->Fill(coinProton.GetCharge(coincChannel));
-                // h_amp_1->Fill(coinProton.GetCharge(coincChannel+1));    
-            }
-            else{
-                // h_amp_0->Fill(coinProton.GetAmplitude(coincChannel));
-                // h_amp_1->Fill(coinProton.GetAmplitude(coincChannel+1));
+    if (useCoinc){
+        for(auto coinProton : particles){
+            coinProton.Test();
+            if(coinProton.GetCharge(coincChannel+1) != 0){
+                if(useCharge){
+                    h_charge_0->Fill(coinProton.GetCharge(coincChannel));
+                    h_charge_1->Fill(coinProton.GetCharge(coincChannel+1));    
+                }
+                else{
+                    h_charge_0->Fill(coinProton.GetAmplitude(coincChannel));
+                    h_charge_1->Fill(coinProton.GetAmplitude(coincChannel+1));
+                }
             }
         }
+    }
 
+    if(!useCoinc){
+        // h_charge_0->Add(h_charge_2, -0.1666);
+        // h_charge_1->Add(h_charge_3, -0.1666);
+        // h_charge_0->Add(h_charge_2, -0.333);
+        // h_charge_1->Add(h_charge_3, -0.333);
+        h_charge_0->Add(h_charge_2, -0.5);
+        h_charge_1->Add(h_charge_3, -0.5);
     }
 
     // TF1 *gaus = new TF1("gaus", "gaus");
-    // h_amp_0->Fit(gaus, "Q"); // "Q" = quiet, remove for verbose
+    // h_charge_0->Fit(gaus, "Q"); // "Q" = quiet, remove for verbose
 
     // double mean  = gaus->GetParameter(1);
     // double sigma = gaus->GetParameter(2);
@@ -346,7 +359,7 @@ void sourceCalib(){
     // std::cout << "  Mean      = " << mean  << "\n";
     // std::cout << "  Sigma     = " << sigma << "\n";
 
-    // h_amp_1->Fit(gaus, "Q"); // "Q" = quiet, remove for verbose
+    // h_charge_1->Fit(gaus, "Q"); // "Q" = quiet, remove for verbose
     
     // mean  = gaus->GetParameter(1);
     // sigma = gaus->GetParameter(2);
@@ -367,19 +380,19 @@ void sourceCalib(){
 
     // Draw first amplitude histogram
     c1->cd(1);
-    h_amp_0->SetLineColor(kBlue);
-    h_amp_0->SetTitle("Amplitude Spectrum Channel 0");
-    h_amp_0->GetXaxis()->SetTitle("Amplitude");
-    h_amp_0->GetYaxis()->SetTitle("Counts");
-    h_amp_0->Draw();
+    h_charge_0->SetLineColor(kBlue);
+    h_charge_0->SetTitle("Amplitude Spectrum Channel 0");
+    h_charge_0->GetXaxis()->SetTitle("Amplitude");
+    h_charge_0->GetYaxis()->SetTitle("Counts");
+    h_charge_0->Draw();
 
     // Draw second amplitude histogram
     c1->cd(2);
-    h_amp_1->SetLineColor(kRed);
-    h_amp_1->SetTitle("Amplitude Spectrum Channel 1");
-    h_amp_1->GetXaxis()->SetTitle("Amplitude");
-    h_amp_1->GetYaxis()->SetTitle("Counts");
-    h_amp_1->Draw();
+    h_charge_1->SetLineColor(kRed);
+    h_charge_1->SetTitle("Amplitude Spectrum Channel 1");
+    h_charge_1->GetXaxis()->SetTitle("Amplitude");
+    h_charge_1->GetYaxis()->SetTitle("Counts");
+    h_charge_1->Draw();
     
     c1->cd(3);
     h_timediff->SetLineColor(kRed);
@@ -390,17 +403,17 @@ void sourceCalib(){
 
         // Draw first amplitude histogram
     c1->cd(4);
-    h_amp_2->SetLineColor(kBlue);
-    h_amp_2->SetTitle("Amplitude Background Spectrum Channel 0");
-    h_amp_2->GetXaxis()->SetTitle("Amplitude");
-    h_amp_2->GetYaxis()->SetTitle("Counts");
-    h_amp_2->Draw();
+    h_charge_2->SetLineColor(kBlue);
+    h_charge_2->SetTitle("Amplitude Background Spectrum Channel 0");
+    h_charge_2->GetXaxis()->SetTitle("Amplitude");
+    h_charge_2->GetYaxis()->SetTitle("Counts");
+    h_charge_2->Draw();
 
     // Draw second amplitude histogram
     c1->cd(5);
-    h_amp_3->SetLineColor(kRed);
-    h_amp_3->SetTitle("Amplitude Background Spectrum Channel 1");
-    h_amp_3->GetXaxis()->SetTitle("Amplitude");
-    h_amp_3->GetYaxis()->SetTitle("Counts");
-    h_amp_3->Draw();
+    h_charge_3->SetLineColor(kRed);
+    h_charge_3->SetTitle("Amplitude Background Spectrum Channel 1");
+    h_charge_3->GetXaxis()->SetTitle("Amplitude");
+    h_charge_3->GetYaxis()->SetTitle("Counts");
+    h_charge_3->Draw();
 }

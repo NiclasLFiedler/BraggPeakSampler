@@ -36,6 +36,10 @@ void TraceProperties::DetectPileup(double pulseDuration) {
 }
 
 void TraceProperties::Process(){
+    amp = 0;
+    amp_idx = 0;
+    return;
+
     Double_t sum = 0;
     int pregate = 25;
 
@@ -47,6 +51,7 @@ void TraceProperties::Process(){
     
     amp = static_cast<u_int16_t>(-*max_trace+sum/pregate);
     amp_idx = static_cast<int>(std::distance(trace.begin(), max_trace));
+
     if(amp_idx > discard_index) ampOffsetStatus = true;
     DetectPileup(30);
     return;
@@ -59,7 +64,9 @@ void TraceProperties::SetParameters(const std::vector<u_int16_t>& ftrace, const 
     time_ns = ftime_ns;
     time_ps = ftime_ps;
     channel = fchannel;
+
     Process();
+    return;
     if(!bsaveTrace){
         trace = {};
     }

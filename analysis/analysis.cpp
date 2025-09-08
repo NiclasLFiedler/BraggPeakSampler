@@ -196,6 +196,13 @@ void analysis(){
     //31 - 102.57 + 17.25 - 2.97269e+03 - 1.03523e+03
 
 
+
+    //new na22
+    // 0 1599.14 + 882.484
+    // 1 1496.94 + 647.818
+    // 2
+    // 3 
+
     Double_t entries = datatree->GetEntries();
     Int_t prevEvent = -1;
     int missing_buffer_counter = 0;
