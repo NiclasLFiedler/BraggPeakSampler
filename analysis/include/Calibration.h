@@ -58,6 +58,7 @@ public:
     }
 
     double GetQuenchedStdDev(int channel, double Energy) {
+        if(!detProps->GetCalibrationStatus()) return Energy/3.46;
         return sqrt(GetVar(channel, FromEnergyToQuenched(channel, Energy))) / (std::pow(1 - detProps->GetBirksConstant() * FromEnergyToQuenched(channel, Energy) / detProps->GetLayerSizeZ(channel), 2));
     }
 

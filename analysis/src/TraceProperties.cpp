@@ -36,10 +36,6 @@ void TraceProperties::DetectPileup(double pulseDuration) {
 }
 
 void TraceProperties::Process(){
-    amp = 0;
-    amp_idx = 0;
-    return;
-
     Double_t sum = 0;
     int pregate = 25;
 
@@ -57,16 +53,21 @@ void TraceProperties::Process(){
     return;
 }
 
-void TraceProperties::SetParameters(const std::vector<u_int16_t>& ftrace, const double fchannel, const Int_t fcharge, const double ftime_ns, const double ftime_ps, int fdiscard_index, bool bsaveTrace){
+void TraceProperties::SetParameters(const std::vector<u_int16_t>& ftrace, const double fchannel, const Int_t fcharge, const double ftime_ns, const double ftime_ps, int fdiscard_index, bool bsaveTrace, bool fTraceDisable = false){
     trace=ftrace;
+    bTraceDisable = fTraceDisable;
     discard_index = fdiscard_index;
     charge = fcharge;
     time_ns = ftime_ns;
     time_ps = ftime_ps;
     channel = fchannel;
-
-    Process();
-    return;
+    if(!bTraceDisable){
+        Process();        
+    }
+    else{
+        amp = 0;
+        amp_idx = 0;
+    }
     if(!bsaveTrace){
         trace = {};
     }

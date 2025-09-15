@@ -100,10 +100,66 @@ void sourceCalib(){
     Double_t phi = 0;
     Int_t TrackID;
     
-    
+
+    // background.root            na1617_300s.root (X)
+    // background_1516.root       na1819_co23_340s.root (X)
+    // co1617_na01_200s.root      na2021_co45_300s.root (X)
+    // co1819_na23_200s.root  (X)    na2223_co67_300s.root  (X)
+    // co2021_na45_200s.root  (X)    na23.root (X)
+    // co2021_na45_200s_2nd.root (X) na23_200s.root (X)
+    // co2223_na67_200s.root   (X)  na2425_co89_300s.root (X)
+    // co2425_na89_200s.root   (?)   na2627_co1011_300s.root (X)
+    // co2627_na1011_200s.root (X)  na2829_co1213_300s.root (X)
+    // co2829_na1213_200s.root (X)  na3031_co1415_300s.root (X)
+    // co3031_na1415_220s.root (X)   na3031_co1516_200s.root (X)
+    // na01.root         (X)        na45.root (X)
+    // na1011_300s.root  (X)        na67_200s.root (X)
+    // na1213_320s.root  (X)         na89_300s.root (X)
+    // na1415_co01_300s.root(X)
+
+
+    na22.CH = {1572.17, 1540.67, 1394.92, 49.7185, 1853.25, 2078.32, 1007.81, 324.048, 500, 1374.37, 726.037, 900, 514.404, 491.578, 1086.86, 921.839, 500, 500, 1041.1, 217.159, 500, 1008.07, 742.082, 756.624, 500, 353.818, 500, 881.16, 500, 500, 1126.8, 203.876};
+    na22.o_CH = {785.518, 623.046, 681.057, 361.922, 586.363, 534.047, 811.318, 1032.56, 1000, 648.283, 618.388, 1000, 334.118, 874.19, 678.237, 459.7, 1000, 1000, 517.583, 337.498, 1000, 527.741, 498.61, 484.256, 1000, 422.4, 1000, 510.73, 1000, 1000, 604.186, 317.11};
+
+    //          na22                    c060
+    //0   1572.17+-785.518              1718.21+-651.8
+    //1   1540.67+-623.046              1417.37 +-611.446
+    //2   1394.92+-681.057 (1438.3+-660.218)              1497.63 +-650.941 (coinc: 169.083+- 418.9)
+    //3  49.7185+-361.922               96.751 +- 34.684
+    //4  1853.25+-586.363  (1594.97+-664.613)             1799.13 +- 641.491(coinc?: 218.933+- 440.838)
+    //5  2078.32+-534.047  (2013.39+-442.469)             2117.79 +- 625.909(coinc?: 187.256+-453.846)
+    //6  1007.81+- 811.318 (1152.73+-1334.39)        ?1820.87+- 529.955
+    //7  94.8475+-339.275 (coinc: 324.048 +- 1032.56)
+    //8  88.355+- 267.49                 1141.68+- 1141.68
+    //9  1374.37+-648.283   (1658.43 +-621.172)
+    //10 726.037+- 618.388  (951.97 +-1145.0)             674.796+-901.862
+    //11 103.091 +- 298.051 (900+1000)
+    //12 35.938 +- 292.8 (514.404+-334.118)
+    //13 93.93+- 273.44 (491.578+-874.19)
+    //14 1448.6+-483.7(coinc?: 204.775+-392.306;  1086.86+-678.237)       1478.07 +- 529.0 (1124.81+-501.79)
+    //15 1373.48+-491.068(coinc?: 188.322+-404.762; 921.839+-459.7)    1703.42 +- 624.532 (1126.0+-449.60)
+    //16 51.33 +- 36.478
+    //17 92.674+-331.529
+    //18 1041.1+- 517.583 (1324.47+-356.078)
+    //19 217.159+-337.498 (96.935+-364.724)
+    //20 500+1000
+    //21 ? 1008.07 +-  527.741
+    //22 742.082+-498.61                             653.698+-464.584
+    //23 756.624+-484.256                            688.189+-487.616
+    //24 500+1000
+    //25 353.818+-422.4
+    //26 78.3982+-352.849 
+    //27 881.16+-510.73 (785.04+-352.849)
+    //28                                             2423.1+-1070.58
+    //29                                             696.856+-545.819
+    //30 1126.8+- 604.186 ()                         1109.41+-500.988
+    //31 203.876+-317.11 (294.426+-582.268)          314.728 +-604.677
+
+
+
     sprintf(in_path, "../data/%s/%s/input/", dataset, filename);
     sprintf(out_path, "../data/%s/%s/output/", dataset, filename);
-    sprintf(file, "%sna2223_co67_300s.root", in_path);//, filename);
+    sprintf(file, "%sco2627_na1011_200s.root", in_path);//, filename);
     cout << "In path: " << file << endl;
     
     TFile *input = new TFile(file, "READ");
@@ -238,11 +294,14 @@ void sourceCalib(){
     
     cout << "Measurement: Getting raw data." << endl;
 
-
-    TH1D* h_charge_0 = new TH1D("h_charge_0", "h_charge_0", 1000, 0, 5000);
-    TH1D* h_charge_1 = new TH1D("h_charge_1", "h_charge_1", 1000, 0, 5000);
-    
-    int coincChannel = 6;
+    double ylim = 10000;
+    TH1D* h_charge_0 = new TH1D("h_charge_0", "h_charge_0", 1000, 0, ylim);
+    TH1D* h_charge_1 = new TH1D("h_charge_1", "h_charge_1", 1000, 0, ylim);
+    TH1D* h_charge_2 = new TH1D("h_charge_2", "h_charge_2", 1000, 0, ylim);
+    TH1D* h_charge_3 = new TH1D("h_charge_3", "h_charge_3", 1000, 0, ylim);
+    TH1D* h_chargeDiff = new TH1D("h_chargeDiff", "h_chargeDiff", 1000, 0, 3000);
+    //co2627_na1011_200s
+    int coincChannel = 10;
     bool useCharge = true;
     bool useCoinc = true;
 
@@ -253,8 +312,9 @@ void sourceCalib(){
             channel += 16;
             timestamp_ps += 32*1000;
         };
-        trace_props.SetParameters(*trace, channel, charge, static_cast<double>(timestamp_ps)/1000, static_cast<double>(timestamp_ps), discard_index, bsaveTrace);
-        detector->EnergyHist(channel)->Fill(trace_props.amp);
+        trace_props.SetParameters(*trace, channel, charge, static_cast<double>(timestamp_ps)/1000, static_cast<double>(timestamp_ps), discard_index, bsaveTrace, true);
+        // printf("test\n");
+        detector->EnergyHist(channel)->Fill(trace_props.charge);
 
         if (!useCoinc){
             if(channel == coincChannel){
@@ -275,8 +335,6 @@ void sourceCalib(){
         }
     }
 
-    TH1D* h_charge_2 = new TH1D("h_charge_2", "h_charge_2", 1000, 0, 6000);
-    TH1D* h_charge_3 = new TH1D("h_charge_3", "h_charge_3", 1000, 0, 6000);
 
     for (double e = 0; e<entries; e++){
         trace_props.Clear();    
@@ -286,7 +344,7 @@ void sourceCalib(){
             timestamp_ps += 32*1000;
         };
         
-        trace_props.SetParameters(*trace, channel, charge, static_cast<double>(timestamp_ps)/1000, static_cast<double>(timestamp_ps), discard_index, bsaveTrace);
+        trace_props.SetParameters(*trace, channel, charge, static_cast<double>(timestamp_ps)/1000, static_cast<double>(timestamp_ps), discard_index, bsaveTrace, true);
         //detector->EnergyHist(channel)->Fill(trace_props.amp);
 
         if (!useCoinc){
@@ -308,10 +366,10 @@ void sourceCalib(){
 
 
     cout << "Measurement: Processing raw data." << endl;
-    TH1D* h_timediff = new TH1D("h_timediff", "h_timediff", 800, -10000, 10000);
+    TH1D* h_timediff = new TH1D("h_timediff", "h_timediff", 800, -200, 200);
     for(const auto& [initialTime, initialTrace] : initialEvents) {
         proton.Clear();
-        proton.InsertInitial(initialTrace);
+        proton.Insert(initialTrace);
         auto lowerTraces = postEvents.lower_bound(initialTime - coincidenceTime*1000);
         auto upperTraces = postEvents.upper_bound(initialTime + coincidenceTime*1000);            
         for (auto coincTrace = lowerTraces; coincTrace != upperTraces; ++coincTrace) {                                
@@ -326,8 +384,12 @@ void sourceCalib(){
             coinProton.Test();
             if(coinProton.GetCharge(coincChannel+1) != 0){
                 if(useCharge){
-                    h_charge_0->Fill(coinProton.GetCharge(coincChannel));
-                    h_charge_1->Fill(coinProton.GetCharge(coincChannel+1));    
+                    
+                    if(std::abs(coinProton.GetCharge(coincChannel)-coinProton.GetCharge(coincChannel+1)) > 0){
+                        h_charge_0->Fill(coinProton.GetCharge(coincChannel));
+                        h_charge_1->Fill(coinProton.GetCharge(coincChannel+1)); 
+                        h_chargeDiff->Fill(std::abs(coinProton.GetCharge(coincChannel)-coinProton.GetCharge(coincChannel+1)));
+                    }    
                 }
                 else{
                     h_charge_0->Fill(coinProton.GetAmplitude(coincChannel));
@@ -340,10 +402,14 @@ void sourceCalib(){
     if(!useCoinc){
         // h_charge_0->Add(h_charge_2, -0.1666);
         // h_charge_1->Add(h_charge_3, -0.1666);
-        // h_charge_0->Add(h_charge_2, -0.333);
-        // h_charge_1->Add(h_charge_3, -0.333);
-        h_charge_0->Add(h_charge_2, -0.5);
-        h_charge_1->Add(h_charge_3, -0.5);
+        h_charge_0->Add(h_charge_2, -0.333);
+        h_charge_1->Add(h_charge_3, -0.333);
+        // h_charge_0->Add(h_charge_2, -0.366);
+        // h_charge_1->Add(h_charge_3, -0.366);
+        // h_charge_0->Add(h_charge_2, -0.5);
+        // h_charge_1->Add(h_charge_3, -0.5);
+        // h_charge_0->Add(h_charge_2, -0.5333);
+        // h_charge_1->Add(h_charge_3, -0.5333);
     }
 
     // TF1 *gaus = new TF1("gaus", "gaus");
@@ -355,7 +421,7 @@ void sourceCalib(){
 
 
     // std::cout << "Fit results:\n";
-    // std::cout << "  Amplitude = " << ampl  << "\n";
+    // std::cout << "  Charge = " << ampl  << "\n";
     // std::cout << "  Mean      = " << mean  << "\n";
     // std::cout << "  Sigma     = " << sigma << "\n";
 
@@ -366,7 +432,7 @@ void sourceCalib(){
     // ampl  = gaus->GetParameter(0);
 
     // std::cout << "Fit results:\n";
-    // std::cout << "  Amplitude = " << ampl  << "\n";
+    // std::cout << "  Charge = " << ampl  << "\n";
     // std::cout << "  Mean      = " << mean  << "\n";
     // std::cout << "  Sigma     = " << sigma << "\n";
 
@@ -375,22 +441,22 @@ void sourceCalib(){
 
    //------------------------Plots-----------------------------//
     sprintf(title, "Bragg Sampler %s Analysis", filename);
-    TCanvas *c1 = new TCanvas("c1", title, 10, 10, 1900, 1000);
+    TCanvas *c1 = new TCanvas("c1", title, 10, 10, 1000, 700);
     c1->Divide(3,2); // two pads side by side
 
-    // Draw first amplitude histogram
+    // Draw first Charge histogram
     c1->cd(1);
     h_charge_0->SetLineColor(kBlue);
-    h_charge_0->SetTitle("Amplitude Spectrum Channel 0");
-    h_charge_0->GetXaxis()->SetTitle("Amplitude");
+    h_charge_0->SetTitle("Charge Spectrum Channel 0");
+    h_charge_0->GetXaxis()->SetTitle("Charge");
     h_charge_0->GetYaxis()->SetTitle("Counts");
     h_charge_0->Draw();
 
-    // Draw second amplitude histogram
+    // Draw second Charge histogram
     c1->cd(2);
     h_charge_1->SetLineColor(kRed);
-    h_charge_1->SetTitle("Amplitude Spectrum Channel 1");
-    h_charge_1->GetXaxis()->SetTitle("Amplitude");
+    h_charge_1->SetTitle("Charge Spectrum Channel 1");
+    h_charge_1->GetXaxis()->SetTitle("Charge");
     h_charge_1->GetYaxis()->SetTitle("Counts");
     h_charge_1->Draw();
     
@@ -401,19 +467,26 @@ void sourceCalib(){
     h_timediff->GetYaxis()->SetTitle("Counts");
     h_timediff->Draw();
 
-        // Draw first amplitude histogram
+        // Draw first Charge histogram
     c1->cd(4);
     h_charge_2->SetLineColor(kBlue);
-    h_charge_2->SetTitle("Amplitude Background Spectrum Channel 0");
-    h_charge_2->GetXaxis()->SetTitle("Amplitude");
+    h_charge_2->SetTitle("Charge Background Spectrum Channel 0");
+    h_charge_2->GetXaxis()->SetTitle("Charge");
     h_charge_2->GetYaxis()->SetTitle("Counts");
     h_charge_2->Draw();
 
-    // Draw second amplitude histogram
+    // Draw second Charge histogram
     c1->cd(5);
     h_charge_3->SetLineColor(kRed);
-    h_charge_3->SetTitle("Amplitude Background Spectrum Channel 1");
-    h_charge_3->GetXaxis()->SetTitle("Amplitude");
+    h_charge_3->SetTitle("Charge Background Spectrum Channel 1");
+    h_charge_3->GetXaxis()->SetTitle("Charge");
     h_charge_3->GetYaxis()->SetTitle("Counts");
     h_charge_3->Draw();
+
+    c1->cd(6);
+    h_chargeDiff->SetLineColor(kOrange);
+    h_chargeDiff->SetTitle("Charge Difference");
+    h_chargeDiff->GetXaxis()->SetTitle("Charge");
+    h_chargeDiff->GetYaxis()->SetTitle("Counts");
+    h_chargeDiff->Draw();
 }

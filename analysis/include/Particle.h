@@ -33,7 +33,6 @@ public:
 
     ~Particle() = default;
     void SumEDep();
-    void InsertInitial(TraceProperties trace);
     void Insert(TraceProperties trace);
     void Coincidence(TraceProperties trace, int channel);
     bool Coincidence(int layer);

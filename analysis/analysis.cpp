@@ -58,7 +58,7 @@ void analysis(){
     bool bPhotons = false;
 
 
-    const char* datasets[3] = {"MIT_05_2024", "simulation", "test"};
+    const char* datasets[3] = {"MIT_05_2024", "simulation", "beamtime"};
     const char* in_data[3] = {"notarget", "homotarget", "heterotarget"};
     const char* target_data[3] = {"without a target", "with the homogeneous target", "with the heterogeneous target"};
 
@@ -163,10 +163,10 @@ void analysis(){
     base.o_E = 0;
     
     energy_ch na22;
-    na22.CH = {100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100};
-    // na22.CH = {2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000, 2000}; //charge
-    na22.o_CH = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    na22.E = 0.511;
+    na22.CH = {1572.17, 1540.67, 1394.92, 49.7185, 1853.25, 2078.32, 1007.81, 324.048, 500, 1374.37, 726.037, 900, 514.404, 491.578, 1086.86, 921.839, 500, 500, 1041.1, 217.159, 500, 1008.07, 742.082, 756.624, 500, 353.818, 500, 881.16, 500, 500, 1126.8, 203.876};
+    na22.o_CH = {785.518, 623.046, 681.057, 361.922, 586.363, 534.047, 811.318, 1032.56, 1000, 648.283, 618.388, 1000, 334.118, 874.19, 678.237, 459.7, 1000, 1000, 517.583, 337.498, 1000, 527.741, 498.61, 484.256, 1000, 422.4, 1000, 510.73, 1000, 1000, 604.186, 317.11};
+
+    na22.E = 1.275;
     na22.o_E = 0.01;
     
     //4 - 93.01 + 19.97; 1779.12+690.66
@@ -247,14 +247,18 @@ void analysis(){
     std::vector<Particle> ScintParticles;
     
     Particle proton(nLayers, coincidenceTime, coincidenceLayer, calib);
-    std::unordered_map<double, TraceProperties> initialEvents;
+    std::map<double, TraceProperties> initialEvents;
     std::multimap<double, TraceProperties> postEvents;
     bool bsaveTrace = false; 
     Plotter plotter(coincidenceTime);
 
+    //tests
+    TH1D* h_timediff = new TH1D("h_timediff", "h_timediff", 2000, 0, 20000);
+    TH1D* h_inittime = new TH1D("h_inittime", "h_inittime", 200000, 0, 1e11);
+
     cout << "Dataset: " << dataset << endl;
     cout << "Input file: " << filename << endl;
-    int test = 0;
+    bool bTraceDisable = true;
     if(!simulationStatus){
         cout << "Measurement: Getting raw data." << endl;
         for (double e = 0; e<entries; e++){
@@ -264,8 +268,10 @@ void analysis(){
                 timestamp_ps += 32*1000;
             };
             trace_props.Clear();    
-            trace_props.SetParameters(*trace, channel, charge, static_cast<double>(timestamp_ps)/1000, static_cast<double>(timestamp_ps), discard_index, bsaveTrace);
-            detector->EnergyHist(channel)->Fill(calib->GetQuenchedEnergy(channel, trace_props.amp)); //todo set birks to 0 if no quenching // sometimes double accounted for
+            trace_props.SetParameters(*trace, channel, charge, static_cast<double>(timestamp_ps)/1000, static_cast<double>(timestamp_ps), discard_index, bsaveTrace, bTraceDisable);
+            if(trace_props.charge > 0) {
+                detector->EnergyHist(channel)->Fill(calib->GetQuenchedEnergy(channel, trace_props.charge)); //todo set birks to 0 if no quenching // sometimes double accounted for
+            }
             if(trace_props.channel == 0){
                 initialEvents.insert({trace_props.time_ps, trace_props});
             }
@@ -274,9 +280,28 @@ void analysis(){
             }
         }
         cout << "Measurement: Processing raw data." << endl;
+        
+        double time1 = 0;
+        double time2 = 0;
+        double timeDiff = 0;
+        int iMod = 0;
         for(const auto& [initialTime, initialTrace] : initialEvents) {
+            h_inittime->Fill(initialTime/1000);
+            if(time1 == 0){
+                time1 = initialTime;
+            }
+            else{
+                time2 = initialTime;
+                timeDiff = (time2-time1)/1000;
+                h_timediff->Fill((time2-time1)/1000);
+                time1 = time2;
+            }
             proton.Clear();
-            proton.InsertInitial(initialTrace);
+            proton.Insert(initialTrace);
+            if((timeDiff)<1200){
+                // cout << "Short time difference: " << timeDiff/1000 << " us, Event: " << iMod << endl;
+                detector->StoppedEnergyHist(0)->Fill(proton.GetEDep(0));
+            }
             auto lowerTraces = postEvents.lower_bound(initialTime - coincidenceTime*1000);
             auto upperTraces = postEvents.upper_bound(initialTime + coincidenceTime*1000);            
             for (auto coincTrace = lowerTraces; coincTrace != upperTraces; ++coincTrace) {                                
@@ -288,7 +313,7 @@ void analysis(){
             coinProton.Test();
             if(coinProton.missingChannel == true){
                 missing_buffer_counter++;
-                //continue;
+                continue;
             }
             if(coinProton.pileupStatus == true){
                 pileup_counter++;
@@ -300,7 +325,7 @@ void analysis(){
             }
             if(coinProton.coinc_layer < coincidenceLayer){
                 coinc_layer_counter++;
-                //continue;
+                continue;
             }
             
             coinProton.SumEDep();
@@ -312,7 +337,7 @@ void analysis(){
             }
             for (int i = coinProton.traces.size() - 1; i >= 0; --i) {
                 if(coinProton.GetEDep(i)!=0){
-                    detector->StoppedEnergyHist(i)->Fill(coinProton.GetEDep(i));
+                    //detector->StoppedEnergyHist(i)->Fill(coinProton.GetEDep(i));
                     break;
                 }
             }
@@ -443,6 +468,12 @@ void analysis(){
     detector->TotalEnergyHist()->SetLineColor(kGreen+1);
     plotter.Histogram1D(detector->TotalEnergyHist(), "EDep [MeV]", "Counts");
     
+    c1->cd(nLayers+3);
+    plotter.Histogram1D(h_timediff, "time / ns", "Counts");
+
+    c1->cd(nLayers+4);
+    plotter.Histogram1D(h_inittime, "time / ns", "Counts");
+
     //outputfile
     sprintf(file, "%splots.root", out_path);
     TFile *	hfile = new TFile(file,"RECREATE");

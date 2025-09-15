@@ -21,6 +21,7 @@ public:
     int amp_idx = 0;
     bool pileupStatus = false;
     bool ampOffsetStatus = false;
+    bool bTraceDisable = false;
 
     TraceProperties();
 
@@ -29,7 +30,7 @@ public:
     void Clear();
     void DetectPileup(double pulseDuration);
     void Process();
-    void SetParameters(const std::vector<u_int16_t>& ftrace, const double fchannel, const Int_t fcharge, const double ftime_ns, const double ftime_ps, int fdiscard_index, bool bsaveTrace);
+    void SetParameters(const std::vector<u_int16_t>& ftrace, const double fchannel, const Int_t fcharge, const double ftime_ns, const double ftime_ps, int fdiscard_index, bool bsaveTrace, bool fTraceDisable);
 };
 
 #endif // TRACE_PROPERTIES_H

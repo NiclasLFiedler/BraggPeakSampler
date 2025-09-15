@@ -40,18 +40,10 @@ void Particle::SumEDep(){
     }
 }
 
-void Particle::InsertInitial(TraceProperties trace){
-    // if(trace.channel != 0){
-    //     std::cout << "Initial trace not channel 0" << std::endl;
-    // }
-    Insert(trace);
-    return;
-}
-
 void Particle::Insert(TraceProperties trace){
     int fchannel = trace.channel;
     traces.at(fchannel) = trace;
-    QuenchedDeposition.at(fchannel) = calibration->GetQuenchedEnergy(fchannel, trace.amp);
+    QuenchedDeposition.at(fchannel) = calibration->GetQuenchedEnergy(fchannel, trace.charge);
     Deposition.at(fchannel) = calibration->GetEnergy(fchannel, QuenchedDeposition.at(fchannel));
     DepositionStdDev.at(fchannel) = calibration->GetQuenchedStdDev(fchannel, QuenchedDeposition.at(fchannel));
     return;
