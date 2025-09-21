@@ -14,7 +14,7 @@ public:
     Double_t quenched_energy = 0;
     Double_t energy_err = 0;
     Double_t time_ns = 0;
-    Double_t time_ps = 0;
+    Long64_t time_ps = 0;
     Int_t charge = 0;
     std::vector<u_int16_t> trace = {};
 
@@ -30,7 +30,7 @@ public:
     void Clear();
     void DetectPileup(double pulseDuration);
     void Process();
-    void SetParameters(const std::vector<u_int16_t>& ftrace, const double fchannel, const Int_t fcharge, const double ftime_ns, const double ftime_ps, int fdiscard_index, bool bsaveTrace, bool fTraceDisable);
+    void SetParameters(const std::vector<u_int16_t>& ftrace, const double fchannel, const Int_t fcharge, const double ftime_ns, Long64_t ftime_ps, int fdiscard_index, bool bsaveTrace, bool fTraceDisable);
 };
 
 #endif // TRACE_PROPERTIES_H

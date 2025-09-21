@@ -1,5 +1,5 @@
 {
-  "detectorSelect": 3,
+  "detectorSelect": 0,
   "targetSelect": 0,
   "detectors": [
     {
@@ -22,11 +22,11 @@
       "absorberType": "pmma",
       "absorberSize": 0,
       "reversedStatus": false,
-      "normStatus": true,
+      "normStatus": false,
       "simulationStatus": false,
       "teflonThickness": 0.5,
       "aluThickness": 0.02,
-      "coincidenceTime": 300,
+      "coincidenceTime": 500,
       "coincidenceLayer": 1,
       "discardIndex": 50,
       "targetThickness": 0

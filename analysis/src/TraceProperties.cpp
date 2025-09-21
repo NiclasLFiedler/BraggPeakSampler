@@ -53,7 +53,7 @@ void TraceProperties::Process(){
     return;
 }
 
-void TraceProperties::SetParameters(const std::vector<u_int16_t>& ftrace, const double fchannel, const Int_t fcharge, const double ftime_ns, const double ftime_ps, int fdiscard_index, bool bsaveTrace, bool fTraceDisable = false){
+void TraceProperties::SetParameters(const std::vector<u_int16_t>& ftrace, const double fchannel, const Int_t fcharge, const double ftime_ns, Long64_t ftime_ps, int fdiscard_index, bool bsaveTrace, bool fTraceDisable = false){
     trace=ftrace;
     bTraceDisable = fTraceDisable;
     discard_index = fdiscard_index;
