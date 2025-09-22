@@ -285,6 +285,9 @@ void analysis(){
             if(trace_props.charge > 0) {
                 detector->EnergyHist(channel)->Fill(calib->GetQuenchedEnergy(channel, trace_props.charge)); //todo set birks to 0 if no quenching // sometimes double accounted for
             }
+            else{
+                detector->EnergyHist(channel)->Fill(-1); //todo set birks to 0 if no quenching // sometimes double accounted for
+            }
             if(trace_props.channel == 0){
                 initialEvents.insert({trace_props.time_ps, trace_props});
             }
@@ -475,10 +478,10 @@ void analysis(){
     for(int i = 0; i<nLayers; i++){
         c1->cd(i+1);
         plotter.Histogram1D(detector->EnergyHist(i), "EDep [MeV]", "Counts");
-        detector->CoincEnergyHist(i)->SetLineColor(kRed+1);
-        detector->CoincEnergyHist(i)->Draw("HIST SAME");
-        detector->StoppedEnergyHist(i)->SetLineColor(kOrange+1);
-        detector->StoppedEnergyHist(i)->Draw("HIST SAME");
+        // detector->CoincEnergyHist(i)->SetLineColor(kRed+1);
+        // detector->CoincEnergyHist(i)->Draw("HIST SAME");
+        // detector->StoppedEnergyHist(i)->SetLineColor(kOrange+1);
+        // detector->StoppedEnergyHist(i)->Draw("HIST SAME");
         plotter.Legend(detector->EnergyHist(i));
 
         cout << setw(10) << i << setw(2) << "|" << setw(15) << detector->EnergyHist(i)->GetEntries() << setw(2) << "|" << setw(25) << detector->CoincEnergyHist(i)->GetEntries() << setw(2) << "|" << setw(18) <<  detector->StoppedEnergyHist(i)->GetEntries() << endl;

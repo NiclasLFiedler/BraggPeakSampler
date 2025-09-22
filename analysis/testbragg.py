@@ -103,7 +103,7 @@ coincidenceTime = config["coincidenceTime"]
 coincidenceLayer = config["coincidenceLayer"]
 discardIndex = config["discardIndex"]
 
-datasets = ["MIT_05_2024", "simulation"]
+datasets = ["MIT_05_2024", "simulation", "beamtime"]
 in_data = ["notarget", "homotarget", "heterotarget"]
 in_title = ["without a target", "with the homogeneous target", "with the heterogeneous target"]
 
@@ -140,6 +140,42 @@ if(bhetero):
     x_sigma2 = heterotree["x_sigma"].array().to_numpy()
     x_sigma2 = [x/10 for x in x_sigma2]
 
+y_data1 = [5.76817, 5.78830, 5.91962, 6.02027, 6.17647, 6.31865, 6.43451, 6.57329, 6.79197, 7.03662, 7.28912, 4.70684, 4.97107, 5.04074, 5.33586, 5.69500, 5.73153, 5.96638, 6.15702, 6.33759, 6.89649, 7.27459, 7.80804, 8.40822, 9.70558, 10.8170, 13.4784, 20.2835, 11.1428, 5.36193, 5.45272, 5.38791]
+y_sigma1 = [1.05952, 1.00481, 1.04628, 1.05401, 1.17253, 1.02417, 1.19482, 1.08550, 1.34963, 1.22602, 1.41804, 1.75369, 1.83540, 2.31214, 1.88457, 1.50985, 2.35451, 3.49368, 1.52134, 2.08780, 1.82112, 1.73598, 2.25831, 2.29804,  4.19429, 2.48435, 2.27875, 6.30751, 2.37186, 1.24200, 1.17689, 9.92402]
+counts = [197321,197321,197321,197321,197321,197321,197321,197321,197321,197321,197321,197321,197321,197321,197321,197321,197321,197321,197321,197321,197321,197321,197321,197321,197321, 197321, 197321, 197321, 10486, 1546, 1541, 763] 
+
+if(targetSelect == 1):
+    y_data1 = [6.00176, 6.07318, 6.39285, 6.43914, 6.71883, 6.45248, 7.03723, 7.33222, 7.58636, 8.02201, 8.25445, 6.20799, 5.40542, 5.38858, 6.25463, 6.75024, 5.80082, 6.20833, 9.20776, 10.8855, 15.5453, 9.7055, 2.05837, 7.7235, 8.14947, 13.885, 13.5339, 18.5561, 12.1416, 4.57177, 4.13783, 4.73284]
+    y_sigma1 = [1.08812, 1.05688, 1.05828, 1.1409, 1.15742, 0.931626, 1.24063, 0.943488, 1.42111, 1.27323, 1.50352, 2.6597, 1.83007, 2.23962, 1.23171, 1.43868, 2.28398, 3.55953, 1.93801, 2.78693, 4.27617, 2.19289, 1.43113, 2.76886, 4.17295, 5.40727, 5.76706, 6.11727, 5.10709, 1.14239, 0.986111, 0.949723]
+    counts = [300000, 300000, 300000, 300000, 300000, 300000, 300000, 300000, 300000, 300000, 300000, 300000, 300000, 300000, 300000, 300000, 300000, 300000, 300000, 300000, 300000, 95108, 5253, 2939, 16824, 328, 125, 387, 664, 616, 730, 294] 
+
+y_data2 = [5.98458, 6.03263, 6.36008, 6.38608, 6.68541, 6.44159, 7.00916, 7.27892, 7.54899, 7.98059, 8.0964, 4.49038, 5.3649, 5.32143, 6.21623, 6.69112, 5.76967, 6.75673, 8.76714, 9.60902, 13.4133,12.8486, 2.03278, 8.096, 12.5796, 13.8951, 13.2846, 18.0847, 10.8717, 4.69535, 4.3318, 6.49868]
+y_sigma2 = [1.09676, 1.04085, 1.07188, 1.08782, 1.11803, 0.859022, 1.24689, 0.97747, 1.39625, 1.25349, 1.50665, 2.5856, 1.8828, 2.23713, 1.1592, 1.45099, 2.4415, 3.7286, 1.91762, 2.90847, 4.83249, 5.40193, 1.44396, 2.90994, 13.4627, 4.41395, 2.78418, 7.49992, 3.67727, 1.21208, 1.03319, 1.39521]
+counts2 = [250538, 250538, 250538, 250538, 250538, 250538, 250538, 250538, 250538, 250538, 250538, 250538, 250538, 250538, 250538, 250538, 250538, 250538, 250538, 250538, 250538, 167869, 31879, 2937, 295, 217, 143, 369, 800, 736, 897, 383] 
+
+layersize = 3
+energy_notarget = 0
+energy_heterotarget = 0
+
+for index, value in enumerate(y_data1):
+    if(index == 11):
+        layersize = 2
+    y_data1[index] = value*counts[index]/counts[0]*1/layersize
+    energy_notarget += y_data1[index]*layersize
+    y_sigma1[index] = y_sigma1[index]*counts[index]/counts[0]*1/layersize
+    if(targetSelect == 2):  
+        y_data2[index] = y_data2[index]*counts2[index]/counts2[0]*1/layersize
+        energy_heterotarget += y_data2[index]*layersize
+        y_sigma2[index] = y_sigma2[index]*counts2[index]/counts2[0]*1/layersize
+    
+if(targetSelect == 0):
+    print(f"Total energy deposition no target: {energy_notarget} MeV")
+if(targetSelect == 1):
+    print(f"Total energy deposition homogeneous target: {energy_notarget} MeV")
+if(targetSelect == 2):
+    print(f"Total energy deposition no target: {energy_notarget} MeV")
+    print(f"Total energy deposition heterogeneous target: {energy_heterotarget} MeV")
+
 # for _ in range(20):
 #     y_data1 = np.append(y_data1, 0)
 #     y_sigma1 = np.append(y_sigma1, 0)
@@ -155,7 +191,7 @@ if(bhetero):
 
 #plt.style.use(['science','notebook','grid'])
 plt.rcParams.update({'font.size': 20})
-fig, ax1 = plt.subplots(figsize=(16, 8))
+fig, ax1 = plt.subplots(figsize=(18, 13))
 ax1.set_title(f'Fitted energy depth dose distribution {in_title[targetSelect]}')
 if(bhetero):
     print(f'Fitted energy depth dose distribution {in_title[2]}')
@@ -172,15 +208,31 @@ ax1.errorbar(x_data, y_data1, y_sigma1, x_sigma, fmt='s', markersize=1, capsize=
 ax1.errorbar(x_data2, y_data2, y_sigma2, x_sigma2, fmt='o', markersize=1, capsize=capSize, elinewidth=lineWidth, color="#cc7000", label="Hetero. data points") #Convolution
 
 f = interp1d(x_data, y_data1, kind='linear', fill_value="extrapolate")
-f = interp1d(x_data, y_data1, kind='cubic', fill_value="extrapolate")
+# f = interp1d(x_data, y_data1, kind='cubic', fill_value="extrapolate")
 
-popt, pcov =  curve_fit(lambda x, amp, mean, stddev: right_sided_convolution(f, lambda x2: gaussian(x2, amp, mean, stddev), x), x_data2, y_data2, p0 = [1, 2, 0.2], bounds=((0.9, 0, 0), (1.1, 10, 1)))
+popt, pcov =  curve_fit(lambda x, amp, mean, stddev: right_sided_convolution(f, lambda x2: gaussian(x2, amp, mean, stddev), x), x_data2, y_data2, p0 = [1, 2, 0.2], bounds=((0.8, 0, 0), (1.1, 10, 1)))
 
-print(f"amp = {popt[0]}")
-print(f"t = {popt[1]}")
-print(f"sigmat = {popt[2]}")
-print(f"pmod = {popt[2]**2/popt[1]*10**4}")
-plt.plot(z, f(z), label='Right-sided convolved (Gaussian)')
-plt.plot(z, right_sided_convolution(f, lambda x2: gaussian(x2, *popt), z), label='Right-sided convolved (Gaussian)')
-plt.legend()
+stddev = np.sqrt(np.diag(pcov))
+    
+t = popt[1]
+o_t = stddev[1]   
+    
+sigmat = popt[2]
+o_sigmat = stddev[2]
+
+pmod = sigmat**2/t*10000
+sigma_pmod = np.sqrt((2*sigmat/t**2*o_sigmat)**2+(sigmat**2/t**2*o_t)**2)*10000
+
+print(f"amp = {popt[0]} +- {stddev[0]}")
+print(f"t = {popt[1]} +- {stddev[1]}")
+print(f"sigmat = {popt[2]} +- {stddev[2]}")
+print(f"pmod = {pmod} +- {sigma_pmod}")
+
+plt.plot(z, f(z), label='Linear interpolation of no target data')
+plt.plot(z, right_sided_convolution(f, lambda x2: gaussian(x2, *popt), z), label='Right sided convolution: \n' fr"$t= {t:.3f}" "\pm" fr"{o_t:.3f}~cm, \sigma={sigmat:.3f} \pm {o_sigmat:.3f}~cm,~P_{{mod}}={pmod:.3f} \pm {sigma_pmod:.3f}$" rf"$~\mu m$")
+plt.grid(True)
+plt.xlabel('Water Equivalent Depth / cm')
+plt.ylabel('Energy Deposition per thickness  / MeV/mm')
+plt.legend(loc='upper left',  fancybox=False, edgecolor='black')
+fig.tight_layout()
 plt.show()

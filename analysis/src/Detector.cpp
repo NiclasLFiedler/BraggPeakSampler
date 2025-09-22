@@ -7,7 +7,7 @@ Detector::Detector(DetectorProperties* detectorProperties)
 
     Char_t histdesc[100];
     Char_t histname[100];
-    int binningEdep[3] = {300, 0, 30};
+    int binningEdep[3] = {200, 0, 40};
     int binningPhotons[3] = {200, 0, 50};
     int binningEntry[3] = {200, -static_cast<int>(detectorProperties->GetLayerSizeX())/2, static_cast<int>(detectorProperties->GetLayerSizeX())/2};
     int binningAngle[3] = {400, 0, 4};
@@ -161,8 +161,8 @@ void Detector::CalcDose(int layer){
     crystals.at(layer).dose.stddev = h_edep_all[layer]->GetStdDev();
 
     if(detectorProperties->GetNormStatus()){
-        crystals.at(layer).dose.dose*=1/h_edep_all[layer]->GetEntries();
-        crystals.at(layer).dose.stddev*=1/h_edep_all[layer]->GetEntries();
+        crystals.at(layer).dose.dose*=h_edep_all[layer]->GetEntries()/h_edep_all[0]->GetEntries();
+        crystals.at(layer).dose.stddev*=h_edep_all[layer]->GetEntries()/h_edep_all[0]->GetEntries();
     }
 
     crystals.at(layer).dose.dose*=1/detectorProperties->GetLayerSizeZ(layer);
