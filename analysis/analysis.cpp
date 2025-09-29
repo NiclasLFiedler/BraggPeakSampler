@@ -257,9 +257,9 @@ void analysis(){
     std::vector<Particle> ScintParticles;
     
     Particle proton(nLayers, coincidenceTime, coincidenceLayer, calib);
-    std::map<double, TraceProperties> initialEvents;
+    std::map<Long64_t, TraceProperties> initialEvents;
     std::map<Long64_t, TraceProperties> secondaryEvents;
-    std::multimap<double, TraceProperties> postEvents;
+    std::multimap<Long64_t, TraceProperties> postEvents;
     bool bsaveTrace = false; 
     Plotter plotter(coincidenceTime);
 
@@ -280,7 +280,7 @@ void analysis(){
                 timestamp_ps += 32*1000;
             };
             trace_props.Clear();    
-            trace_props.SetParameters(*trace, channel, charge, static_cast<double>(timestamp_ps)/1000,  static_cast<double>(timestamp_ps), discard_index, bsaveTrace, bTraceDisable);
+            trace_props.SetParameters(*trace, channel, charge, static_cast<double>(timestamp_ps)/1000,  timestamp_ps, discard_index, bsaveTrace, bTraceDisable);
             
             if(trace_props.charge > 0) {
                 detector->EnergyHist(channel)->Fill(calib->GetQuenchedEnergy(channel, trace_props.charge)); //todo set birks to 0 if no quenching // sometimes double accounted for
@@ -295,9 +295,9 @@ void analysis(){
                 postEvents.insert({trace_props.time_ps, trace_props});
             } 
 
-            // if(channel == 0 && board == 0){
-            //     secondaryEvents.insert({timestamp_ps, trace_props});
-            // }
+            if(channel == 16 && board == 1){
+                secondaryEvents.insert({timestamp_ps, trace_props});
+            }
         }
         cout << "Measurement: Processing raw data." << endl;
         
@@ -305,31 +305,33 @@ void analysis(){
         Long64_t time2 = 0;
         Long64_t timeDiff = 0;
         int iMod = 0;
-        // for(const auto& [secondaryTime, secondaryTrace] : secondaryEvents) {
-        //     //h_inittime->Fill(secondaryTime/1000);
-        //     if(time1 == 0){
-        //         time1 = secondaryTime;
-        //     }
-        //     else{
-        //         time2 = secondaryTime;
-        //         timeDiff = (time2-time1);
-        //         printf("Time1 %lld Tim2: %lld Timediff: %lld ns \n", time1, time2, timeDiff);
-        //         h_timediff->Fill(timeDiff);
-        //         time1 = time2;
-        //     }
-        // }
-
-        for(const auto& [initialTime, initialTrace] : initialEvents) {
-            //h_inittime->Fill(initialTime/1000);
+        for(const auto& [secondaryTime, secondaryTrace] : secondaryEvents) {
+            //h_inittime->Fill(secondaryTime/1000);
             if(time1 == 0){
-                time1 = initialTime;
+                time1 = secondaryTime;
             }
             else{
-                time2 = initialTime;
+                time2 = secondaryTime;
                 timeDiff = (time2-time1)/1000;
-                //h_timediff->Fill((time2-time1)/1000);
+                printf("Time1 %lld Tim2: %lld ps Timediff: %lld ns \n", time1, time2, timeDiff);
+                h_timediff->Fill(timeDiff);
                 time1 = time2;
             }
+        }
+
+        for(const auto& [initialTime, initialTrace] : initialEvents) {
+            // h_inittime->Fill(initialTime/1000);
+            // if(time1 == 0){
+            //     time1 = initialTime;
+            // }
+            // else{
+            //     time2 = initialTime;
+            //     timeDiff = (time2-time1)/1000;
+            //     h_timediff->Fill(timeDiff);
+            //     time1 = time2;
+            // }
+            // printf("Time1 %lld Tim2: %lld ps Timediff: %lld ns \n", time1, time2, timeDiff);
+
             proton.Clear();
             proton.Insert(initialTrace);
             if((timeDiff)<1200){
