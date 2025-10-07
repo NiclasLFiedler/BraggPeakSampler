@@ -179,6 +179,8 @@ void Detector::CalcPosition(int layer){
     double aluthick = detectorProperties->GetAluThickness();
     double teflonthick = detectorProperties->GetTeflonThickness();
 
+    std::cout << "Thickness " << aluthick << " " << teflonthick << std::endl;
+
     double delta = 0;
     if(layer == 0){
         depth = CalcWET(depth, aluthick/2, detectorProperties->GetMaterial("alu"));

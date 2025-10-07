@@ -46,8 +46,8 @@ class DetectorConstruction : public G4VUserDetectorConstruction
     G4double voxelZ;
     std::string detectorType;
     std::string absorberType;
-    double teflonThickness;
-    double aluThickness;
+    double ThicknessTeflon;
+    double ThicknessAlu;
     G4int NbOfSlices; //781 max
     G4int nbofvoxelsX;
     G4int nbofvoxelsY;

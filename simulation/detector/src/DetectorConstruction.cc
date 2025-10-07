@@ -69,10 +69,8 @@ DetectorConstruction::DetectorConstruction()
     absSizeZ                                          = config["secLayerSizeZ"];
     absorberStatus                                    = config["absorberStatus"];
     absorberSize                                      = config["absorberSize"];
-    double fteflonThickness              = config["teflonThickness"];
-    double faluThickness                 = config["aluThickness"];
-    teflonThickness                                   = fteflonThickness;
-    aluThickness                                      = faluThickness;
+    ThicknessTeflon                                   = config["teflonThickness"];
+    ThicknessAlu                                      = config["aluThickness"];
     absorberType                                      = config["absorberType"];
     targetThickness                                   = config["targetThickness"];
     
@@ -546,15 +544,10 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   logicalworld = new G4LogicalVolume(solidworld, worldMat, "logicalWorld");
   
   physworld = new G4PVPlacement(nullptr, G4ThreeVector(), logicalworld, "physworld", nullptr, false, 0, fCheckOverlaps);  
-  
-  G4double ThicknessTeflon = 0.25*mm;
-  G4double ThicknessAlu = 0.01*mm;
-  ThicknessTeflon = 1*nm;
-  ThicknessAlu = 1*nm;
 
   G4double SiPMSizeYZ = 3.7*mm;
   if(SiPMSizeYZ>detSizeZ) SiPMSizeYZ = detSizeZ;
-  G4double SiPMSizeX = ThicknessTeflon;
+  G4double SiPMSizeX = ThicknessTeflon/2;
   G4Box* solidSiPM = new G4Box("solidSiPM", SiPMSizeX/2, SiPMSizeYZ/2, SiPMSizeYZ/2);
   logicalSiPM = new G4LogicalVolume(solidSiPM, SiPMGlassMat, "logicalSiPM");
 
@@ -565,8 +558,8 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   solidAbsorber = new G4Box("solidAbsorber", detSizeX/2, detSizeY/2, absSizeZ/2);
   logicalAbsorber = new G4LogicalVolume(solidAbsorber, detMaterial, "logicalAbsorber");
   G4cout << "Secondary layer active? "<< secondaryLayerStatus << G4endl;
-  G4Box* solidAluFoilAbs = new G4Box("solidAluFoilAbs", detSizeX/2+ThicknessTeflon+ThicknessAlu, detSizeY/2+ThicknessTeflon+ThicknessAlu, absSizeZ/2+ThicknessTeflon+ThicknessAlu);
-  G4Box* solidTeflonFoilAbs = new G4Box("solidTeflonFoilAbs", detSizeX/2+ThicknessTeflon, detSizeY/2+ThicknessTeflon, absSizeZ/2+ThicknessTeflon);
+  G4Box* solidAluFoilAbs = new G4Box("solidAluFoilAbs", detSizeX/2+ThicknessTeflon/2+ThicknessAlu/2, detSizeY/2+ThicknessTeflon/2+ThicknessAlu/2, absSizeZ/2+ThicknessTeflon/2+ThicknessAlu/2);
+  G4Box* solidTeflonFoilAbs = new G4Box("solidTeflonFoilAbs", detSizeX/2+ThicknessTeflon/2, detSizeY/2+ThicknessTeflon/2, absSizeZ/2+ThicknessTeflon/2);
   if(secondaryLayerStatus){
     logicalAbsorber->SetUserLimits(userLimits);
 
@@ -601,8 +594,8 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   logicalDetector = new G4LogicalVolume(solidDetector, detMaterial, "logicalDetector");
   logicalDetector->SetUserLimits(userLimits);
   
-  G4Box* solidAluFoil = new G4Box("solidAluFoil", detSizeX/2+ThicknessAlu+ThicknessTeflon, detSizeY/2+ThicknessAlu+ThicknessTeflon, detSizeZ/2+ThicknessAlu+ThicknessTeflon);
-  G4Box* solidTeflonFoil = new G4Box("solidTeflonFoil", detSizeX/2+ThicknessTeflon, detSizeY/2+ThicknessTeflon, detSizeZ/2+ThicknessTeflon);
+  G4Box* solidAluFoil = new G4Box("solidAluFoil", detSizeX/2+ThicknessAlu+ThicknessTeflon/2, detSizeY/2+ThicknessAlu/2+ThicknessTeflon/2, detSizeZ/2+ThicknessAlu/2+ThicknessTeflon/2);
+  G4Box* solidTeflonFoil = new G4Box("solidTeflonFoil", detSizeX/2+ThicknessTeflon/2, detSizeY/2+ThicknessTeflon/2, detSizeZ/2+ThicknessTeflon/2);
   
   logicalAluFoil = new G4LogicalVolume(solidAluFoil , aluminumFoil, "logicalAluFoil");
   logicalTeflonFoil = new G4LogicalVolume(solidTeflonFoil, Teflon, "logicalTeflonFoil");
@@ -657,7 +650,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
     logicalHolder = new G4LogicalVolume(solidHolder, resinMaterial, "logicalHolder");
     G4cout << "Max Extent " << solidHolder->GetMaxZExtent() << G4endl;
     translation = d_IsocentreDetector+solidHolder->GetMaxZExtent()/2+16.725*mm+8.475*mm;
-    physHolder = new G4PVPlacement(nullptr, G4ThreeVector(0.,0., -translation), logicalHolder,"physHolder", logicalworld, false, 0, fCheckOverlaps);    
+    physHolder = new G4PVPlacement(nullptr, G4ThreeVector(0.,0., -translation), logicalHolder,"physHolder", logicalworld, false, 0, fCheckOverlaps);
 
     G4VisAttributes* visHolder = new G4VisAttributes(G4Colour(1.0, 1.0, 1.0, 0.6));
     visHolder->SetVisibility(true);
@@ -666,7 +659,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   }
   G4double dBeamSpot = 0.1*mm;
   G4int nx, ny, nz;
-  G4double cubeSizeX, cubeSizeY, cubeSizeZ; 
+  G4double cubeSizeX, cubeSizeY, cubeSizeZ;
 
   if (ftarget == 2){ //heterogenous
     bool test = false;

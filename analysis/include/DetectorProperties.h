@@ -232,9 +232,9 @@ struct DetectorProperties {
 
     double GetGapSizeZ(){return gapSizeZ; }
 
-    double GetTeflonThickness(){return TeflonThickness*1/10000; }
+    double GetTeflonThickness(){return TeflonThickness; }
 
-    double GetAluThickness(){return AluThickness*1/10000; }
+    double GetAluThickness(){return AluThickness; }
 
     double GetAbsorberSize(){return absorberSizeZ; }
 

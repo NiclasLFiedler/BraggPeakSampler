@@ -18,13 +18,16 @@ void TraceProperties::Clear(){
     trace = {};
 }
 
-void TraceProperties::DetectPileup(double pulseDuration) {
+void TraceProperties::DetectPileup(double minimumPeakDiff) {
     double previousPeakTime = -1;
+    int pileupGate = 6;
+    int leftDiff = 50;
+    int rightDiff = 50;
     for (int i = 1; i < trace.size() - 1; ++i) {
-        if (trace[i] < trace[i-6] && trace[i] < trace[i+6] && (trace[i-6]-trace[i]) > 50 && (trace[i+6]-trace[i]) > 50){
+        if (trace[i] < trace[i-pileupGate] && trace[i] < trace[i+pileupGate] && (trace[i-pileupGate]-trace[i]) > leftDiff && (trace[i+pileupGate]-trace[i]) > rightDiff){
             if (previousPeakTime != -1.0) {
                 double timeSeparation = i - previousPeakTime;
-                if (timeSeparation > pulseDuration) {
+                if (timeSeparation > minimumPeakDiff) {
                     pileupStatus = true;
                     break;
                 }

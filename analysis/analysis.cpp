@@ -237,7 +237,7 @@ void analysis(){
     detectorProperties->SetNormStatus(normStatus);
     detectorProperties->SetReversedStatus(reversedStatus);
     detectorProperties->SetSimulationStatus(simulationStatus);
-    detectorProperties->SetCalibrationStatus(true);
+    detectorProperties->SetCalibrationStatus(false);
     detectorProperties->SetAbsorberStatus(absorberStatus);
     
     detectorProperties->Process();

@@ -1,5 +1,5 @@
 {
-  "detectorSelect": 0,
+  "detectorSelect": 3,
   "targetSelect": 0,
   "detectors": [
     {
@@ -25,9 +25,9 @@
       "normStatus": false,
       "simulationStatus": false,
       "teflonThickness": 0.5,
-      "aluThickness": 0.02,
+      "aluThickness": 0.04,
       "coincidenceTime": 500,
-      "coincidenceLayer": 1,
+      "coincidenceLayer": 21,
       "discardIndex": 50,
       "targetThickness": 0
     },
@@ -91,7 +91,7 @@
     },
     {
       "detectorID": 3,
-      "comment": "test Detector",
+      "comment": "New Detector",
       "datasetSelect": 1,
       "detectorType": "pbwo4",
       "beamEnergy": 220,
@@ -101,7 +101,7 @@
         30,
         2
       ],
-      "gapSizeZ": 3,
+      "gapSizeZ": 0.1,
       "secondaryLayerStatus": true,
       "nSecondaryLayers": 11,
       "secLayerSizeZ": 3,
@@ -112,9 +112,9 @@
       "normStatus": true,
       "simulationStatus": true,
       "teflonThickness": 0.5,
-      "aluThickness": 0.02,
+      "aluThickness": 0.04,
       "coincidenceTime": 20000,
-      "coincidenceLayer": 1,
+      "coincidenceLayer": 23,
       "discardIndex": 50,
       "targetThickness": 60
     }
