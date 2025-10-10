@@ -45,8 +45,8 @@ void idealAnalysis(){
     bool reversedStatus                 = config["reversedStatus"];
     bool normStatus                     = config["normStatus"];
     bool simulationStatus               = config["simulationStatus"];
-    std::vector<double> teflonThickness = config["teflonThickness"];
-    std::vector<double> aluThickness    = config["aluThickness"];
+    double teflonThickness = config["teflonThickness"];
+    double aluThickness    = config["aluThickness"];
     int coincidenceTime                 = config["coincidenceTime"];
     int coincidenceLayer                = config["coincidenceLayer"];
     int discard_index                   = config["discardIndex"];
@@ -58,7 +58,7 @@ void idealAnalysis(){
     bool bPhotons = false;
 
 
-    const char* datasets[2] = {"MIT_05_2024", "simulation"};
+    const char* datasets[3] = {"MIT_05_2024", "simulation", "beamtime"};
     const char* in_data[3] = {"notarget", "homotarget", "heterotarget"};
     const char* target_data[3] = {"without a target", "with the homogeneous target", "with the heterogeneous target"};
 
@@ -120,17 +120,20 @@ void idealAnalysis(){
 	datatree->SetBranchAddress("NDet", &NDet);
 	datatree->SetBranchAddress("EDep", &EDep);
     
-    energy_ch muon;
-    muon.CH = {970, 905, 968, 1072.4, 1094.3, 1078.8, 983.6, 177.9, 965.5, 1035.08, 1171.35, 162.08, 172.74, 145, 101.8};
-    muon.o_CH = {100.52, 90.4, 100.65, 98.31, 107.62, 117.89, 98.19, 23.22, 99.15, 96.28, 116.67, 17.89, 19.18, 15.76, 9.33}; //old
-    muon.E = 4.95;
-    muon.o_E = 0.3433;
-    
-    energy_ch co60;
-    co60.CH = {402.56, 401.75, 421.52, 444.63, 437.76, 428.52, 415.91, 49.03, 403.4, 417.63, 457.43, 52.08, 52.11, 47.11, 35.55};
-    co60.o_CH = {97.79, 97.82, 101.99, 99.31, 115.65, 102.12, 90.23, 11.05, 96.9, 97.69, 111.66, 20.22, 23.25, 19.32, 12.67};
-    co60.E = 1.25275;
-    co60.o_E = 0.068;
+    energy_ch base;
+    base.CH = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    base.o_CH = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    base.E = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    base.o_E = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+    energy_ch beam;
+    beam.CH = {5419.79, 5673.85, 6221.08, 5718.44, 6121.69, 6272.27, 5510.53, 24060.1, 5106.76, 6495.73, 5359.34, 1369.69, 1742.07, 1350.71, 4038.64, 3880.83, 1902.56, 1303.45, 3584.7, 2008.28, 3627.02, 3616.78, 2946.28, 3312.72, 3856.61, 6518.53, 7242.99, 5724.06, 10907.4, 5587.3, 5645.68, 11026.2};
+
+    beam.o_CH = {1278.59, 1066.01, 1145.18, 1114.99, 1179.06, 1134.02, 1123.82, 4018.15, 1124.86, 1167.49, 1184.63, 649.625, 702.544, 659.381, 653.853, 1328.2, 799.764, 760.142, 958.492, 756.957, 1018.61, 966.635, 941.913, 934.82, 2004, 1385.32, 1179.33, 1981.61, 2367.1, 1445.27, 1406.13, 2694.97};
+
+    beam.E = {5.7038, 5.79716, 5.94443, 6.03835, 6.16728, 6.3360, 6.45465, 6.6303, 6.83547, 7.03770, 7.2600, 4.93424, 5.07636, 5.20989, 5.36086, 5.57017, 5.73576, 5.96942, 6.21447, 6.52709, 6.89378, 7.29601, 7.88811, 8.56514, 9.53018, 10.9653, 13.5613, 20.5618, 11.2318, 5.7038, 5.7038, 5.7038};
+
+    beam.o_E = {0.14336, 0.149442, 0.14427, 0.143871, 0.154516, 0.143849, 0.14975, 0.149520, 0.141375, 0.146101, 0.13765, 0.13335, 0.139438, 0.133682, 0.130915, 0.112131, 0.116986, 0.112732, 0.118858, 0.118496, 0.120264, 0.126596, 0.143783, 0.164512, 0.229532, 0.378573, 0.843234, 3.08753, 6.45036, 0.14336, 0.14336, 0.14336};
     
     
     Double_t entries = datatree->GetEntries();
@@ -160,13 +163,13 @@ void idealAnalysis(){
     detectorProperties->SetNormStatus(normStatus);
     detectorProperties->SetReversedStatus(reversedStatus);
     detectorProperties->SetSimulationStatus(simulationStatus);
-    detectorProperties->SetCalibrationStatus(!simulationStatus);
+    detectorProperties->SetCalibrationStatus(false);
     detectorProperties->SetAbsorberStatus(absorberStatus);
     
     detectorProperties->Process();
 
     Calibration* calib = new Calibration(detectorProperties);
-    calib->energy_extrapolation(co60, muon);
+    calib->energy_extrapolation(base, beam);
     
     detectorProperties->SetCalibration(calib);
     
@@ -241,11 +244,6 @@ void idealAnalysis(){
     if(modCanvas != 0) rows++;
     c1->Divide(coloums, rows);
 
-    cout << setfill(' ');
-    cout << setw(10) << "Channel" << setw(2) << "|" << setw(15) << "Unfiltered" << setw(2) << "|"  << setw(25) << "Coinc. /w channel 1" << setw(2) << "|" << setw(18) << " Stopped particle" << endl;
-    cout << setfill('-') << setw(80) << "-" << endl;
-    cout << setfill(' ');
-
     // for(int i = 0; i<nLayers; i++){
     //     c1->cd(i+1);
     //     plotter.Histogram1D(detector->EnergyHist(i), "EDep [MeV]", "Counts");
@@ -257,12 +255,7 @@ void idealAnalysis(){
 
     //     cout << setw(10) << i << setw(2) << "|" << setw(15) << detector->EnergyHist(i)->GetEntries() << setw(2) << "|" << setw(25) << detector->CoincEnergyHist(i)->GetEntries() << setw(2) << "|" << setw(18) <<  detector->StoppedEnergyHist(i)->GetEntries() << endl;
     // }
-    cout << setfill('-') << setw(80) << "-" << endl;
-    cout << setfill(' ');
-    cout << "Detected missing buffer entries: " << missing_buffer_counter << endl;
-    cout << "Detected pileups: " << pileup_counter << endl;
-    cout << "Detected prepeak steps: " << prepeak_step_counter << endl;
-    cout << "Number of lower coincidence particles: " << coinc_layer_counter << endl;
+
     c1->cd(nLayers+1);    
 
     sprintf(histdesc, "Norm. energy depth dose distribution %s", target_data[fileSelect]);

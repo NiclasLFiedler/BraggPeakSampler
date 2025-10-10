@@ -69,10 +69,8 @@ DetectorConstruction::DetectorConstruction()
     absSizeZ                                          = config["secLayerSizeZ"];
     absorberStatus                                    = config["absorberStatus"];
     absorberSize                                      = config["absorberSize"];
-    std::vector<double> fteflonThickness              = config["teflonThickness"];
-    std::vector<double> faluThickness                 = config["aluThickness"];
-    teflonThickness                                   = fteflonThickness;
-    aluThickness                                      = faluThickness;
+    ThicknessTeflon                                   = config["teflonThickness"];
+    ThicknessAlu                                      = config["aluThickness"];
     absorberType                                      = config["absorberType"];
     targetThickness                                   = config["targetThickness"];
     
@@ -625,7 +623,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
       logicalTracker->SetVisAttributes(waterVisAttr);
       new G4PVPlacement(nullptr, G4ThreeVector(0, 0, 4*mm), logicalTracker, "physTracker", logicalworld, false, 0);
   } 
-  if(ftarget == 2 || ftarget == 0){ //homogeneous
+  if(ftarget == 2){ //homogeneous
     solidHomo =  new G4Box("solidHomo", 300/2, 300/2, 20/2);
     logicalHomo = new G4LogicalVolume(solidHomo, absorberMaterial, "logicalHomo");    
     physHomo = new G4PVPlacement(nullptr, G4ThreeVector(0.,0., 20/2*mm+cubeSizeZ*nz+8*mm), logicalHomo,"physHomo", logicalworld, false, 0, fCheckOverlaps);
