@@ -13,7 +13,7 @@ def convert_to_secondary_units(y):
 ped = 85.4
 pe = 110.53
 #na22 = 0.059409
-na22 = 0.511    
+na22 = 0.511
 
 def GetPE(channel):
     return abs(((channel-ped)/(pe-ped))/na22)
