@@ -1,6 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import stats
+import ROOT
+from array import array
+
 from scipy.integrate import quad
 from scipy.optimize import curve_fit
 
@@ -8,7 +11,243 @@ from scipy.stats import poisson
 from scipy.signal import convolve
 import matplotlib.gridspec as gridspec
 from matplotlib.colors import LogNorm
-import ROOT
+
+
+class RooUnfoldCrossCheck:
+    """
+    Cross-check our Bayesian unfolding with RooUnfold
+    """
+    
+    def __init__(self):
+        # Make sure ROOT and RooUnfold are available
+        try:
+            ROOT.gSystem.Load("libRooUnfold")
+            print("RooUnfold loaded successfully")
+        except:
+            print("Warning: RooUnfold not available. Some features will be disabled.")
+    
+    def convert_to_root_histograms(self, true_edges, measured_edges, response_matrix, 
+                                 measured_spectrum, true_spectrum=None):
+        """
+        Convert numpy arrays to ROOT histograms for RooUnfold
+        """
+        # Convert edges to arrays for ROOT
+        true_edges_root = array('d', true_edges)
+        measured_edges_root = array('d', measured_edges)
+        
+        n_true_bins = len(true_edges) - 1
+        n_measured_bins = len(measured_edges) - 1
+        
+        # Create histograms
+        h_measured = ROOT.TH1D("h_measured", "Measured Spectrum", 
+                              n_measured_bins, measured_edges_root)
+        h_true = None
+        if true_spectrum is not None:
+            h_true = ROOT.TH1D("h_true", "True Spectrum", 
+                              n_true_bins, true_edges_root)
+        
+        # Create response matrix in ROOT format
+        h_response = ROOT.TH2D("h_response", "Response Matrix",
+                              n_measured_bins, measured_edges_root,
+                              n_true_bins, true_edges_root)
+        
+        # Fill measured spectrum
+        for i in range(n_measured_bins):
+            h_measured.SetBinContent(i+1, measured_spectrum[i])
+            h_measured.SetBinError(i+1, np.sqrt(measured_spectrum[i] + 1e-10))
+        
+        # Fill true spectrum if available
+        if true_spectrum is not None:
+            for j in range(n_true_bins):
+                h_true.SetBinContent(j+1, true_spectrum[j])
+        
+        # Fill response matrix
+        for i in range(n_measured_bins):
+            for j in range(n_true_bins):
+                h_response.SetBinContent(i+1, j+1, response_matrix[i, j])
+        
+        return h_measured, h_true, h_response
+    
+    def run_roounfold_bayes(self, true_edges, measured_edges, response_matrix,
+                           measured_spectrum, true_spectrum=None, n_iterations=4):
+        """
+        Run Bayesian unfolding using RooUnfold
+        """
+        print("\n=== RUNNING ROOUNFOLD BAYESIAN UNFOLDING ===")
+        
+        # Convert to ROOT histograms
+        h_meas, h_true, h_resp = self.convert_to_root_histograms(
+            true_edges, measured_edges, response_matrix, measured_spectrum, true_spectrum)
+        
+        # Create RooUnfold response object
+        response = ROOT.RooUnfoldResponse(h_meas, h_true, h_resp)
+        
+        # Create and run Bayesian unfolding
+        unfold_bayes = ROOT.RooUnfoldBayes(response, h_meas, n_iterations)
+        h_unfolded = unfold_bayes.Hreco()
+        
+        # Get uncertainty
+        h_errors = unfold_bayes.Ereco()
+        
+        # Convert back to numpy
+        n_true_bins = len(true_edges) - 1
+        unfolded_roounfold = np.zeros(n_true_bins)
+        errors_roounfold = np.zeros(n_true_bins)
+        
+        for i in range(n_true_bins):
+            unfolded_roounfold[i] = h_unfolded.GetBinContent(i+1)
+            errors_roounfold[i] = h_errors.GetBinContent(i+1)
+        
+        # Get chi-squared and other diagnostics
+        chi2 = unfold_bayes.Chi2()
+        dof = n_true_bins
+        
+        print(f"RooUnfold Bayes completed:")
+        print(f"  Iterations: {n_iterations}")
+        print(f"  Chi-squared: {chi2:.2f}")
+        print(f"  Total unfolded counts: {np.sum(unfolded_roounfold):.1f}")
+        
+        return unfolded_roounfold, errors_roounfold, chi2
+    
+    def run_roounfold_svd(self, true_edges, measured_edges, response_matrix,
+                         measured_spectrum, true_spectrum=None, k_reg=3):
+        """
+        Run SVD unfolding using RooUnfold (alternative method)
+        """
+        print("\n=== RUNNING ROOUNFOLD SVD UNFOLDING ===")
+        
+        h_meas, h_true, h_resp = self.convert_to_root_histograms(
+            true_edges, measured_edges, response_matrix, measured_spectrum, true_spectrum)
+        
+        response = ROOT.RooUnfoldResponse(h_meas, h_true, h_resp)
+        
+        # SVD unfolding
+        unfold_svd = ROOT.RooUnfoldSvd(response, h_meas, k_reg)
+        h_unfolded = unfold_svd.Hreco()
+        h_errors = unfold_svd.Ereco()
+        
+        n_true_bins = len(true_edges) - 1
+        unfolded_svd = np.zeros(n_true_bins)
+        errors_svd = np.zeros(n_true_bins)
+        
+        for i in range(n_true_bins):
+            unfolded_svd[i] = h_unfolded.GetBinContent(i+1)
+            errors_svd[i] = h_errors.GetBinContent(i+1)
+        
+        print(f"RooUnfold SVD completed:")
+        print(f"  Regularization parameter: {k_reg}")
+        print(f"  Total unfolded counts: {np.sum(unfolded_svd):.1f}")
+        
+        return unfolded_svd, errors_svd
+    
+    def compare_methods(self, true_edges, measured_edges, response_matrix,
+                       measured_spectrum, true_spectrum, our_unfolded,
+                       our_closure_error, n_iterations=4):
+        """
+        Compare our implementation with RooUnfold
+        """
+        print("\n" + "="*60)
+        print("METHOD COMPARISON: Our Implementation vs RooUnfold")
+        print("="*60)
+        
+        # Run RooUnfold Bayesian unfolding
+        unfolded_roo, errors_roo, chi2_roo = self.run_roounfold_bayes(
+            true_edges, measured_edges, response_matrix, 
+            measured_spectrum, true_spectrum, n_iterations)
+        
+        # Calculate metrics for both methods
+        true_centers = (true_edges[1:] + true_edges[:-1]) / 2
+        
+        # Calculate closure for RooUnfold
+        predicted_measured_roo = np.dot(response_matrix, unfolded_roo)
+        mask = measured_spectrum > np.max(measured_spectrum) * 0.01
+        if np.sum(mask) > 0:
+            closure_roo = np.sqrt(np.mean(
+                ((measured_spectrum[mask] - predicted_measured_roo[mask]) / 
+                 measured_spectrum[mask])**2))
+        else:
+            closure_roo = float('inf')
+        
+        # Calculate correlation between methods
+        correlation = np.corrcoef(our_unfolded, unfolded_roo)[0, 1]
+        
+        # Calculate relative difference
+        relative_diff = np.abs(our_unfolded - unfolded_roo) / (unfolded_roo + 1e-10)
+        mean_relative_diff = np.mean(relative_diff)
+        
+        print(f"\n=== COMPARISON RESULTS ===")
+        print(f"Our Implementation:")
+        print(f"  Total counts: {np.sum(our_unfolded):.1f}")
+        print(f"  Closure error: {our_closure_error:.4f} ({our_closure_error*100:.1f}%)")
+        print(f"RooUnfold:")
+        print(f"  Total counts: {np.sum(unfolded_roo):.1f}")
+        print(f"  Closure error: {closure_roo:.4f} ({closure_roo*100:.1f}%)")
+        print(f"  Chi-squared: {chi2_roo:.2f}")
+        print(f"Comparison:")
+        print(f"  Correlation between methods: {correlation:.4f}")
+        print(f"  Mean relative difference: {mean_relative_diff:.4f} ({mean_relative_diff*100:.1f}%)")
+        
+        # Plot comparison
+        self.plot_comparison(true_centers, true_spectrum, our_unfolded, 
+                           unfolded_roo, errors_roo, correlation, mean_relative_diff)
+        
+        return unfolded_roo, errors_roo, correlation, mean_relative_diff
+    
+    def plot_comparison(self, true_energies, true_spectrum, our_unfolded,
+                       roounfold_unfolded, roounfold_errors, correlation, mean_diff):
+        """Plot comparison between our method and RooUnfold"""
+        fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+        
+        # Plot 1: Spectrum comparison
+        axes[0, 0].plot(true_energies, true_spectrum, 'k-', linewidth=2, label='True Spectrum')
+        axes[0, 0].plot(true_energies, our_unfolded, 'b--', linewidth=2, label='Our Unfolding')
+        axes[0, 0].plot(true_energies, roounfold_unfolded, 'r:', linewidth=2, label='RooUnfold')
+        axes[0, 0].fill_between(true_energies, 
+                               roounfold_unfolded - roounfold_errors,
+                               roounfold_unfolded + roounfold_errors,
+                               alpha=0.3, color='red', label='RooUnfold Errors')
+        axes[0, 0].set_xlabel('True Energy')
+        axes[0, 0].set_ylabel('Counts')
+        axes[0, 0].set_title('Unfolding Comparison')
+        axes[0, 0].legend()
+        axes[0, 0].grid(True, alpha=0.3)
+        
+        # Plot 2: Ratio to true spectrum
+        ratio_ours = our_unfolded / (true_spectrum + 1e-10)
+        ratio_roo = roounfold_unfolded / (true_spectrum + 1e-10)
+        
+        axes[0, 1].plot(true_energies, ratio_ours, 'b--', linewidth=2, label='Our Method / True')
+        axes[0, 1].plot(true_energies, ratio_roo, 'r:', linewidth=2, label='RooUnfold / True')
+        axes[0, 1].axhline(y=1.0, color='k', linestyle='-', alpha=0.5)
+        axes[0, 1].set_xlabel('True Energy')
+        axes[0, 1].set_ylabel('Ratio to True')
+        axes[0, 1].set_title('Ratio to True Spectrum')
+        axes[0, 1].legend()
+        axes[0, 1].grid(True, alpha=0.3)
+        axes[0, 1].set_ylim(0, 2)
+        
+        # Plot 3: Difference between methods
+        relative_diff = (our_unfolded - roounfold_unfolded) / (roounfold_unfolded + 1e-10)
+        axes[1, 0].plot(true_energies, relative_diff * 100, 'g-', linewidth=2)
+        axes[1, 0].axhline(y=0, color='k', linestyle='-', alpha=0.5)
+        axes[1, 0].set_xlabel('True Energy')
+        axes[1, 0].set_ylabel('Relative Difference (%)')
+        axes[1, 0].set_title(f'Our Method vs RooUnfold\nMean Difference: {mean_diff*100:.1f}%')
+        axes[1, 0].grid(True, alpha=0.3)
+        
+        # Plot 4: Correlation scatter plot
+        axes[1, 1].scatter(our_unfolded, roounfold_unfolded, alpha=0.6)
+        min_val = min(np.min(our_unfolded), np.min(roounfold_unfolded))
+        max_val = max(np.max(our_unfolded), np.max(roounfold_unfolded))
+        axes[1, 1].plot([min_val, max_val], [min_val, max_val], 'r--', alpha=0.8)
+        axes[1, 1].set_xlabel('Our Unfolded Counts')
+        axes[1, 1].set_ylabel('RooUnfold Counts')
+        axes[1, 1].set_title(f'Correlation: {correlation:.4f}')
+        axes[1, 1].grid(True, alpha=0.3)
+        
+        plt.tight_layout()
+        plt.show()
+
 
 class BayesianUnfoldingWithDRF:
     """
@@ -444,296 +683,61 @@ class BayesianUnfoldingWithDRF:
         if zero_bins > 0:
             print("WARNING: Zero bins in measured spectrum can inflate closure error!")
 
-
-def save_response_matrix_th2d(response_matrix, true_edges, measured_edges, 
-                             filename="response_matrix.root", histname="response_matrix"):
+def pmt_response(true_pe, pe_axis, n_max=300):
     """
-    Save response matrix as TH2D in ROOT file
-    
+    Calculate PMT response function for a given energy deposition
     Parameters:
-    response_matrix: 2D numpy array (n_measured_bins, n_true_bins)
-    true_edges: 1D array of true energy bin edges
-    measured_edges: 1D array of measured energy bin edges  
-    filename: output ROOT filename
-    histname: name of the TH2D histogram
+    - true_adc: True adc value
+    - mean_SPE: mean of single photoelectron peak
+    - sigma_SPE: Standard deviation of single photoelectron peak
+    - mean_ped: mean of pedastal
+    - sigma_ped: Standard deviation of pedastal
+    - pe_range: Tuple (min, max, n_points) for pe axis
+    - n_max: Maximum number of photoelectrons to consider
+    Returns:
+    - pe_axis: Array of pe values
+    - response: Probability density function
+    - components: Individual photoelectron peaks for plotting
     """
-    
-    # Convert edges to ROOT arrays
-    true_edges_root = np.array('d', true_edges)
-    measured_edges_root = np.array('d', measured_edges)
-    
-    n_true_bins = len(true_edges) - 1
-    n_measured_bins = len(measured_edges) - 1
-    
-    # Create TH2D
-    h_response = ROOT.TH2D(histname, "Detector Response Matrix",
-                          n_true_bins, true_edges_root,
-                          n_measured_bins, measured_edges_root)
-    
-    # Set axis titles
-    h_response.GetXaxis().SetTitle("True Energy")
-    h_response.GetYaxis().SetTitle("Measured Energy")
-    h_response.GetZaxis().SetTitle("Probability")
-    
-    # Fill the histogram
-    for i in range(n_measured_bins):      # y-axis (measured)
-        for j in range(n_true_bins):      # x-axis (true)
-            # TH2D bin indexing: (x_bin, y_bin) where x=true, y=measured
-            h_response.SetBinContent(j+1, i+1, response_matrix[i, j])
-    
-    # Save to file
-    output_file = ROOT.TFile(filename, "RECREATE")
-    h_response.Write()
-    output_file.Close()
-    
-    print(f"Response matrix saved to {filename}")
-    print(f"Histogram name: {histname}")
-    print(f"Dimensions: {n_true_bins} true bins × {n_measured_bins} measured bins")
-    
-    return h_response
+    mean_SPE = 110.342
+    sigma_SPE= 10.0004
+    mean_ped= 85.5295
+    sigma_ped= 0.48595
+    sigma_SPE = (sigma_SPE) / (mean_SPE-mean_ped)
+    sigma_ped = (sigma_ped) / (mean_SPE-mean_ped)
+    response = np.zeros_like(pe_axis)
+    for n in range(0, n_max + 1):    
+        poisson_prob = poisson.pmf(n, true_pe)
+        if poisson_prob > 1e-10:  
+            mean_n = n
+            sigma_n = np.sqrt((np.sqrt(n) * sigma_SPE)**2+sigma_ped**2) if n > 0 else np.sqrt(sigma_SPE**2+sigma_ped**2)
+            if sigma_n < 1e-10:
+                sigma_n = sigma_SPE
+            gaussian = (1 / (np.sqrt(2 * np.pi) * sigma_n)) * \
+                      np.exp(-0.5 * ((pe_axis - mean_n) / sigma_n) ** 2)
+            component = poisson_prob * gaussian
+            response += component
+    #return pe_axis, response, components
+    return response
 
-def save_comprehensive_response_data(response_matrix, true_edges, measured_edges, 
-                                   true_centers, measured_centers, efficiency,
-                                   filename="response_data.root"):
-    """
-    Save comprehensive response matrix data including 1D projections
-    """
-    # Convert edges to ROOT arrays
-    true_edges_root = np.array('d', true_edges)
-    measured_edges_root = np.array('d', measured_edges)
-    true_centers_root = np.array('d', true_centers)
-    measured_centers_root = np.array('d', measured_centers)
+# Complete cross-check workflow
+def full_cross_check():
+    """Complete workflow for cross-checking our implementation"""
     
-    n_true_bins = len(true_edges) - 1
-    n_measured_bins = len(measured_edges) - 1
+    # Initialize both implementations
+    our_unfolder = BayesianUnfoldingWithDRF(n_true_bins=4001-85, n_measured_bins=4001-85, n_iterations=50)
+    roo_checker = RooUnfoldCrossCheck()
     
-    # Create output file
-    output_file = ROOT.TFile(filename, "RECREATE")
-    
-    # 1. Main response matrix (TH2D)
-    h_response = ROOT.TH2D("response_matrix", "Detector Response Matrix R(i,j)=P(measured i|true j)",
-                          n_true_bins, true_edges_root,
-                          n_measured_bins, measured_edges_root)
-    h_response.GetXaxis().SetTitle("True Energy [MeV]")
-    h_response.GetYaxis().SetTitle("Measured Energy [MeV]")
-    h_response.GetZaxis().SetTitle("Probability Density")
-    
-    # 2. Efficiency curve (TH1D)
-    h_efficiency = ROOT.TH1D("efficiency", "Detection Efficiency",
-                            n_true_bins, true_edges_root)
-    h_efficiency.GetXaxis().SetTitle("True Energy [MeV]")
-    h_efficiency.GetYaxis().SetTitle("Efficiency")
-    
-    # 3. Example response slices (TH1D for different true energies)
-    h_response_slices = []
-    
-    # Fill histograms
-    for i in range(n_measured_bins):
-        for j in range(n_true_bins):
-            h_response.SetBinContent(j+1, i+1, response_matrix[i, j])
-    
-    for j in range(n_true_bins):
-        h_efficiency.SetBinContent(j+1, efficiency[j])
-        h_efficiency.SetBinError(j+1, 0.01)  # Small error for plotting
-    
-    # Create example slices at different true energies
-    slice_positions = [0.25, 0.5, 0.75]  # Fractions of energy range
-    for frac in slice_positions:
-        j = int(n_true_bins * frac)
-        if j >= n_true_bins:
-            j = n_true_bins - 1
-        
-        slice_name = f"response_slice_true_{true_centers[j]:.2f}MeV"
-        h_slice = ROOT.TH1D(slice_name, f"Response at {true_centers[j]:.2f} MeV",
-                           n_measured_bins, measured_edges_root)
-        h_slice.GetXaxis().SetTitle("Measured Energy [MeV]")
-        h_slice.GetYaxis().SetTitle("Probability Density")
-        
-        for i in range(n_measured_bins):
-            h_slice.SetBinContent(i+1, response_matrix[i, j])
-        
-        h_slice.Write()
-        h_response_slices.append(h_slice)
-    
-    # Write all histograms
-    h_response.Write()
-    h_efficiency.Write()
-    
-    # Create a directory for projections
-    output_file.mkdir("projections")
-    output_file.cd("projections")
-    
-    # Save projections
-    h_projX = h_response.ProjectionX("projection_true")
-    h_projY = h_response.ProjectionY("projection_measured")
-    h_projX.Write()
-    h_projY.Write()
-    
-    output_file.cd()  # Back to main directory
-    
-    # Save metadata as TTree
-    tree = ROOT.TTree("metadata", "Response Matrix Metadata")
-    
-    # Create variables for the tree
-    n_true = np.array([n_true_bins], dtype='i')
-    n_measured = np.array([n_measured_bins], dtype='i')
-    true_min = np.array([true_edges[0]], dtype='f')
-    true_max = np.array([true_edges[-1]], dtype='f')
-    measured_min = np.array([measured_edges[0]], dtype='f')
-    measured_max = np.array([measured_edges[-1]], dtype='f')
-    
-    # Create branches
-    tree.Branch("n_true_bins", n_true, "n_true_bins/I")
-    tree.Branch("n_measured_bins", n_measured, "n_measured_bins/I")
-    tree.Branch("true_energy_min", true_min, "true_energy_min/F")
-    tree.Branch("true_energy_max", true_max, "true_energy_max/F")
-    tree.Branch("measured_energy_min", measured_min, "measured_energy_min/F")
-    tree.Branch("measured_energy_max", measured_max, "measured_energy_max/F")
-    
-    tree.Fill()
-    tree.Write()
-    
-    output_file.Close()
-    
-    print(f"Comprehensive response data saved to {filename}")
-    print("Contents:")
-    print("  - response_matrix: TH2D main response matrix")
-    print("  - efficiency: TH1D detection efficiency")
-    print("  - response_slice_*: TH1D example response slices")
-    print("  - projections/: directory with 1D projections")
-    print("  - metadata: TTree with binning information")
-
-def save_response_matrix(self, filename="response_matrix.root"):
-    """Save the current response matrix to ROOT file"""
-    if not hasattr(self, 'R'):
-        print("Error: Build response matrix first using build_response_matrix()")
-        return
-    
-    save_comprehensive_response_data(
-        self.R, self.true_edges, self.measured_edges,
-        self.true_centers, self.measured_centers,
-        np.sum(self.R, axis=0),  # efficiency
-        filename
+    # Build response matrix (using your DRF)
+    R, true_edges, measured_edges = our_unfolder.build_response_matrix(
+        true_energy_range=(0, 157.76203526448361),
+        measured_energy_range=(0, 157.76203526448361),
+        custom_drf=pmt_response  # Your actual DRF
     )
-
-# Example usage with your data
-if __name__ == "__main__":
-    # Set random seed for reproducibility
-    np.random.seed(42)
     
-    print("Bayesian Unfolding with Functional DRF")
-    print("=" * 50)
-    
-    # 1. Initialize unfolding with your binning preferences
-    unfolder = BayesianUnfoldingWithDRF(n_true_bins=4001-85, n_measured_bins=4001-85, n_iterations=50)
-
-    def pmt_response(true_pe, pe_axis, n_max=300):
-        """
-        Calculate PMT response function for a given energy deposition
-
-        Parameters:
-        - true_adc: True adc value
-        - mean_SPE: mean of single photoelectron peak
-        - sigma_SPE: Standard deviation of single photoelectron peak
-        - mean_ped: mean of pedastal
-        - sigma_ped: Standard deviation of pedastal
-        - pe_range: Tuple (min, max, n_points) for pe axis
-        - n_max: Maximum number of photoelectrons to consider
-
-        Returns:
-        - pe_axis: Array of pe values
-        - response: Probability density function
-        - components: Individual photoelectron peaks for plotting
-        """
-        mean_SPE = 110.342
-        sigma_SPE= 10.0004
-        mean_ped= 85.5295
-        sigma_ped= 0.48595
-
-        sigma_SPE = (sigma_SPE) / (mean_SPE-mean_ped)
-        sigma_ped = (sigma_ped) / (mean_SPE-mean_ped)
-
-        response = np.zeros_like(pe_axis)
-
-        for n in range(0, n_max + 1):    
-            poisson_prob = poisson.pmf(n, true_pe)
-            if poisson_prob > 1e-10:  
-                mean_n = n
-                sigma_n = np.sqrt((np.sqrt(n) * sigma_SPE)**2+sigma_ped**2) if n > 0 else np.sqrt(sigma_SPE**2+sigma_ped**2)
-
-                if sigma_n < 1e-10:
-                    sigma_n = sigma_SPE
-
-                gaussian = (1 / (np.sqrt(2 * np.pi) * sigma_n)) * \
-                          np.exp(-0.5 * ((pe_axis - mean_n) / sigma_n) ** 2)
-
-                component = poisson_prob * gaussian
-                response += component
-
-        #return pe_axis, response, components
-        return response
-
-    def pmt_response_single(measured_pe, true_pe):
-        """
-        Calculate PMT response function for a given energy deposition
-
-        Parameters:
-        - measured_pe: Measured pe value
-        - true_pe: True pe value
-
-        Returns:
-        - response: Probability density function
-        - components: Individual photoelectron peaks for plotting
-        """
-        n_max=50
-        mean_SPE = 110.342
-        sigma_SPE= 10.0004
-        mean_ped= 85.5295
-        sigma_ped= 0.48595
-        sigma_SPE = (sigma_SPE) / (mean_SPE-mean_ped)
-        sigma_ped = (sigma_ped) / (mean_SPE-mean_ped)
-        components = []
-        response = 0
-
-        for n in range(0, n_max + 1):    
-            poisson_prob = poisson.pmf(n, true_pe)
-            if poisson_prob > 1e-10:  
-                mean_n = n
-                sigma_n = np.sqrt((np.sqrt(n) * sigma_SPE)**2+sigma_ped**2) if n > 0 else np.sqrt(sigma_SPE**2+sigma_ped**2)
-
-                if sigma_n < 1e-10:
-                    sigma_n = sigma_SPE
-
-                gaussian = (1 / (np.sqrt(2 * np.pi) * sigma_n)) * \
-                          np.exp(-0.5 * ((measured_pe - mean_n) / sigma_n) ** 2)
-
-                component = poisson_prob * gaussian
-                response += component
-                components.append((n, mean_n, sigma_n, component))
-
-        return response
-
-    # 3. Build response matrix using your DRF
-    print("Building response matrix from DRF function...")
-    R, true_energies, measured_energies = unfolder.build_response_matrix(
-        true_energy_range=(0, 157.76203526448361),      # Adjust to your energy range
-        measured_energy_range=(0, 157.76203526448361),   # Adjust to your energy range  
-        custom_drf=pmt_response            # Use your DRF function
-    )
-    responseShape  = R.shape
-    hist1d = ROOT.TH1D("h_measurement", "Measurement", responseShape[0], 0, 157.76203526448361)
-    hist2d = ROOT.TH2D("h_responseMatrix", "Response Matrix", responseShape[0], 0, 157.76203526448361, responseShape[1], 0, 157.76203526448361)
-
-    for i in range(responseShape[0]):
-        for j in range(responseShape[1]):
-            hist2d.SetBinContent(i+1, j+1, R[i, j])  # ROOT bins start at 1
-
-    unfolder.check_response_matrix()
-
-    # 4. CREATE OR LOAD YOUR MEASURED SPECTRUM
-    # Replace this with your actual measured data
-    print("Loading measured spectrum...")
-    
+    # Create or load your measured spectrum
+    # measured_spectrum = your_actual_measured_data
+    # true_spectrum = your_actual_true_spectrum (if available for testing)
     
     datapath = "../lightyield/data/2504/flat"
     input_file = f"{datapath}/bps_pwo_3_na22.his.txt"
@@ -760,89 +764,58 @@ if __name__ == "__main__":
             pe_axis.append((x-mean_ped) / (mean_SPE-mean_ped))
             measured_spectrum.append(y)
 
+    # For demonstration, create synthetic data
+    true_centers = (true_edges[1:] + true_edges[:-1]) / 2
+    def test_spectrum(e):
+        return (np.exp(-e/2.0) + 
+                0.5 * np.exp(-0.5 * ((e - 1.5) / 0.1)**2) +
+                0.3 * np.exp(-0.5 * ((e - 2.5) / 0.08)**2))
+    
     measured_spectrum = measured_spectrum[85:]
     print(len(measured_spectrum))
     measured_spectrum = np.array(measured_spectrum)
     pe_axis = np.array(pe_axis)
+    
+    # Run our implementation
+    print("Running our Bayesian unfolding implementation...")
+    our_unfolded = our_unfolder.unfold(measured_spectrum, prior=measured_spectrum)
+    
+    # Calculate closure for our method
+    predicted_measured_ours = np.dot(R, our_unfolded)
 
-    for i in range(responseShape[0]):
-        hist1d.SetBinContent(i+1, measured_spectrum[i])  # ROOT bins start at 1
+    mask = measured_spectrum > np.max(measured_spectrum) * 0.01
+    our_closure = np.sqrt(np.mean(
+        ((measured_spectrum[mask] - predicted_measured_ours[mask]) / 
+         measured_spectrum[mask])**2))
     
-    root_file = ROOT.TFile("responseMatrix.root", "RECREATE")
-    hist2d.Write()
-    hist1d.Write()
-    root_file.Close()
+    # Cross-check with RooUnfold
+    roo_unfolded, roo_errors, correlation, mean_diff = roo_checker.compare_methods(
+        true_edges, measured_edges, R, measured_spectrum, measured_spectrum,
+        our_unfolded, our_closure, n_iterations=10)
+    
+    # Print final assessment
+    print("\n" + "="*60)
+    print("FINAL ASSESSMENT")
+    print("="*60)
+    
+    if correlation > 0.95:
+        print("✅ EXCELLENT AGREEMENT: Our implementation matches RooUnfold very well!")
+    elif correlation > 0.9:
+        print("✅ GOOD AGREEMENT: Our implementation is consistent with RooUnfold")
+    elif correlation > 0.8:
+        print("⚠️  ACCEPTABLE AGREEMENT: Some differences, but generally consistent")
+    else:
+        print("❌ POOR AGREEMENT: Significant differences detected")
+    
+    if mean_diff < 0.1:
+        print("✅ SMALL DIFFERENCES: Mean relative difference < 10%")
+    elif mean_diff < 0.2:
+        print("⚠️  MODERATE DIFFERENCES: Mean relative difference 10-20%")
+    else:
+        print("❌ LARGE DIFFERENCES: Mean relative difference > 20%")
+    
+    return our_unfolded, roo_unfolded, correlation, mean_diff
 
-    print("\nPerforming Bayesian unfolding...")
-
-    initial_prior = np.ones_like(true_energies)  # Flat prior
-    
-    unfolded_spectrum = unfolder.unfold(measured_spectrum, prior=measured_spectrum)
-    #unfolded_spectrum = unfolder.unfold_regularized(measured_spectrum, prior=measured_spectrum)
-    
-    # 6. Calculate closure test
-    closure_error, chi2_per_dof, predicted_measured = unfolder.calculate_closure(measured_spectrum)
-    print(f"Closure test error: {closure_error:.4f} ({closure_error*100:.1f}%)")
-    print(f"Chi-squared per DOF: {chi2_per_dof:.2f}")
-    
-    closure_results = unfolder.calculate_closure_fixed(measured_spectrum)
-    predicted_measured = closure_results['predicted']
-
-    print(f"\n=== INTERPRETATION GUIDE ===")
-    print(f"RMS Error < 10%: Excellent")
-    print(f"RMS Error 10-20%: Good") 
-    print(f"RMS Error 20-30%: Acceptable")
-    print(f"RMS Error > 30%: Needs improvement")
-    print(f"Correlation > 0.95: Excellent")
-    print(f"Correlation 0.9-0.95: Good")
-    print(f"Correlation < 0.9: Needs improvement")
-
-    unfolder.debug_closure_issue(measured_spectrum, predicted_measured)
-
-    # 7. Plot results
-    print("Plotting results...")
-    fig, axes = plt.subplots(2, 2, figsize=(12, 10))
-    
-    # Plot 1: Response matrix
-    im = axes[0, 0].imshow(R, aspect='auto', origin='lower', 
-                          extent=[true_energies[0], true_energies[-1], 
-                                  measured_energies[0], measured_energies[-1]],
-                                  norm=LogNorm(vmin=1e-4, vmax=1))
-    axes[0, 0].set_xlabel('True Photoelectrons (p.e.)')
-    axes[0, 0].set_ylabel('Measured Photoelectrons (p.e.)')
-    axes[0, 0].set_title('Detector Response Matrix from DRF')
-    plt.colorbar(im, ax=axes[0, 0], label='Probability')
-    
-    # Plot 2: True vs Unfolded spectrum
-    axes[0, 1].step(true_energies, measured_spectrum, 'b-', linewidth=2, label='Measured Spectrum')
-    axes[0, 1].step(true_energies, unfolded_spectrum, 'r--', linewidth=2, label='Unfolded Spectrum')
-    axes[0, 1].set_xlabel('Photoelectrons (p.e.)')
-    axes[0, 1].set_ylabel('Counts')
-    #axes[0, 1].set_yscale('log')
-    axes[0, 1].set_title('True vs Unfolded Spectrum')
-    axes[0, 1].legend()
-    axes[0, 1].grid(True, alpha=0.3)
-    
-    # Plot 3: Measured spectrum and prediction from unfolded
-    axes[1, 0].step(measured_energies, measured_spectrum, 'ko', markersize=3, label='Measured')
-    axes[1, 0].step(measured_energies, predicted_measured, 'r-', linewidth=2, label='Predicted from Unfolded')
-    axes[1, 0].set_xlabel('Measured Photoelectrons (p.e.)')
-    axes[1, 0].set_ylabel('Counts')
-    axes[1, 0].set_yscale('log')
-    axes[1, 0].set_title('Measured Spectrum vs Prediction')
-    axes[1, 0].legend()
-    axes[1, 0].grid(True, alpha=0.3)
-    
-    # Plot 4: Convergence
-    iterations = range(len(unfolder.history))
-    total_counts = [np.sum(f) for f in unfolder.history]
-    axes[1, 1].plot(iterations, total_counts, 'bo-')
-    axes[1, 1].set_xlabel('Iteration')
-    axes[1, 1].set_ylabel('Total Counts in Unfolded Spectrum')
-    axes[1, 1].set_title('Convergence of Unfolding')
-    axes[1, 1].grid(True, alpha=0.3)
-    
-    plt.tight_layout()
-    plt.show()
-    
-    print("\nUnfolding completed successfully!")
+# Run the cross-check
+if __name__ == "__main__":
+    our_result, roo_result, corr, diff = full_cross_check()

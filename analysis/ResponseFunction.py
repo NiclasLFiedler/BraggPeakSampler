@@ -4,7 +4,7 @@ from scipy.stats import poisson
 from scipy.signal import convolve
 import matplotlib.gridspec as gridspec
 
-def pmt_response(true_adc, mean_SPE, sigma_SPE, mean_ped, sigma_ped, pe_range=None, n_max=50):
+def pmt_response(true_pe, pe_axis, n_max=50):
     """
     Calculate PMT response function for a given energy deposition
     
@@ -22,22 +22,20 @@ def pmt_response(true_adc, mean_SPE, sigma_SPE, mean_ped, sigma_ped, pe_range=No
     - response: Probability density function
     - components: Individual photoelectron peaks for plotting
     """
-    
-    mu_pe = (true_adc-mean_ped) / (mean_SPE-mean_ped)
-    
-    if pe_range is None:
-        pe_min = 0
-        pe_max = (mu_pe + 7 * sigma_SPE)
-        n_points = 1000
-        pe_axis = np.linspace(pe_min, pe_max, n_points)
-    else:
-        pe_axis = np.linspace(pe_range[0], pe_range[1], pe_range[2])
+    mean_SPE = 110.342
+    sigma_SPE= 10.0004
+    mean_ped= 85.5295
+    sigma_ped= 0.48595
+
+    sigma_SPE = (sigma_SPE) / (mean_SPE-mean_ped)
+    sigma_ped = (sigma_ped) / (mean_SPE-mean_ped)
+    print(sigma_SPE, sigma_ped)
 
     response = np.zeros_like(pe_axis)
     components = []
     
     for n in range(0, n_max + 1):    
-        poisson_prob = poisson.pmf(n, mu_pe)
+        poisson_prob = poisson.pmf(n, true_pe)
         if poisson_prob > 1e-10:  
             mean_n = n
             sigma_n = np.sqrt((np.sqrt(n) * sigma_SPE)**2+sigma_ped**2) if n > 0 else np.sqrt(sigma_SPE**2+sigma_ped**2)
@@ -127,24 +125,24 @@ gs = gridspec.GridSpec(2, 2)
 
 # Plot 1: Different energy depositions
 ax1 = plt.subplot(gs[0, 0])
-energies = [0.5, 1.0, 2.0, 4.0]  # MeV
-colors = ['blue', 'green', 'red', 'purple']
+PEs = [1, 5, 10, 20, 50, 100]
+colors = ['blue', 'green', 'red', 'purple', 'orange', 'brown']
 
-for energy, color in zip(energies, colors):
-    charge_axis, response, _ = sipm_response(energy, light_yield, Q_pe, sigma_SPE)
+for true_pe, color in zip(PEs, colors):
+    charge_axis, response, _ = pmt_response(true_pe, np.linspace(0, 157, 4001))
     ax1.plot(charge_axis, response, color=color, linewidth=2, 
-             label=f'{energy} MeV (μ={energy*light_yield:.1f} p.e.)')
+             label=f'μ={true_pe:.1f} p.e.')
 
-ax1.set_xlabel('Charge (arb. units)')
+ax1.set_xlabel('PE / p.e.')
 ax1.set_ylabel('Probability Density')
-ax1.set_title('SiPM Response for Different Energy Depositions')
+ax1.set_title('PMT Response for Different PE Depositions')
 ax1.legend()
 ax1.grid(True, alpha=0.3)
 
 # Plot 2: Individual photoelectron peaks for a specific energy
 ax2 = plt.subplot(gs[0, 1])
-energy = 2.0  # MeV
-charge_axis, total_response, components = sipm_response(energy, light_yield, Q_pe, sigma_SPE)
+PE =28  # Mean number of photoelectrons
+charge_axis, total_response, components = pmt_response(PE, np.linspace(0, 157, 4001))
 
 # Plot individual components
 for n, mean_n, sigma_n, component in components:
@@ -157,7 +155,7 @@ ax2.plot(charge_axis, total_response, 'k-', linewidth=3, label='Total Response')
 
 ax2.set_xlabel('Charge (arb. units)')
 ax2.set_ylabel('Probability Density')
-ax2.set_title(f'Individual Photoelectron Peaks (E={energy} MeV)')
+ax2.set_title(f'Individual Photoelectron Peaks ({PE} pe)')
 ax2.legend(fontsize=8)
 ax2.grid(True, alpha=0.3)
 
