@@ -192,6 +192,8 @@ class BayesianUnfoldingWithDRF:
             # Bayesian update
             correction_factor = np.dot(self.R.T, g / g_expected)
             f_new = f * correction_factor / efficiency
+            plt.plot(self.true_centers, f_new)
+            plt.show()
             
             # Apply smoothing to reduce oscillations
             #f_new = self._smooth_spectrum(f_new, strength=0.1)
@@ -207,6 +209,30 @@ class BayesianUnfoldingWithDRF:
         self.unfolded = f
         return f
     
+    def unfold_bayesian(self, measured_spectrum, true_spectrum):
+        if not hasattr(self, 'R'):
+            raise ValueError("Must build response matrix first")
+        
+        M = measured_spectrum.astype(float)
+        T = true_spectrum.copy() if true_spectrum is not None else np.ones(self.n_true_bins)
+
+        efficiency = np.sum(self.R, axis=0)
+
+        self.history = [T.copy()]
+        self.closure_errors = []
+
+        print("\nStarting regularized Bayesian unfolding...")
+        for iteration in range(self.n_iterations):
+
+            nC = 1/efficiency*np.dot(self.R, M/np.dot(self.R, T))*T
+            plt.plot(nC)
+            plt.show()
+
+            T = nC
+            
+        self.unfolded = T
+        return T
+
     def unfold_regularized(self, measured_spectrum, prior=None, regularization_strength=0.01, early_stopping=True):
         """
         Unfold with Tikhonov regularization for better convergence
@@ -227,27 +253,20 @@ class BayesianUnfoldingWithDRF:
 
         print("\nStarting regularized Bayesian unfolding...")
         for iteration in range(self.n_iterations):
-            # Expected measured spectrum
             g_expected = np.dot(self.R, f)
             g_expected[g_expected == 0] = 1e-10
 
-            # Bayesian update
             correction_factor = np.dot(self.R.T, g / g_expected)
             f_new = f * correction_factor / efficiency
 
-            # Apply Tikhonov regularization
-            f_new = self._tikhonov_regularize(f_new, f, regularization_strength)
-
-            # Ensure non-negativity
+            #f_new = self._tikhonov_regularize(f_new, f, regularization_strength
             f_new = np.maximum(f_new, 0)
 
-            # Check convergence
             relative_change = np.sum(np.abs(f_new - f)) / np.sum(f)
 
             f = f_new
             self.history.append(f.copy())
 
-            # Calculate closure error for monitoring
             pred_meas = np.dot(self.R, f)
             closure_err = np.sqrt(np.mean(((g - pred_meas) / (g + 1e-10))**2))
             self.closure_errors.append(closure_err)
@@ -728,7 +747,7 @@ if __name__ == "__main__":
         for j in range(responseShape[1]):
             hist2d.SetBinContent(i+1, j+1, R[i, j])  # ROOT bins start at 1
 
-    unfolder.check_response_matrix()
+    # unfolder.check_response_matrix()
 
     # 4. CREATE OR LOAD YOUR MEASURED SPECTRUM
     # Replace this with your actual measured data
@@ -777,6 +796,7 @@ if __name__ == "__main__":
 
     initial_prior = np.ones_like(true_energies)  # Flat prior
     
+    unfolder.unfold_bayesian(measured_spectrum, measured_spectrum)
     unfolded_spectrum = unfolder.unfold(measured_spectrum, prior=measured_spectrum)
     #unfolded_spectrum = unfolder.unfold_regularized(measured_spectrum, prior=measured_spectrum)
     
