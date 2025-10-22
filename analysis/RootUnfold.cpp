@@ -71,7 +71,7 @@ void RootUnfold(){
     hMeasData->Draw("HIST");
     hUnfolded->Draw("HIST SAME");
     c1->BuildLegend();
-
+    
     // Optional: Save unfolded spectrum
     TFile *fout = new TFile("unfolded.root", "RECREATE");
     hUnfolded->Write("unfolded_spectrum");

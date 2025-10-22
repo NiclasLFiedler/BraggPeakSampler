@@ -174,31 +174,22 @@ class BayesianUnfoldingWithDRF:
         # Normalize prior
         f = f / np.sum(f) * np.sum(g)
         
-        # Estimate efficiency from response matrix if not provided
         if efficiency is None:
             efficiency = np.sum(self.R, axis=0)
         
-        # Store iteration history
         self.history = [f.copy()]
         
         print("\nStarting Bayesian unfolding...")
         for iteration in range(self.n_iterations):
-            # Calculate expected measured spectrum given current truth estimate
             g_expected = np.dot(self.R, f)
             
-            # Avoid division by zero
             g_expected[g_expected == 0] = 1e-10
             
-            # Bayesian update
             correction_factor = np.dot(self.R.T, g / g_expected)
             f_new = f * correction_factor / efficiency
-            plt.plot(self.true_centers, f_new)
-            plt.show()
             
-            # Apply smoothing to reduce oscillations
-            #f_new = self._smooth_spectrum(f_new, strength=0.1)
+            f_new = self._smooth_spectrum(f_new, strength=0.1)
             
-            # Ensure non-negativity
             f_new = np.maximum(f_new, 0)
             
             f = f_new
@@ -208,30 +199,6 @@ class BayesianUnfoldingWithDRF:
         
         self.unfolded = f
         return f
-    
-    def unfold_bayesian(self, measured_spectrum, true_spectrum):
-        if not hasattr(self, 'R'):
-            raise ValueError("Must build response matrix first")
-        
-        M = measured_spectrum.astype(float)
-        T = true_spectrum.copy() if true_spectrum is not None else np.ones(self.n_true_bins)
-
-        efficiency = np.sum(self.R, axis=0)
-
-        self.history = [T.copy()]
-        self.closure_errors = []
-
-        print("\nStarting regularized Bayesian unfolding...")
-        for iteration in range(self.n_iterations):
-
-            nC = 1/efficiency*np.dot(self.R, M/np.dot(self.R, T))*T
-            plt.plot(nC)
-            plt.show()
-
-            T = nC
-            
-        self.unfolded = T
-        return T
 
     def unfold_regularized(self, measured_spectrum, prior=None, regularization_strength=0.01, early_stopping=True):
         """
@@ -259,7 +226,7 @@ class BayesianUnfoldingWithDRF:
             correction_factor = np.dot(self.R.T, g / g_expected)
             f_new = f * correction_factor / efficiency
 
-            #f_new = self._tikhonov_regularize(f_new, f, regularization_strength
+            f_new = self._tikhonov_regularize(f_new, f, regularization_strength)
             f_new = np.maximum(f_new, 0)
 
             relative_change = np.sum(np.abs(f_new - f)) / np.sum(f)
@@ -779,8 +746,7 @@ if __name__ == "__main__":
             pe_axis.append((x-mean_ped) / (mean_SPE-mean_ped))
             measured_spectrum.append(y)
 
-    measured_spectrum = measured_spectrum[85:]
-    print(len(measured_spectrum))
+    measured_spectrum = measured_spectrum[int(mean_ped):]
     measured_spectrum = np.array(measured_spectrum)
     pe_axis = np.array(pe_axis)
 
@@ -796,7 +762,7 @@ if __name__ == "__main__":
 
     initial_prior = np.ones_like(true_energies)  # Flat prior
     
-    unfolder.unfold_bayesian(measured_spectrum, measured_spectrum)
+    # unfolder.unfold_bayesian(measured_spectrum, measured_spectrum)
     unfolded_spectrum = unfolder.unfold(measured_spectrum, prior=measured_spectrum)
     #unfolded_spectrum = unfolder.unfold_regularized(measured_spectrum, prior=measured_spectrum)
     
@@ -823,6 +789,22 @@ if __name__ == "__main__":
     print("Plotting results...")
     fig, axes = plt.subplots(2, 2, figsize=(12, 10))
     
+
+    file = ROOT.TFile("my_hist.root", "RECREATE")
+
+    hist = ROOT.TH1D("h_unfold", "Energy / PE", len(true_energies), true_energies[0], true_energies[-1])
+    hist2 = ROOT.TH1D("h_measurement", "Energy / PE", len(true_energies), true_energies[0], true_energies[-1])
+    hist3 = ROOT.TH1D("h_predicted", "Energy / PE", len(true_energies), true_energies[0], true_energies[-1])
+    for index in range(len(true_energies)):
+        hist.SetBinContent(index, unfolded_spectrum[index])
+        hist2.SetBinContent(index, measured_spectrum[index])
+        hist3.SetBinContent(index, predicted_measured[index])
+    
+    hist.Write()
+    hist2.Write()
+    hist3.Write()
+    file.Close()
+
     # Plot 1: Response matrix
     im = axes[0, 0].imshow(R, aspect='auto', origin='lower', 
                           extent=[true_energies[0], true_energies[-1], 
