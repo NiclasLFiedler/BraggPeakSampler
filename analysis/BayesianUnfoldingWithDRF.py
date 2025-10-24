@@ -20,7 +20,7 @@ class BayesianUnfoldingWithDRF:
         self.n_measured_bins = n_measured_bins
         self.n_iterations = n_iterations
     
-    def pmt_response(true_adc, mean_SPE, sigma_SPE, mean_ped, sigma_ped, pe_range=None, n_max=50):
+    def pmt_response(true_adc, mean_SPE, sigma_SPE, mean_ped, sigma_ped, pe_range=None, n_max=300):
         """
         Calculate PMT response function for a given energy deposition
 
@@ -39,7 +39,7 @@ class BayesianUnfoldingWithDRF:
         - components: Individual photoelectron peaks for plotting
         """
 
-        mu_pe = (true_adc-mean_ped) / (mean_SPE-mean_ped)
+        mu_pe = (true_adc-mean_ped) / (mean_SPE-mean_ped)/0.2316
 
         if pe_range is None:
             pe_min = 0
@@ -609,11 +609,8 @@ if __name__ == "__main__":
     
     print("Bayesian Unfolding with Functional DRF")
     print("=" * 50)
-    
-    # 1. Initialize unfolding with your binning preferences
-    unfolder = BayesianUnfoldingWithDRF(n_true_bins=4001-85, n_measured_bins=4001-85, n_iterations=50)
 
-    def pmt_response(true_pe, pe_axis, n_max=300):
+    def pmt_response(true_pe, pe_axis, n_max=1000):
         """
         Calculate PMT response function for a given energy deposition
 
@@ -635,23 +632,23 @@ if __name__ == "__main__":
         sigma_SPE= 10.0004
         mean_ped= 85.5295
         sigma_ped= 0.48595
+        PDE = 0.2316
 
-        sigma_SPE = (sigma_SPE) / (mean_SPE-mean_ped)
-        sigma_ped = (sigma_ped) / (mean_SPE-mean_ped)
+        sigma_SPE = (sigma_SPE) / (mean_SPE-mean_ped)#/0.2316
+        sigma_ped = (sigma_ped) / (mean_SPE-mean_ped)#/0.2316
 
         response = np.zeros_like(pe_axis)
 
         for n in range(0, n_max + 1):    
-            poisson_prob = poisson.pmf(n, true_pe)
+            poisson_prob = poisson.pmf(n, true_pe*PDE)
             if poisson_prob > 1e-10:  
-                mean_n = n
                 sigma_n = np.sqrt((np.sqrt(n) * sigma_SPE)**2+sigma_ped**2) if n > 0 else np.sqrt(sigma_SPE**2+sigma_ped**2)
 
                 if sigma_n < 1e-10:
                     sigma_n = sigma_SPE
 
                 gaussian = (1 / (np.sqrt(2 * np.pi) * sigma_n)) * \
-                          np.exp(-0.5 * ((pe_axis - mean_n) / sigma_n) ** 2)
+                          np.exp(-0.5 * ((pe_axis*PDE - n) / sigma_n) ** 2)
 
                 component = poisson_prob * gaussian
                 response += component
@@ -699,39 +696,23 @@ if __name__ == "__main__":
 
         return response
 
-    # 3. Build response matrix using your DRF
-    print("Building response matrix from DRF function...")
-    R, true_energies, measured_energies = unfolder.build_response_matrix(
-        true_energy_range=(0, 157.76203526448361),      # Adjust to your energy range
-        measured_energy_range=(0, 157.76203526448361),   # Adjust to your energy range  
-        custom_drf=pmt_response            # Use your DRF function
-    )
-    responseShape  = R.shape
-    hist1d = ROOT.TH1D("h_measurement", "Measurement", responseShape[0], 0, 157.76203526448361)
-    hist2d = ROOT.TH2D("h_responseMatrix", "Response Matrix", responseShape[0], 0, 157.76203526448361, responseShape[1], 0, 157.76203526448361)
-
-    for i in range(responseShape[0]):
-        for j in range(responseShape[1]):
-            hist2d.SetBinContent(i+1, j+1, R[i, j])  # ROOT bins start at 1
-
-    # unfolder.check_response_matrix()
-
-    # 4. CREATE OR LOAD YOUR MEASURED SPECTRUM
-    # Replace this with your actual measured data
     print("Loading measured spectrum...")
     
     
-    datapath = "../lightyield/data/2504/flat"
-    input_file = f"{datapath}/bps_pwo_3_na22.his.txt"
+    # datapath = "../lightyield/data/2504/flat"
+    # input_file = f"{datapath}/bps_pwo_3_na22.his.txt"
     
-    #datapath = "../lightyield/data/1310_pedastal"
-    #input_file = f"{datapath}/bps_spe_100ns.his.txt"
+    datapath = "../lightyield/old"
+    input_file = f"{datapath}/BPS_CH0.his.txt"
     
     mean_SPE = 110.342
     sigma_SPE= 10.0004
     mean_ped= 85.5295
     sigma_ped= 0.48595
+    PDE = 0.2316
 
+    print(f"Mean SPE: {1}, Sigma SPE: {sigma_SPE/mean_SPE}")
+    print(f"Mean PED: {mean_ped/mean_SPE}, Sigma PED: {sigma_ped/mean_SPE}")
     # --- Read data from text file ---
     measured_spectrum = []
     pe_axis = []
@@ -743,13 +724,31 @@ if __name__ == "__main__":
             if len(parts) < 2:
                 continue
             x, y = map(float, parts[:2])
-            pe_axis.append((x-mean_ped) / (mean_SPE-mean_ped))
+            pe_axis.append(x)
             measured_spectrum.append(y)
 
-    measured_spectrum = measured_spectrum[int(mean_ped):]
-    measured_spectrum = np.array(measured_spectrum)
     pe_axis = np.array(pe_axis)
+    pedastal_idx = np.argmin(np.abs(pe_axis - mean_ped))
+    pe_axis = (pe_axis-mean_ped) / (mean_SPE-mean_ped)
+    measured_spectrum = measured_spectrum[pedastal_idx:]
+    measured_spectrum = np.array(measured_spectrum)
+    unfolder = BayesianUnfoldingWithDRF(n_true_bins=4001-pedastal_idx, n_measured_bins=4001-pedastal_idx, n_iterations=10)
+    # 3. Build response matrix using your DRF
+    print("Building response matrix from DRF function...")
 
+    maxE = (4001-pedastal_idx-mean_ped)/(mean_SPE-mean_ped)/PDE
+    R, true_energies, measured_energies = unfolder.build_response_matrix(
+        true_energy_range=(0, maxE),      # Adjust to your energy range
+        measured_energy_range=(0, maxE),
+        custom_drf=pmt_response            # Use your DRF function
+    )
+    responseShape  = R.shape
+    hist1d = ROOT.TH1D("h_measurement", "Measurement", responseShape[0], 0, maxE)
+    hist2d = ROOT.TH2D("h_responseMatrix", "Response Matrix", responseShape[0], 0, maxE, responseShape[1], 0, maxE)
+
+    for i in range(responseShape[0]):
+        for j in range(responseShape[1]):
+            hist2d.SetBinContent(i+1, j+1, R[i, j])  # ROOT bins start at 1
     for i in range(responseShape[0]):
         hist1d.SetBinContent(i+1, measured_spectrum[i])  # ROOT bins start at 1
     
@@ -830,7 +829,7 @@ if __name__ == "__main__":
     axes[1, 0].step(measured_energies, predicted_measured, 'r-', linewidth=2, label='Predicted from Unfolded')
     axes[1, 0].set_xlabel('Measured Photoelectrons (p.e.)')
     axes[1, 0].set_ylabel('Counts')
-    axes[1, 0].set_yscale('log')
+    # axes[1, 0].set_yscale('log')
     axes[1, 0].set_title('Measured Spectrum vs Prediction')
     axes[1, 0].legend()
     axes[1, 0].grid(True, alpha=0.3)
