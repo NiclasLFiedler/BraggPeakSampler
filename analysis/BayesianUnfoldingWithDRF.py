@@ -613,7 +613,6 @@ if __name__ == "__main__":
     def pmt_response(true_pe, pe_axis, n_max=1000):
         """
         Calculate PMT response function for a given energy deposition
-
         Parameters:
         - true_adc: True adc value
         - mean_SPE: mean of single photoelectron peak
@@ -622,7 +621,6 @@ if __name__ == "__main__":
         - sigma_ped: Standard deviation of pedastal
         - pe_range: Tuple (min, max, n_points) for pe axis
         - n_max: Maximum number of photoelectrons to consider
-
         Returns:
         - pe_axis: Array of pe values
         - response: Probability density function
@@ -633,28 +631,37 @@ if __name__ == "__main__":
         mean_ped= 85.5295
         sigma_ped= 0.48595
         PDE = 0.2316
-
         sigma_SPE = (sigma_SPE) / (mean_SPE-mean_ped)#/0.2316
         sigma_ped = (sigma_ped) / (mean_SPE-mean_ped)#/0.2316
-
         response = np.zeros_like(pe_axis)
+        underflow_axis = np.arange(-10, 0, 0.17025946972945388)
+
+        underflow_response = np.zeros_like(underflow_axis)
+        components = []
 
         for n in range(0, n_max + 1):    
             poisson_prob = poisson.pmf(n, true_pe*PDE)
             if poisson_prob > 1e-10:  
                 sigma_n = np.sqrt((np.sqrt(n) * sigma_SPE)**2+sigma_ped**2) if n > 0 else np.sqrt(sigma_SPE**2+sigma_ped**2)
-
                 if sigma_n < 1e-10:
                     sigma_n = sigma_SPE
-
                 gaussian = (1 / (np.sqrt(2 * np.pi) * sigma_n)) * \
                           np.exp(-0.5 * ((pe_axis*PDE - n) / sigma_n) ** 2)
-
                 component = poisson_prob * gaussian
-                response += component
 
-        #return pe_axis, response, components
+                if(true_pe<20):
+                    underflow_gaussian = (1 / (np.sqrt(2 * np.pi) * sigma_n)) * \
+                              np.exp(-0.5 * ((underflow_axis*PDE - n) / sigma_n) ** 2)
+                    underflow_component = poisson_prob * underflow_gaussian
+
+                    underflow_response += underflow_component
+                    component[0] += np.sum(underflow_component)
+                components.append((n, n, sigma_n, component))
+                response += component
+        # print()
+        # print(response)
         return response
+        #return response
 
     def pmt_response_single(measured_pe, true_pe):
         """
@@ -699,11 +706,11 @@ if __name__ == "__main__":
     print("Loading measured spectrum...")
     
     
-    # datapath = "../lightyield/data/2504/flat"
-    # input_file = f"{datapath}/bps_pwo_3_na22.his.txt"
+    datapath = "../lightyield/data/2504/flat"
+    input_file = f"{datapath}/bps_pwo_3_na22.his.txt"
     
-    datapath = "../lightyield/old"
-    input_file = f"{datapath}/BPS_CH0.his.txt"
+    # datapath = "../lightyield/old"
+    # input_file = f"{datapath}/BPS_CH0.his.txt"
     
     mean_SPE = 110.342
     sigma_SPE= 10.0004
