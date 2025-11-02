@@ -9,6 +9,8 @@ from scipy.signal import convolve
 import matplotlib.gridspec as gridspec
 from matplotlib.colors import LogNorm
 import ROOT
+import matplotlib
+matplotlib.use("TkAgg")  # or "QtAgg"
 
 class BayesianUnfoldingWithDRF:
     """
@@ -19,56 +21,6 @@ class BayesianUnfoldingWithDRF:
         self.n_true_bins = n_true_bins
         self.n_measured_bins = n_measured_bins
         self.n_iterations = n_iterations
-    
-    def pmt_response(true_adc, mean_SPE, sigma_SPE, mean_ped, sigma_ped, pe_range=None, n_max=300):
-        """
-        Calculate PMT response function for a given energy deposition
-
-        Parameters:
-        - true_adc: True adc value
-        - mean_SPE: mean of single photoelectron peak
-        - sigma_SPE: Standard deviation of single photoelectron peak
-        - mean_ped: mean of pedastal
-        - sigma_ped: Standard deviation of pedastal
-        - pe_range: Tuple (min, max, n_points) for pe axis
-        - n_max: Maximum number of photoelectrons to consider
-
-        Returns:
-        - pe_axis: Array of pe values
-        - response: Probability density function
-        - components: Individual photoelectron peaks for plotting
-        """
-
-        mu_pe = (true_adc-mean_ped) / (mean_SPE-mean_ped)/0.2316
-
-        if pe_range is None:
-            pe_min = 0
-            pe_max = (mu_pe + 7 * sigma_SPE)
-            n_points = 1000
-            pe_axis = np.linspace(pe_min, pe_max, n_points)
-        else:
-            pe_axis = np.linspace(pe_range[0], pe_range[1], pe_range[2])
-
-        response = np.zeros_like(pe_axis)
-        components = []
-
-        for n in range(0, n_max + 1):    
-            poisson_prob = poisson.pmf(n, mu_pe)
-            if poisson_prob > 1e-10:  
-                mean_n = n
-                sigma_n = np.sqrt((np.sqrt(n) * sigma_SPE)**2+sigma_ped**2) if n > 0 else np.sqrt(sigma_SPE**2+sigma_ped**2)
-
-                if sigma_n < 1e-10:
-                    sigma_n = sigma_SPE
-
-                gaussian = (1 / (np.sqrt(2 * np.pi) * sigma_n)) * \
-                          np.exp(-0.5 * ((pe_axis - mean_n) / sigma_n) ** 2)
-
-                component = poisson_prob * gaussian
-                response += component
-                components.append((n, mean_n, sigma_n, component))
-
-        return pe_axis, response, components
 
     def drf_function(self, measured_energy, true_energy, resolution=0.15, tail_strength=0.2):
         """
@@ -177,8 +129,10 @@ class BayesianUnfoldingWithDRF:
         if efficiency is None:
             efficiency = np.sum(self.R, axis=0)
         
+        max_index = np.argmax(measured_spectrum)
+
         self.history = [f.copy()]
-        
+        self.chi2 = [0]
         print("\nStarting Bayesian unfolding...")
         for iteration in range(self.n_iterations):
             g_expected = np.dot(self.R, f)
@@ -188,12 +142,21 @@ class BayesianUnfoldingWithDRF:
             correction_factor = np.dot(self.R.T, g / g_expected)
             f_new = f * correction_factor / efficiency
             
-            f_new = self._smooth_spectrum(f_new, strength=0.1)
-            
+            #f_new = self._smooth_spectrum(f_new, strength=0.1)
+            # f_new = self._tikhonov_regularize(f_new, f, 0.01)
             f_new = np.maximum(f_new, 0)
+            
+            # mask = (self.history[0] > 0) & (f_new > 0)
+            # chi2 = np.sum((f_new[mask] - self.history[0][mask])**2 / self.history[0][mask])
+            
+            predicted_measured = np.dot(self.R, f_new)
+            mask = (measured_spectrum > 0) & (predicted_measured > 0)
+            mask[:max_index+10] = False
+            chi2 = np.sum((predicted_measured[mask] - measured_spectrum[mask])**2 / measured_spectrum[mask])
             
             f = f_new
             self.history.append(f.copy())
+            self.chi2.append(chi2)
             
             print(f"Iteration {iteration+1}: Total counts = {np.sum(f):.1f}")
         
@@ -658,50 +621,8 @@ if __name__ == "__main__":
                     component[0] += np.sum(underflow_component)
                 components.append((n, n, sigma_n, component))
                 response += component
-        # print()
-        # print(response)
         return response
-        #return response
 
-    def pmt_response_single(measured_pe, true_pe):
-        """
-        Calculate PMT response function for a given energy deposition
-
-        Parameters:
-        - measured_pe: Measured pe value
-        - true_pe: True pe value
-
-        Returns:
-        - response: Probability density function
-        - components: Individual photoelectron peaks for plotting
-        """
-        n_max=50
-        mean_SPE = 110.342
-        sigma_SPE= 10.0004
-        mean_ped= 85.5295
-        sigma_ped= 0.48595
-        sigma_SPE = (sigma_SPE) / (mean_SPE-mean_ped)
-        sigma_ped = (sigma_ped) / (mean_SPE-mean_ped)
-        components = []
-        response = 0
-
-        for n in range(0, n_max + 1):    
-            poisson_prob = poisson.pmf(n, true_pe)
-            if poisson_prob > 1e-10:  
-                mean_n = n
-                sigma_n = np.sqrt((np.sqrt(n) * sigma_SPE)**2+sigma_ped**2) if n > 0 else np.sqrt(sigma_SPE**2+sigma_ped**2)
-
-                if sigma_n < 1e-10:
-                    sigma_n = sigma_SPE
-
-                gaussian = (1 / (np.sqrt(2 * np.pi) * sigma_n)) * \
-                          np.exp(-0.5 * ((measured_pe - mean_n) / sigma_n) ** 2)
-
-                component = poisson_prob * gaussian
-                response += component
-                components.append((n, mean_n, sigma_n, component))
-
-        return response
 
     print("Loading measured spectrum...")
     
@@ -739,7 +660,7 @@ if __name__ == "__main__":
     pe_axis = (pe_axis-mean_ped) / (mean_SPE-mean_ped)
     measured_spectrum = measured_spectrum[pedastal_idx:]
     measured_spectrum = np.array(measured_spectrum)
-    unfolder = BayesianUnfoldingWithDRF(n_true_bins=4001-pedastal_idx, n_measured_bins=4001-pedastal_idx, n_iterations=10)
+    unfolder = BayesianUnfoldingWithDRF(n_true_bins=4001-pedastal_idx, n_measured_bins=4001-pedastal_idx, n_iterations=20)
     # 3. Build response matrix using your DRF
     print("Building response matrix from DRF function...")
 
@@ -821,9 +742,12 @@ if __name__ == "__main__":
     axes[0, 0].set_title('Detector Response Matrix from DRF')
     plt.colorbar(im, ax=axes[0, 0], label='Probability')
     
+    min_index = np.argmin(unfolder.chi2[1:]) + 1 
+    
     # Plot 2: True vs Unfolded spectrum
     axes[0, 1].step(true_energies, measured_spectrum, 'b-', linewidth=2, label='Measured Spectrum')
-    axes[0, 1].step(true_energies, unfolded_spectrum, 'r--', linewidth=2, label='Unfolded Spectrum')
+    axes[0, 1].step(true_energies, unfolded_spectrum, 'r--', linewidth=2, label=f'Unfolded Spectrum {len(unfolder.chi2)}')
+    axes[0, 1].step(true_energies, unfolder.history[min_index], 'g-', linewidth=2, label=f'Unfolded Spectrum {min_index+1}')
     axes[0, 1].set_xlabel('Photoelectrons (p.e.)')
     axes[0, 1].set_ylabel('Counts')
     #axes[0, 1].set_yscale('log')
@@ -833,7 +757,8 @@ if __name__ == "__main__":
     
     # Plot 3: Measured spectrum and prediction from unfolded
     axes[1, 0].step(measured_energies, measured_spectrum, 'ko', markersize=3, label='Measured')
-    axes[1, 0].step(measured_energies, predicted_measured, 'r-', linewidth=2, label='Predicted from Unfolded')
+    axes[1, 0].step(measured_energies, predicted_measured, 'r-', linewidth=2, label=f'Predicted from Unfolded {len(unfolder.chi2)}')
+    axes[1, 0].step(measured_energies, np.dot(unfolder.R, unfolder.history[min_index]), 'g-', linewidth=2, label=f'Unfolded Spectrum {min_index+1}')
     axes[1, 0].set_xlabel('Measured Photoelectrons (p.e.)')
     axes[1, 0].set_ylabel('Counts')
     # axes[1, 0].set_yscale('log')
@@ -842,11 +767,10 @@ if __name__ == "__main__":
     axes[1, 0].grid(True, alpha=0.3)
     
     # Plot 4: Convergence
-    iterations = range(len(unfolder.history))
-    total_counts = [np.sum(f) for f in unfolder.history]
-    axes[1, 1].plot(iterations, total_counts, 'bo-')
+    iterations = range(len(unfolder.chi2))
+    axes[1, 1].plot(iterations, unfolder.chi2, 'bo-')
     axes[1, 1].set_xlabel('Iteration')
-    axes[1, 1].set_ylabel('Total Counts in Unfolded Spectrum')
+    axes[1, 1].set_ylabel('Chi-squared')
     axes[1, 1].set_title('Convergence of Unfolding')
     axes[1, 1].grid(True, alpha=0.3)
     
