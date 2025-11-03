@@ -1,9 +1,23 @@
+# ---
+# jupyter:
+#   jupytext:
+#     cell_metadata_filter: -all
+#     formats: ipynb,py:percent
+#     text_representation:
+#       extension: .py
+#       format_name: percent
+#       format_version: '1.3'
+#       jupytext_version: 1.18.1
+# ---
+
+# %%
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import stats
 from scipy.integrate import quad
 from scipy.optimize import curve_fit
 
+# %%
 from scipy.stats import poisson
 from scipy.signal import convolve
 import matplotlib.gridspec as gridspec
@@ -12,6 +26,7 @@ import ROOT
 import matplotlib
 matplotlib.use("TkAgg")  # or "QtAgg"
 
+# %%
 class BayesianUnfoldingWithDRF:
     """
     Bayesian Unfolding with a functional Detector Response Function (DRF)
@@ -133,6 +148,7 @@ class BayesianUnfoldingWithDRF:
 
         self.history = [f.copy()]
         self.chi2 = [0]
+        self.closure_errors = [0]
         print("\nStarting Bayesian unfolding...")
         for iteration in range(self.n_iterations):
             g_expected = np.dot(self.R, f)
@@ -142,22 +158,26 @@ class BayesianUnfoldingWithDRF:
             correction_factor = np.dot(self.R.T, g / g_expected)
             f_new = f * correction_factor / efficiency
             
-            #f_new = self._smooth_spectrum(f_new, strength=0.1)
+            f_new = self._smooth_spectrum(f_new, strength=0.1)
             # f_new = self._tikhonov_regularize(f_new, f, 0.01)
             f_new = np.maximum(f_new, 0)
             
             # mask = (self.history[0] > 0) & (f_new > 0)
             # chi2 = np.sum((f_new[mask] - self.history[0][mask])**2 / self.history[0][mask])
-            
+
             predicted_measured = np.dot(self.R, f_new)
             mask = (measured_spectrum > 0) & (predicted_measured > 0)
-            mask[:max_index+10] = False
-            chi2 = np.sum((predicted_measured[mask] - measured_spectrum[mask])**2 / measured_spectrum[mask])
-            
+            mask[:max_index+30] = False
+            print(f"Energy Cutoff: {self.true_centers[max_index+60]}")
+            n_dof = np.sum(mask) - 1
+            chi2 = np.sum((predicted_measured[mask] - measured_spectrum[mask])**2 / measured_spectrum[mask])/n_dof
+            closure_error = np.sqrt(np.mean(((measured_spectrum[mask] - predicted_measured[mask]) / measured_spectrum[mask])**2))
+
             f = f_new
             self.history.append(f.copy())
             self.chi2.append(chi2)
-            
+            self.closure_errors.append(closure_error)
+
             print(f"Iteration {iteration+1}: Total counts = {np.sum(f):.1f}")
         
         self.unfolded = f
@@ -232,7 +252,7 @@ class BayesianUnfoldingWithDRF:
     def _smooth_spectrum(self, spectrum, strength=0.1):
         """Apply mild smoothing to reduce oscillations"""
         from scipy.ndimage import gaussian_filter1d
-        return (1 - strength) * spectrum + strength * gaussian_filter1d(spectrum, sigma=1.0)
+        return (1 - strength) * spectrum + strength * gaussian_filter1d(spectrum, sigma=10.0)
     
     def calculate_closure(self, measured_spectrum):
         """Calculate how well the unfolded spectrum reproduces the measurement"""
@@ -394,6 +414,7 @@ class BayesianUnfoldingWithDRF:
             print("WARNING: Zero bins in measured spectrum can inflate closure error!")
 
 
+# %%
 def save_response_matrix_th2d(response_matrix, true_edges, measured_edges, 
                              filename="response_matrix.root", histname="response_matrix"):
     """
@@ -441,6 +462,7 @@ def save_response_matrix_th2d(response_matrix, true_edges, measured_edges,
     
     return h_response
 
+# %%
 def save_comprehensive_response_data(response_matrix, true_edges, measured_edges, 
                                    true_centers, measured_centers, efficiency,
                                    filename="response_data.root"):
@@ -552,6 +574,7 @@ def save_comprehensive_response_data(response_matrix, true_edges, measured_edges
     print("  - projections/: directory with 1D projections")
     print("  - metadata: TTree with binning information")
 
+# %%
 def save_response_matrix(self, filename="response_matrix.root"):
     """Save the current response matrix to ROOT file"""
     if not hasattr(self, 'R'):
@@ -565,6 +588,7 @@ def save_response_matrix(self, filename="response_matrix.root"):
         filename
     )
 
+# %%
 # Example usage with your data
 if __name__ == "__main__":
     # Set random seed for reproducibility
@@ -769,6 +793,7 @@ if __name__ == "__main__":
     # Plot 4: Convergence
     iterations = range(len(unfolder.chi2))
     axes[1, 1].plot(iterations, unfolder.chi2, 'bo-')
+    axes[1, 1].plot(iterations, unfolder.closure_errors, 'go-')
     axes[1, 1].set_xlabel('Iteration')
     axes[1, 1].set_ylabel('Chi-squared')
     axes[1, 1].set_title('Convergence of Unfolding')
