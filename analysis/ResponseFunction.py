@@ -10,23 +10,23 @@ def pmt_response(true_pe, pe_axis, n_max=1000):
     Calculate PMT response function for a given energy deposition
     Parameters:
     - true_adc: True adc value
-    - mean_SPE: mean of single photoelectron peak
-    - sigma_SPE: Standard deviation of single photoelectron peak
+    - mean_SPE: mean of single photon peak
+    - sigma_SPE: Standard deviation of single photon peak
     - mean_ped: mean of pedastal
     - sigma_ped: Standard deviation of pedastal
     - pe_range: Tuple (min, max, n_points) for pe axis
-    - n_max: Maximum number of photoelectrons to consider
+    - n_max: Maximum number of photons to consider
     Returns:
     - pe_axis: Array of pe values
     - response: Probability density function
-    - components: Individual photoelectron peaks for plotting
+    - components: Individual photon peaks for plotting
     """
     mean_SPE = 110.342
     sigma_SPE= 10.0004
     mean_ped= 85.5295
     sigma_ped= 0.48595
     PDE = 0.2316
-    sigma_SPE = (sigma_SPE) / (mean_SPE-mean_ped)#/0.2316
+    sigma_SPE = (sigma_SPE) / (mean_SPE-mean_ped)*0.8#/0.2316
     sigma_ped = (sigma_ped) / (mean_SPE-mean_ped)#/0.2316
     response = np.zeros_like(pe_axis)
     underflow_axis = np.arange(-10, 0, 0.17025946972945388)
@@ -115,19 +115,19 @@ def sipm_response(energy_deposited, light_yield, Q_pe, sigma_SPE, charge_range=N
     
     Parameters:
     - energy_deposited: True energy deposited (MeV)
-    - light_yield: Light yield (photoelectrons/MeV)
-    - Q_pe: Charge per photoelectron (arbitrary units)
-    - sigma_SPE: Standard deviation of single photoelectron peak
+    - light_yield: Light yield (photons/MeV)
+    - Q_pe: Charge per photon (arbitrary units)
+    - sigma_SPE: Standard deviation of single photon peak
     - charge_range: Tuple (min, max, n_points) for charge axis
-    - n_max: Maximum number of photoelectrons to consider
+    - n_max: Maximum number of photons to consider
     
     Returns:
     - charge_axis: Array of charge values
     - response: Probability density function
-    - components: Individual photoelectron peaks for plotting
+    - components: Individual photon peaks for plotting
     """
     
-    # Calculate mean number of photoelectrons
+    # Calculate mean number of photons
     mu_pe = energy_deposited * light_yield # * eta_PDE * eta_coll  (0.63, 0.2)
     
     # Set up charge axis if not provided
@@ -142,12 +142,12 @@ def sipm_response(energy_deposited, light_yield, Q_pe, sigma_SPE, charge_range=N
     response = np.zeros_like(charge_axis)
     components = []
     
-    # Sum over possible photoelectron counts
+    # Sum over possible photon counts
     for n in range(0, n_max + 1):
-        # Poisson probability for n photoelectrons
+        # Poisson probability for n photons
         poisson_prob = poisson.pmf(n, mu_pe)
         if poisson_prob > 1e-10:  # Only consider significant contributions
-            # Gaussian for n photoelectrons
+            # Gaussian for n photons
             mean_n = n * Q_pe
             sigma_n = np.sqrt(n) * sigma_SPE if n > 0 else sigma_SPE
             
@@ -165,8 +165,8 @@ def sipm_response(energy_deposited, light_yield, Q_pe, sigma_SPE, charge_range=N
     return charge_axis, response, components
 
 # Parameters
-light_yield = 10  # photoelectrons/MeV
-Q_pe = 1.0        # charge per photoelectron
+light_yield = 10  # photons/MeV
+Q_pe = 1.0        # charge per photon
 sigma_SPE = 0.15  # standard deviation of SPE peak
 
 mean_SPE = 110.342
@@ -189,28 +189,30 @@ mean_SPE = 110.342
 sigma_SPE= 10.0004
 mean_ped= 85.5295
 sigma_ped= 0.48595
+maxBin = 4001
+# maxBin = 4201
 
 pedastal_idx = int(mean_ped)
 PDE  = 0.2316
-maxE = (4001-pedastal_idx-mean_ped)/(mean_SPE-mean_ped)/PDE
-
-pe_axis = np.linspace(0, maxE, 4001-pedastal_idx)
+maxE = (maxBin-pedastal_idx-mean_ped)/(mean_SPE-mean_ped)/PDE
+print(maxE/maxBin)
+pe_axis = np.linspace(0, maxE, maxBin-pedastal_idx)
 print(pe_axis[1]-pe_axis[0])
 
 for true_pe, color in zip(PEs, colors):
     charge_axis, response, _ = pmt_response(true_pe, pe_axis)
     ax1.plot(charge_axis, response, color=color, linewidth=2, 
-             label=f'μ={true_pe:.1f} p.e.')
+             label=f'μ={true_pe:.1f} ph')
 
-ax1.set_xlabel('PE / p.e.')
+ax1.set_xlabel('Photon Count')
 ax1.set_ylabel('Probability Density')
-ax1.set_title('PMT Response for Different PE Depositions')
+ax1.set_title('PMT Response for Different photon Depositions')
 ax1.legend()
 ax1.grid(True, alpha=0.3)
 
-# Plot 2: Individual photoelectron peaks for a specific energy
+# Plot 2: Individual photon peaks for a specific energy
 ax2 = plt.subplot(gs[0, 1])
-PE = 100  # Mean number of photoelectrons
+PE = 4  # Mean number of photons
 charge_axis, total_response, components = pmt_response(PE, pe_axis)
 
 # Plot individual components
@@ -222,9 +224,9 @@ for n, mean_n, sigma_n, component in components:
 # Plot total response
 ax2.plot(charge_axis, total_response, 'k-', linewidth=3, label='Total Response')
 
-ax2.set_xlabel('Charge (arb. units)')
+ax2.set_xlabel('Photon Count')
 ax2.set_ylabel('Probability Density')
-ax2.set_title(f'Individual Photoelectron Peaks ({PE} pe)')
+ax2.set_title(f'Individual photon Peaks ({PE} photons)')
 ax2.legend(fontsize=8)
 ax2.grid(True, alpha=0.3)
 
@@ -238,9 +240,9 @@ ax3.plot(n_values, theoretical_widths, 'bo-', linewidth=2, markersize=6,
 ax3.plot(n_values, np.sqrt(n_values) * 1.0, 'r--', alpha=0.7, 
          label='Reference: √N (normalized)')
 
-ax3.set_xlabel('Number of Photoelectrons (N)')
+ax3.set_xlabel('Number of photons (N)')
 ax3.set_ylabel('Peak Width σ')
-ax3.set_title('Evolution of Peak Width with Photoelectron Count')
+ax3.set_title('Evolution of Peak Width with photon Count')
 ax3.legend()
 ax3.grid(True, alpha=0.3)
 
@@ -252,11 +254,11 @@ charge_axis_low, response_low, _ = pmt_response(0.3, pe_axis)
 charge_axis_high, response_high, _ = pmt_response(8.0, pe_axis)
 
 ax4.plot(charge_axis_low, response_low, 'b-', linewidth=2, 
-         label=f'Low light (E=0.3 MeV, μ={0.3*light_yield} p.e.)')
+         label=f'Low light (E=0.3 MeV, μ={0.3*light_yield} ph)')
 ax4.plot(charge_axis_high, response_high, 'r-', linewidth=2, 
-         label=f'High light (E=8.0 MeV, μ={8.0*light_yield} p.e.)')
+         label=f'High light (E=8.0 MeV, μ={8.0*light_yield} ph)')
 
-ax4.set_xlabel('Charge (arb. units)')
+ax4.set_xlabel('Photon Count')
 ax4.set_ylabel('Probability Density')
 ax4.set_title('Low vs High Light Level Response')
 ax4.legend()
@@ -279,17 +281,18 @@ plt.plot(n_range, linear, 'r--', linewidth=2,
 plt.plot(n_range, np.sqrt(n_range), 'g:', alpha=0.7, 
          label='√N scaling (normalized)')
 
-plt.xlabel('Number of Photoelectrons (N)')
+plt.xlabel('Number of photons (N)')
 plt.ylabel('Peak Width σ')
 plt.title('Demonstration of √N Scaling in Peak Widths')
 plt.legend()
 plt.grid(True, alpha=0.3)
+plt.savefig("SiPM_Response_Function.pdf", dpi=300)
 plt.show()
 
 # Print some key information
 print("SiPM Response Function Parameters:")
-print(f"Light yield: {light_yield} photoelectrons/MeV")
-print(f"Charge per photoelectron (Q_pe): {Q_pe}")
+print(f"Light yield: {light_yield} photons/MeV")
+print(f"Charge per photon (Q_pe): {Q_pe}")
 print(f"SPE peak width (σ_SPE): {sigma_SPE}")
 print("\nPeak width scaling:")
 for n in [1, 2, 3, 4, 5, 10]:

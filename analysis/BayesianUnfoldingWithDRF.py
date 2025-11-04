@@ -24,7 +24,8 @@ import matplotlib.gridspec as gridspec
 from matplotlib.colors import LogNorm
 import ROOT
 import matplotlib
-matplotlib.use("TkAgg")  # or "QtAgg"
+matplotlib.use('TkAgg')  # or 'Agg' for non-interactive
+
 
 # %%
 class BayesianUnfoldingWithDRF:
@@ -645,6 +646,7 @@ if __name__ == "__main__":
                     component[0] += np.sum(underflow_component)
                 components.append((n, n, sigma_n, component))
                 response += component
+                
         return response
 
 
@@ -756,13 +758,15 @@ if __name__ == "__main__":
     hist3.Write()
     file.Close()
 
+    R[R < 1e-10] = 1e-10
+
     # Plot 1: Response matrix
     im = axes[0, 0].imshow(R, aspect='auto', origin='lower', 
                           extent=[true_energies[0], true_energies[-1], 
                                   measured_energies[0], measured_energies[-1]],
                                   norm=LogNorm(vmin=1e-4, vmax=1))
-    axes[0, 0].set_xlabel('True Photoelectrons (p.e.)')
-    axes[0, 0].set_ylabel('Measured Photoelectrons (p.e.)')
+    axes[0, 0].set_xlabel('True Photon Count')
+    axes[0, 0].set_ylabel('Measured Photon Count')
     axes[0, 0].set_title('Detector Response Matrix from DRF')
     plt.colorbar(im, ax=axes[0, 0], label='Probability')
     
@@ -772,7 +776,7 @@ if __name__ == "__main__":
     axes[0, 1].step(true_energies, measured_spectrum, 'b-', linewidth=2, label='Measured Spectrum')
     axes[0, 1].step(true_energies, unfolded_spectrum, 'r--', linewidth=2, label=f'Unfolded Spectrum {len(unfolder.chi2)}')
     axes[0, 1].step(true_energies, unfolder.history[min_index], 'g-', linewidth=2, label=f'Unfolded Spectrum {min_index+1}')
-    axes[0, 1].set_xlabel('Photoelectrons (p.e.)')
+    axes[0, 1].set_xlabel('Photon Count')
     axes[0, 1].set_ylabel('Counts')
     #axes[0, 1].set_yscale('log')
     axes[0, 1].set_title('True vs Unfolded Spectrum')
@@ -783,7 +787,7 @@ if __name__ == "__main__":
     axes[1, 0].step(measured_energies, measured_spectrum, 'ko', markersize=3, label='Measured')
     axes[1, 0].step(measured_energies, predicted_measured, 'r-', linewidth=2, label=f'Predicted from Unfolded {len(unfolder.chi2)}')
     axes[1, 0].step(measured_energies, np.dot(unfolder.R, unfolder.history[min_index]), 'g-', linewidth=2, label=f'Unfolded Spectrum {min_index+1}')
-    axes[1, 0].set_xlabel('Measured Photoelectrons (p.e.)')
+    axes[1, 0].set_xlabel('Photon Count')
     axes[1, 0].set_ylabel('Counts')
     # axes[1, 0].set_yscale('log')
     axes[1, 0].set_title('Measured Spectrum vs Prediction')
@@ -800,6 +804,89 @@ if __name__ == "__main__":
     axes[1, 1].grid(True, alpha=0.3)
     
     plt.tight_layout()
+    # plt.clf()
     plt.show()
     
+    # Plot the response matrix
+    im = plt.imshow(R, aspect='auto', origin='lower',
+                    extent=[true_energies[0], true_energies[-1],
+                            measured_energies[0], measured_energies[-1]],
+                    norm=LogNorm(vmin=1e-4, vmax=1))
+
+    plt.xlabel('True Photon Count')
+    plt.ylabel('Measured Photon Count')
+    plt.title('Detector Response Matrix from DRF')
+
+    cbar = plt.colorbar(im, label='Probability')
+    plt.savefig("response_matrix_drf.svg", dpi=300)
+    plt.show()
+    # plt.clf()
+    R_inv = np.linalg.inv(R)
+    R_inv[R_inv < 1e-10] = 1e-10
+        # Plot the response matrix
+    im = plt.imshow(R_inv, aspect='auto', origin='lower',
+                    extent=[true_energies[0], true_energies[-1],
+                            measured_energies[0], measured_energies[-1]],
+                    norm=LogNorm(vmin=1e-4, vmax=1))
+
+    plt.xlabel('Measured Photon Count')
+    plt.ylabel('True Photon Count')
+    plt.title('Inverse Detector Response Matrix')
+
+    cbar = plt.colorbar(im, label='Probability')
+    plt.savefig("response_matrix_inv.svg", dpi=6000)
+    plt.show()
+    # plt.clf()
+    plt.step(true_energies, measured_spectrum, 'b-', linewidth=2, label='Measured Spectrum')
+    plt.step(true_energies, np.dot(measured_spectrum, R_inv), 'r--', linewidth=2, label=f'Matrix Unfolded Spectrum {len(unfolder.chi2)}')
+    # plt.step(true_energies, unfolder.history[min_index], 'g-', linewidth=2, label=f'Unfolded Spectrum')
+    
+    plt.xlabel('Count')
+    plt.ylabel('Photon Count')
+    plt.title('Unfolded Spectrum using Inverse Matrix')
+
+    plt.savefig("unfolded_spectrum_inv.svg", dpi=300)
+    plt.show()
+    
+    plt.step(true_energies, measured_spectrum, 'b-', linewidth=2, label='Measured Spectrum')
+    
+    plt.xlabel('Count')
+    plt.ylabel('Photon Count')
+    plt.title('Measured Spectrum')
+
+    plt.savefig("measured_spectrum.svg", dpi=300)
+    plt.show()
+    
+    plt.step(true_energies, measured_spectrum, 'b-', linewidth=2, label='Measured Spectrum')
+    # plt.step(true_energies, unfolded_spectrum, 'r--', linewidth=2, label=f'Unfolded Spectrum {len(unfolder.chi2)}')
+    plt.step(true_energies, unfolder.history[min_index], 'r--', linewidth=2, label=f'Unfolded Spectrum')
+    plt.xlabel('Photon Count')
+    plt.ylabel('Counts')
+    plt.title('True vs Unfolded Spectrum')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    plt.savefig("true_vs_unfolded_spectrum.svg", dpi=300)
+    plt.show()
+    
+    plt.step(measured_energies, measured_spectrum, 'ko', markersize=3, label='Measured')
+    # plt.step(measured_energies, predicted_measured, 'r-', linewidth=2, label=f'Predicted from Unfolded {len(unfolder.chi2)}')
+    plt.step(measured_energies, np.dot(unfolder.R, unfolder.history[min_index]), 'r-', linewidth=2, label=f'Unfolded Spectrum')
+    plt.xlabel('Photon Count')
+    plt.ylabel('Counts')
+    plt.title('Measured Spectrum vs Prediction')
+    plt.legend()
+    plt.grid(True, alpha=0.3)
+    plt.savefig("measured_vs_predicted_spectrum.svg", dpi=300)
+    plt.show()
+    
+    plt.plot(iterations, unfolder.chi2, 'bo-')
+    # plt.plot(iterations, unfolder.closure_errors, 'go-')
+    plt.xlabel('Iteration')
+    plt.ylabel('Chi-squared/N_DOF')
+    plt.title('Convergence of Unfolding')
+    plt.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    plt.savefig("convergence_of_unfolding.svg", dpi=300)
+    plt.show()
     print("\nUnfolding completed successfully!")
