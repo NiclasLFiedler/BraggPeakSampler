@@ -168,8 +168,8 @@ class BayesianUnfoldingWithDRF:
 
             predicted_measured = np.dot(self.R, f_new)
             mask = (measured_spectrum > 0) & (predicted_measured > 0)
-            mask[:max_index+30] = False
-            print(f"Energy Cutoff: {self.true_centers[max_index+60]}")
+            mask[:max_index+130] = False
+            print(f"Energy Cutoff: {self.true_centers[max_index+130]}")
             n_dof = np.sum(mask) - 1
             chi2 = np.sum((predicted_measured[mask] - measured_spectrum[mask])**2 / measured_spectrum[mask])/n_dof
             closure_error = np.sqrt(np.mean(((measured_spectrum[mask] - predicted_measured[mask]) / measured_spectrum[mask])**2))
@@ -686,7 +686,7 @@ if __name__ == "__main__":
     pe_axis = (pe_axis-mean_ped) / (mean_SPE-mean_ped)
     measured_spectrum = measured_spectrum[pedastal_idx:]
     measured_spectrum = np.array(measured_spectrum)
-    unfolder = BayesianUnfoldingWithDRF(n_true_bins=4001-pedastal_idx, n_measured_bins=4001-pedastal_idx, n_iterations=20)
+    unfolder = BayesianUnfoldingWithDRF(n_true_bins=4001-pedastal_idx, n_measured_bins=4001-pedastal_idx, n_iterations=40)
     # 3. Build response matrix using your DRF
     print("Building response matrix from DRF function...")
 
