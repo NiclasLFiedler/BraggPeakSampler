@@ -10,30 +10,31 @@ def pmt_response(true_pe, pe_axis, n_max=1000):
     Calculate PMT response function for a given energy deposition
     Parameters:
     - true_adc: True adc value
-    - mean_SPE: mean of single photon peak
-    - sigma_SPE: Standard deviation of single photon peak
+    - mean_SPE: mean of single photoelectron peak
+    - sigma_SPE: Standard deviation of single photoelectron peak
     - mean_ped: mean of pedastal
     - sigma_ped: Standard deviation of pedastal
     - pe_range: Tuple (min, max, n_points) for pe axis
-    - n_max: Maximum number of photons to consider
+    - n_max: Maximum number of photoelectrons to consider
     Returns:
     - pe_axis: Array of pe values
     - response: Probability density function
-    - components: Individual photon peaks for plotting
+    - components: Individual photoelectron peaks for plotting
     """
     mean_SPE = 110.342
     sigma_SPE= 10.0004
     mean_ped= 85.5295
     sigma_ped= 0.48595
     PDE = 0.2316
-    sigma_SPE = (sigma_SPE) / (mean_SPE-mean_ped)*0.8#/0.2316
+    sigma_SPE = (sigma_SPE) / (mean_SPE-mean_ped)#/0.2316
     sigma_ped = (sigma_ped) / (mean_SPE-mean_ped)#/0.2316
     response = np.zeros_like(pe_axis)
-    underflow_axis = np.arange(-10, 0, 0.17025946972945388)
-
+    bin_width = unfolder.true_centers[1]-unfolder.true_centers[0]
+    underflow_axis = np.arange(-(bin_width)*400+unfolder.true_centers[0], -unfolder.true_centers[0], unfolder.true_centers[1]-unfolder.true_centers[0])
+    overflow_axis = np.arange(unfolder.true_centers[-1]+unfolder.true_centers[0], (bin_width)*400+unfolder.true_centers[-1], unfolder.true_centers[1]-unfolder.true_centers[0])
     underflow_response = np.zeros_like(underflow_axis)
+    overflow_response = np.zeros_like(underflow_axis)
     components = []
-
     for n in range(0, n_max + 1):    
         poisson_prob = poisson.pmf(n, true_pe*PDE)
         if poisson_prob > 1e-10:  
@@ -43,17 +44,22 @@ def pmt_response(true_pe, pe_axis, n_max=1000):
             gaussian = (1 / (np.sqrt(2 * np.pi) * sigma_n)) * \
                       np.exp(-0.5 * ((pe_axis*PDE - n) / sigma_n) ** 2)
             component = poisson_prob * gaussian
-            
-            if(true_pe<20):
+            if(component[0]>1e-3):
                 underflow_gaussian = (1 / (np.sqrt(2 * np.pi) * sigma_n)) * \
                           np.exp(-0.5 * ((underflow_axis*PDE - n) / sigma_n) ** 2)
                 underflow_component = poisson_prob * underflow_gaussian
-
                 underflow_response += underflow_component
                 component[0] += np.sum(underflow_component)
-            response += component
+            
+            if(component[-1]>1e-3):
+                overflow_gaussian = (1 / (np.sqrt(2 * np.pi) * sigma_n)) * \
+                          np.exp(-0.5 * ((overflow_axis*PDE - n) / sigma_n) ** 2)
+                overflow_component = poisson_prob * overflow_gaussian
+                overflow_response += overflow_component
+                component[-1] += np.sum(overflow_component)
             components.append((n, n, sigma_n, component))
-    # print()
+            response += component
+            
     # print(response)
     return pe_axis, response, components
     #return response

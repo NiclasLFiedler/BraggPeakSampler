@@ -25,6 +25,8 @@ from matplotlib.colors import LogNorm
 import ROOT
 import matplotlib
 matplotlib.use('TkAgg')  # or 'Agg' for non-interactive
+import imageio.v2 as imageio
+import os
 
 
 # %%
@@ -158,7 +160,7 @@ class BayesianUnfoldingWithDRF:
             
             correction_factor = np.dot(self.R.T, g / g_expected)
             f_new = f * correction_factor / efficiency
-            
+            f_unsmoothed = f_new.copy()
             f_new = self._smooth_spectrum(f_new, strength=0.1)
             # f_new = self._tikhonov_regularize(f_new, f, 0.01)
             f_new = np.maximum(f_new, 0)
@@ -173,12 +175,19 @@ class BayesianUnfoldingWithDRF:
             n_dof = np.sum(mask) - 1
             chi2 = np.sum((predicted_measured[mask] - measured_spectrum[mask])**2 / measured_spectrum[mask])/n_dof
             closure_error = np.sqrt(np.mean(((measured_spectrum[mask] - predicted_measured[mask]) / measured_spectrum[mask])**2))
+            self.chi2.append(chi2)
+            self.closure_errors.append(closure_error)
+            
+            if(self.chi2[-2]-self.chi2[-1]<0.05 and iteration>3):
+                print(f"Converged after {iteration+1} iterations")
+                f = f_unsmoothed
+                self.history.append(f.copy())
+                
+                break
 
             f = f_new
             self.history.append(f.copy())
-            self.chi2.append(chi2)
-            self.closure_errors.append(closure_error)
-
+            print(self.chi2[-1])
             print(f"Iteration {iteration+1}: Total counts = {np.sum(f):.1f}")
         
         self.unfolded = f
@@ -622,9 +631,12 @@ if __name__ == "__main__":
         sigma_SPE = (sigma_SPE) / (mean_SPE-mean_ped)#/0.2316
         sigma_ped = (sigma_ped) / (mean_SPE-mean_ped)#/0.2316
         response = np.zeros_like(pe_axis)
-        underflow_axis = np.arange(-10, 0, 0.17025946972945388)
+        bin_width = unfolder.true_centers[1]-unfolder.true_centers[0]
+        underflow_axis = np.arange(-(bin_width)*400+unfolder.true_centers[0], -unfolder.true_centers[0], unfolder.true_centers[1]-unfolder.true_centers[0])
+        overflow_axis = np.arange(unfolder.true_centers[-1]+unfolder.true_centers[0], (bin_width)*400+unfolder.true_centers[-1], unfolder.true_centers[1]-unfolder.true_centers[0])
 
         underflow_response = np.zeros_like(underflow_axis)
+        overflow_response = np.zeros_like(overflow_axis)
         components = []
 
         for n in range(0, n_max + 1):    
@@ -637,13 +649,21 @@ if __name__ == "__main__":
                           np.exp(-0.5 * ((pe_axis*PDE - n) / sigma_n) ** 2)
                 component = poisson_prob * gaussian
 
-                if(true_pe<20):
+                if(component[0]>1e-5):
                     underflow_gaussian = (1 / (np.sqrt(2 * np.pi) * sigma_n)) * \
                               np.exp(-0.5 * ((underflow_axis*PDE - n) / sigma_n) ** 2)
                     underflow_component = poisson_prob * underflow_gaussian
 
                     underflow_response += underflow_component
                     component[0] += np.sum(underflow_component)
+                
+                if(component[-1]>1e-5):
+                    overflow_gaussian = (1 / (np.sqrt(2 * np.pi) * sigma_n)) * \
+                              np.exp(-0.5 * ((overflow_axis*PDE - n) / sigma_n) ** 2)
+                    overflow_component = poisson_prob * overflow_gaussian
+
+                    overflow_response += overflow_component
+                    component[-1] += np.sum(overflow_component)
                 components.append((n, n, sigma_n, component))
                 response += component
                 
@@ -807,86 +827,124 @@ if __name__ == "__main__":
     # plt.clf()
     plt.show()
     
-    # Plot the response matrix
-    im = plt.imshow(R, aspect='auto', origin='lower',
-                    extent=[true_energies[0], true_energies[-1],
-                            measured_energies[0], measured_energies[-1]],
-                    norm=LogNorm(vmin=1e-4, vmax=1))
+    # # Plot the response matrix
+    # im = plt.imshow(R, aspect='auto', origin='lower',
+    #                 extent=[true_energies[0], true_energies[-1],
+    #                         measured_energies[0], measured_energies[-1]],
+    #                 norm=LogNorm(vmin=1e-4, vmax=1))
 
-    plt.xlabel('True Photon Count')
-    plt.ylabel('Measured Photon Count')
-    plt.title('Detector Response Matrix from DRF')
+    # plt.xlabel('True Photon Count')
+    # plt.ylabel('Measured Photon Count')
+    # plt.title('Detector Response Matrix from DRF')
 
-    cbar = plt.colorbar(im, label='Probability')
-    plt.savefig("response_matrix_drf.svg", dpi=300)
-    plt.show()
-    # plt.clf()
-    R_inv = np.linalg.inv(R)
-    R_inv[R_inv < 1e-10] = 1e-10
-        # Plot the response matrix
-    im = plt.imshow(R_inv, aspect='auto', origin='lower',
-                    extent=[true_energies[0], true_energies[-1],
-                            measured_energies[0], measured_energies[-1]],
-                    norm=LogNorm(vmin=1e-4, vmax=1))
+    # cbar = plt.colorbar(im, label='Probability')
+    # plt.savefig("response_matrix_drf.svg", dpi=300)
+    # plt.show()
+    # # plt.clf()
+    # R_inv = np.linalg.inv(R)
+    # R_inv[R_inv < 1e-10] = 1e-10
+    #     # Plot the response matrix
+    # im = plt.imshow(R_inv, aspect='auto', origin='lower',
+    #                 extent=[true_energies[0], true_energies[-1],
+    #                         measured_energies[0], measured_energies[-1]],
+    #                 norm=LogNorm(vmin=1e-4, vmax=1))
 
-    plt.xlabel('Measured Photon Count')
-    plt.ylabel('True Photon Count')
-    plt.title('Inverse Detector Response Matrix')
+    # plt.xlabel('Measured Photon Count')
+    # plt.ylabel('True Photon Count')
+    # plt.title('Inverse Detector Response Matrix')
 
-    cbar = plt.colorbar(im, label='Probability')
-    plt.savefig("response_matrix_inv.svg", dpi=6000)
-    plt.show()
-    # plt.clf()
-    plt.step(true_energies, measured_spectrum, 'b-', linewidth=2, label='Measured Spectrum')
-    plt.step(true_energies, np.dot(measured_spectrum, R_inv), 'r--', linewidth=2, label=f'Matrix Unfolded Spectrum {len(unfolder.chi2)}')
-    # plt.step(true_energies, unfolder.history[min_index], 'g-', linewidth=2, label=f'Unfolded Spectrum')
+    # cbar = plt.colorbar(im, label='Probability')
+    # plt.savefig("response_matrix_inv.svg", dpi=6000)
+    # plt.show()
+    # # plt.clf()
+    # plt.step(true_energies, measured_spectrum, 'b-', linewidth=2, label='Measured Spectrum')
+    # plt.step(true_energies, np.dot(measured_spectrum, R_inv), 'r--', linewidth=2, label=f'Matrix Unfolded Spectrum {len(unfolder.chi2)}')
+    # # plt.step(true_energies, unfolder.history[min_index], 'g-', linewidth=2, label=f'Unfolded Spectrum')
     
-    plt.xlabel('Count')
-    plt.ylabel('Photon Count')
-    plt.title('Unfolded Spectrum using Inverse Matrix')
+    # plt.xlabel('Count')
+    # plt.ylabel('Photon Count')
+    # plt.title('Unfolded Spectrum using Inverse Matrix')
 
-    plt.savefig("unfolded_spectrum_inv.svg", dpi=300)
-    plt.show()
+    # plt.savefig("unfolded_spectrum_inv.svg", dpi=300)
+    # plt.show()
     
-    plt.step(true_energies, measured_spectrum, 'b-', linewidth=2, label='Measured Spectrum')
+    # plt.step(true_energies, measured_spectrum, 'b-', linewidth=2, label='Measured Spectrum')
     
-    plt.xlabel('Count')
-    plt.ylabel('Photon Count')
-    plt.title('Measured Spectrum')
+    # plt.xlabel('Count')
+    # plt.ylabel('Photon Count')
+    # plt.title('Measured Spectrum')
 
-    plt.savefig("measured_spectrum.svg", dpi=300)
-    plt.show()
+    # plt.savefig("measured_spectrum.svg", dpi=300)
+    # plt.show()
     
-    plt.step(true_energies, measured_spectrum, 'b-', linewidth=2, label='Measured Spectrum')
-    # plt.step(true_energies, unfolded_spectrum, 'r--', linewidth=2, label=f'Unfolded Spectrum {len(unfolder.chi2)}')
-    plt.step(true_energies, unfolder.history[min_index], 'r--', linewidth=2, label=f'Unfolded Spectrum')
-    plt.xlabel('Photon Count')
-    plt.ylabel('Counts')
-    plt.title('True vs Unfolded Spectrum')
-    plt.legend()
-    plt.grid(True, alpha=0.3)
-    plt.savefig("true_vs_unfolded_spectrum.svg", dpi=300)
-    plt.show()
+    # plt.step(true_energies, measured_spectrum, 'b-', linewidth=2, label='Measured Spectrum')
+    # # plt.step(true_energies, unfolded_spectrum, 'r--', linewidth=2, label=f'Unfolded Spectrum {len(unfolder.chi2)}')
+    # plt.step(true_energies, unfolder.history[min_index], 'r--', linewidth=2, label=f'Unfolded Spectrum')
+    # plt.xlabel('Photon Count')
+    # plt.ylabel('Counts')
+    # plt.title('True vs Unfolded Spectrum')
+    # plt.legend()
+    # plt.grid(True, alpha=0.3)
+    # plt.savefig("true_vs_unfolded_spectrum.svg", dpi=300)
+    # plt.show()
     
-    plt.step(measured_energies, measured_spectrum, 'ko', markersize=3, label='Measured')
-    # plt.step(measured_energies, predicted_measured, 'r-', linewidth=2, label=f'Predicted from Unfolded {len(unfolder.chi2)}')
-    plt.step(measured_energies, np.dot(unfolder.R, unfolder.history[min_index]), 'r-', linewidth=2, label=f'Unfolded Spectrum')
-    plt.xlabel('Photon Count')
-    plt.ylabel('Counts')
-    plt.title('Measured Spectrum vs Prediction')
-    plt.legend()
-    plt.grid(True, alpha=0.3)
-    plt.savefig("measured_vs_predicted_spectrum.svg", dpi=300)
-    plt.show()
+    # plt.step(measured_energies, measured_spectrum, 'ko', markersize=3, label='Measured')
+    # # plt.step(measured_energies, predicted_measured, 'r-', linewidth=2, label=f'Predicted from Unfolded {len(unfolder.chi2)}')
+    # plt.step(measured_energies, np.dot(unfolder.R, unfolder.history[min_index]), 'r-', linewidth=2, label=f'Unfolded Spectrum')
+    # plt.xlabel('Photon Count')
+    # plt.ylabel('Counts')
+    # plt.title('Measured Spectrum vs Prediction')
+    # plt.legend()
+    # plt.grid(True, alpha=0.3)
+    # plt.savefig("measured_vs_predicted_spectrum.svg", dpi=300)
+    # plt.show()
     
-    plt.plot(iterations, unfolder.chi2, 'bo-')
-    # plt.plot(iterations, unfolder.closure_errors, 'go-')
-    plt.xlabel('Iteration')
-    plt.ylabel('Chi-squared/N_DOF')
-    plt.title('Convergence of Unfolding')
-    plt.grid(True, alpha=0.3)
+    # plt.plot(iterations, unfolder.chi2, 'bo-')
+    # # plt.plot(iterations, unfolder.closure_errors, 'go-')
+    # plt.xlabel('Iteration')
+    # plt.ylabel('Chi-squared/N_DOF')
+    # plt.title('Convergence of Unfolding')
+    # plt.grid(True, alpha=0.3)
     
-    plt.tight_layout()
-    plt.savefig("convergence_of_unfolding.svg", dpi=300)
-    plt.show()
+    # plt.tight_layout()
+    # plt.savefig("convergence_of_unfolding.svg", dpi=300)
+    # plt.show()
     print("\nUnfolding completed successfully!")
+    fig, ax = plt.subplots(figsize=(8, 5))
+
+    indices = [30, len(true_energies)//2, len(true_energies)-30]  # first, middle, last
+    labels = ['Low edge', 'Mid range', 'High edge']
+
+    for idx, label in zip(indices, labels):
+        ax.plot(measured_energies, R[:, idx], label=f"{label} ({true_energies[idx]:.2f} ph)")
+
+    ax.set_xlabel("Photon Count")
+    ax.set_ylabel("Probability Density")
+    ax.set_title("Response Matrix Edge Cases")
+    ax.legend()
+    ax.grid(True)
+    plt.tight_layout()
+    plt.show()
+
+    os.makedirs("frames", exist_ok=True)
+    filenames = []
+    for i, E in enumerate(true_energies):
+        fig, ax = plt.subplots(figsize=(6, 4))
+        ax.plot(R[:,i], color='C0')
+        ax.set_title(f"Response for Energy = {E:.1f} MeV")
+        ax.set_xlabel("Detector Channel")
+        ax.set_ylabel("Signal (a.u.)")
+        ax.set_ylim(0, R[:,i].max()*1.1)
+
+        fname = f"gif/frame_{i:03d}.png"
+        plt.savefig(fname)
+        plt.close(fig)
+        filenames.append(fname)
+
+    # Create GIF
+    with imageio.get_writer('gif/response_matrix.gif', mode='I', duration=0.1) as writer:
+        for filename in filenames:
+            image = imageio.imread(filename)
+            writer.append_data(image)
+    for filename in filenames:
+        os.remove(filename)
