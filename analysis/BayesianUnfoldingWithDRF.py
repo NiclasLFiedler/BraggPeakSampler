@@ -20,13 +20,17 @@ from scipy.optimize import curve_fit
 # %%
 from scipy.stats import poisson
 from scipy.signal import convolve
+from scipy.signal import find_peaks
+from scipy.optimize import curve_fit
 import matplotlib.gridspec as gridspec
 from matplotlib.colors import LogNorm
 import ROOT
+import uproot
 import matplotlib
 matplotlib.use('TkAgg')  # or 'Agg' for non-interactive
-import imageio.v2 as imageio
+# import imageio.v2 as imageio
 import os
+
 
 
 # %%
@@ -123,6 +127,19 @@ class BayesianUnfoldingWithDRF:
         self.R = response_matrix
         return response_matrix, self.true_centers, self.measured_centers
     
+    def load_response_matrix(self, true_energy_range, measured_energy_range, filename):
+        self.true_edges = np.linspace(true_energy_range[0], true_energy_range[1], self.n_true_bins + 1)
+        self.measured_edges = np.linspace(measured_energy_range[0], measured_energy_range[1], self.n_measured_bins + 1)
+        
+        self.true_centers = (self.true_edges[1:] + self.true_edges[:-1]) / 2
+        self.measured_centers = (self.measured_edges[1:] + self.measured_edges[:-1]) / 2
+        file = uproot.open(filename)
+        hist = file["h_responseMatrix"]
+        response_matrix, _, _ = hist.to_numpy()
+        
+        self.R = response_matrix
+        return response_matrix, self.true_centers, self.measured_centers
+        
     def unfold(self, measured_spectrum, prior=None, efficiency=None):
         """
         Unfold measured spectrum using Bayesian method
@@ -178,7 +195,7 @@ class BayesianUnfoldingWithDRF:
             self.chi2.append(chi2)
             self.closure_errors.append(closure_error)
             
-            if(self.chi2[-2]-self.chi2[-1]<0.05 and iteration>3):
+            if(self.chi2[-2]-self.chi2[-1]<0.02 and iteration>3):
                 print(f"Converged after {iteration+1} iterations")
                 f = f_unsmoothed
                 self.history.append(f.copy())
@@ -607,6 +624,10 @@ if __name__ == "__main__":
     print("Bayesian Unfolding with Functional DRF")
     print("=" * 50)
 
+    
+    def gaussian(x, amplitude, mean, sigma):
+        return amplitude * np.exp(-0.5 * ((x - mean) / sigma)**2)
+
     def pmt_response(true_pe, pe_axis, n_max=1000):
         """
         Calculate PMT response function for a given energy deposition
@@ -706,16 +727,32 @@ if __name__ == "__main__":
     pe_axis = (pe_axis-mean_ped) / (mean_SPE-mean_ped)
     measured_spectrum = measured_spectrum[pedastal_idx:]
     measured_spectrum = np.array(measured_spectrum)
+
+
     unfolder = BayesianUnfoldingWithDRF(n_true_bins=4001-pedastal_idx, n_measured_bins=4001-pedastal_idx, n_iterations=40)
     # 3. Build response matrix using your DRF
-    print("Building response matrix from DRF function...")
+
 
     maxE = (4001-pedastal_idx-mean_ped)/(mean_SPE-mean_ped)/PDE
-    R, true_energies, measured_energies = unfolder.build_response_matrix(
-        true_energy_range=(0, maxE),      # Adjust to your energy range
-        measured_energy_range=(0, maxE),
-        custom_drf=pmt_response            # Use your DRF function
-    )
+    
+    useExistingResponseMatrix = True
+    if(not useExistingResponseMatrix):
+        print("Building response matrix from DRF function...")
+        R, true_energies, measured_energies = unfolder.build_response_matrix(
+            true_energy_range=(0, maxE),      # Adjust to your energy range
+            measured_energy_range=(0, maxE),
+            custom_drf=pmt_response            # Use your DRF function
+        )
+    else:
+        print("Loading response matrix from DRF function...")
+        R, true_energies, measured_energies = unfolder.load_response_matrix(
+            true_energy_range=(0, maxE), 
+            measured_energy_range=(0, maxE),
+            filename="responseMatrix.root")
+        
+    noisePeak = gaussian(true_energies, amplitude=3775.71, mean=17.9493, sigma=0.990767)
+    measured_spectrum = np.maximum(0, measured_spectrum - noisePeak)
+    
     responseShape  = R.shape
     hist1d = ROOT.TH1D("h_measurement", "Measurement", responseShape[0], 0, maxE)
     hist2d = ROOT.TH2D("h_responseMatrix", "Response Matrix", responseShape[0], 0, maxE, responseShape[1], 0, maxE)
@@ -780,6 +817,26 @@ if __name__ == "__main__":
 
     R[R < 1e-10] = 1e-10
 
+    peaks, _ = find_peaks(unfolded_spectrum, height=100, distance=50, width=30)
+    selected_peaks = peaks[1:3]  # second and third
+    fits = []
+    x_fits = []
+    x_fit = []
+    popt = []
+    for p in selected_peaks:
+        width = 30
+        mask = (true_energies > true_energies[p] - width) & (true_energies < true_energies[p] + width)
+        x_fit = true_energies[mask]
+        y_fit = unfolded_spectrum[mask]
+
+        amp0 = unfolded_spectrum[p]
+        mean0 = true_energies[p]
+        sigma0 = 2.0
+
+        popt, pcov = curve_fit(gaussian, x_fit, y_fit, p0=[amp0, mean0, sigma0])
+        fits.append(popt)
+        x_fits.append(x_fit)
+
     # Plot 1: Response matrix
     im = axes[0, 0].imshow(R, aspect='auto', origin='lower', 
                           extent=[true_energies[0], true_energies[-1], 
@@ -794,8 +851,11 @@ if __name__ == "__main__":
     
     # Plot 2: True vs Unfolded spectrum
     axes[0, 1].step(true_energies, measured_spectrum, 'b-', linewidth=2, label='Measured Spectrum')
-    axes[0, 1].step(true_energies, unfolded_spectrum, 'r--', linewidth=2, label=f'Unfolded Spectrum {len(unfolder.chi2)}')
-    axes[0, 1].step(true_energies, unfolder.history[min_index], 'g-', linewidth=2, label=f'Unfolded Spectrum {min_index+1}')
+    axes[0, 1].step(true_energies, unfolded_spectrum, 'g-', linewidth=2, label=f'Unfolded Spectrum {len(unfolder.chi2)}')
+    axes[0, 1].plot(true_energies[peaks], unfolded_spectrum[peaks], 'rx', linewidth=2, label=f'Peaks of Unfolded Spectrum')
+    for i, popt in enumerate(fits):
+        x_fit = x_fits[i]
+        axes[0, 1].plot(x_fit, gaussian(x_fit, *popt), 'r--' ,label=f"Peak at {popt[1]:.2f}")
     axes[0, 1].set_xlabel('Photon Count')
     axes[0, 1].set_ylabel('Counts')
     #axes[0, 1].set_yscale('log')
@@ -804,7 +864,7 @@ if __name__ == "__main__":
     axes[0, 1].grid(True, alpha=0.3)
     
     # Plot 3: Measured spectrum and prediction from unfolded
-    axes[1, 0].step(measured_energies, measured_spectrum, 'ko', markersize=3, label='Measured')
+    axes[1, 0].step(measured_energies, measured_spectrum, 'b-', linewidth=2, label='Measured Spectrum')
     axes[1, 0].step(measured_energies, predicted_measured, 'r-', linewidth=2, label=f'Predicted from Unfolded {len(unfolder.chi2)}')
     axes[1, 0].step(measured_energies, np.dot(unfolder.R, unfolder.history[min_index]), 'g-', linewidth=2, label=f'Unfolded Spectrum {min_index+1}')
     axes[1, 0].set_xlabel('Photon Count')
@@ -926,25 +986,25 @@ if __name__ == "__main__":
     plt.tight_layout()
     plt.show()
 
-    os.makedirs("frames", exist_ok=True)
-    filenames = []
-    for i, E in enumerate(true_energies):
-        fig, ax = plt.subplots(figsize=(6, 4))
-        ax.plot(R[:,i], color='C0')
-        ax.set_title(f"Response for Energy = {E:.1f} MeV")
-        ax.set_xlabel("Detector Channel")
-        ax.set_ylabel("Signal (a.u.)")
-        ax.set_ylim(0, R[:,i].max()*1.1)
+    # os.makedirs("frames", exist_ok=True)
+    # filenames = []
+    # for i, E in enumerate(true_energies):
+    #     fig, ax = plt.subplots(figsize=(6, 4))
+    #     ax.plot(R[:,i], color='C0')
+    #     ax.set_title(f"Response for Energy = {E:.1f} MeV")
+    #     ax.set_xlabel("Detector Channel")
+    #     ax.set_ylabel("Signal (a.u.)")
+    #     ax.set_ylim(0, R[:,i].max()*1.1)
 
-        fname = f"gif/frame_{i:03d}.png"
-        plt.savefig(fname)
-        plt.close(fig)
-        filenames.append(fname)
+    #     fname = f"gif/frame_{i:03d}.png"
+    #     plt.savefig(fname)
+    #     plt.close(fig)
+    #     filenames.append(fname)
 
-    # Create GIF
-    with imageio.get_writer('gif/response_matrix.gif', mode='I', duration=0.1) as writer:
-        for filename in filenames:
-            image = imageio.imread(filename)
-            writer.append_data(image)
-    for filename in filenames:
-        os.remove(filename)
+    # # Create GIF
+    # with imageio.get_writer('gif/response_matrix.gif', mode='I', duration=0.1) as writer:
+    #     for filename in filenames:
+    #         image = imageio.imread(filename)
+    #         writer.append_data(image)
+    # for filename in filenames:
+    #     os.remove(filename)
