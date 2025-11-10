@@ -28,7 +28,6 @@ import ROOT
 import uproot
 import matplotlib
 matplotlib.use('TkAgg')  # or 'Agg' for non-interactive
-# import imageio.v2 as imageio
 import os
 
 
@@ -188,14 +187,13 @@ class BayesianUnfoldingWithDRF:
             predicted_measured = np.dot(self.R, f_new)
             mask = (measured_spectrum > 0) & (predicted_measured > 0)
             mask[:max_index+130] = False
-            print(f"Energy Cutoff: {self.true_centers[max_index+130]}")
             n_dof = np.sum(mask) - 1
             chi2 = np.sum((predicted_measured[mask] - measured_spectrum[mask])**2 / measured_spectrum[mask])/n_dof
             closure_error = np.sqrt(np.mean(((measured_spectrum[mask] - predicted_measured[mask]) / measured_spectrum[mask])**2))
             self.chi2.append(chi2)
             self.closure_errors.append(closure_error)
             
-            if(self.chi2[-2]-self.chi2[-1]<0.02 and iteration>3):
+            if(self.chi2[-2]-self.chi2[-1]<0.05 and iteration>3):
                 print(f"Converged after {iteration+1} iterations")
                 f = f_unsmoothed
                 self.history.append(f.copy())
@@ -204,9 +202,7 @@ class BayesianUnfoldingWithDRF:
 
             f = f_new
             self.history.append(f.copy())
-            print(self.chi2[-1])
-            print(f"Iteration {iteration+1}: Total counts = {np.sum(f):.1f}")
-        
+                                
         self.unfolded = f
         return f
 
@@ -690,28 +686,149 @@ if __name__ == "__main__":
                 
         return response
 
+    def findPeaks(unfolded_spectrum, true_energies, fheight=50, fdistance=50, fwidth=30):
+        peaks, _ = find_peaks(unfolded_spectrum, height=fheight, distance=fdistance, width=fwidth)
+        selected_peaks = peaks[1:3]
+        params = []
+        x_fits = []
+        x_fit = []
+        popt = []
+        for p in selected_peaks:
+            mask = (true_energies > true_energies[p] - fwidth) & (true_energies < true_energies[p] + fwidth)
+            x_fit = true_energies[mask]
+            y_fit = unfolded_spectrum[mask]
 
-    print("Loading measured spectrum...")
+            amp0 = unfolded_spectrum[p]
+            mean0 = true_energies[p]
+            sigma0 = 2.0
+
+            popt, pcov = curve_fit(gaussian, x_fit, y_fit, p0=[amp0, mean0, sigma0])
+            perr = np.sqrt(np.diag(pcov))
+            params.append([popt, perr])
+            x_fits.append(x_fit)
+        return selected_peaks, params, x_fits
     
+    def saveGif():
+        import imageio.v2 as imageio
+        os.makedirs("frames", exist_ok=True)
+        filenames = []
+        for i, E in enumerate(true_energies):
+            fig, ax = plt.subplots(figsize=(6, 4))
+            ax.plot(R[:,i], color='C0')
+            ax.set_title(f"Response for Energy = {E:.1f} MeV")
+            ax.set_xlabel("Detector Channel")
+            ax.set_ylabel("Signal (a.u.)")
+            ax.set_ylim(0, R[:,i].max()*1.1)
+
+            fname = f"gif/frame_{i:03d}.png"
+            plt.savefig(fname)
+            plt.close(fig)
+            filenames.append(fname)
+
+        # Create GIF
+        with imageio.get_writer('gif/response_matrix.gif', mode='I', duration=0.1) as writer:
+            for filename in filenames:
+                image = imageio.imread(filename)
+                writer.append_data(image)
+        for filename in filenames:
+            os.remove(filename)
+
+    def plotSingleResponse(R, true_energies):
+        _, ax = plt.subplots(figsize=(8, 5))
+
+        indices = [30, len(true_energies)//2, len(true_energies)-30]  # first, middle, last
+        labels = ['Low edge', 'Mid range', 'High edge']
+
+        for idx, label in zip(indices, labels):
+            ax.plot(true_energies, R[:, idx], label=f"{label} ({true_energies[idx]:.2f} ph)")
+
+        ax.set_xlabel("Photon Count")
+        ax.set_ylabel("Probability Density")
+        ax.set_title("Response Matrix Edge Cases")
+        ax.legend()
+        ax.grid(True)
+        plt.tight_layout()
+        plt.show()
     
-    datapath = "../lightyield/data/2504/flat"
-    input_file = f"{datapath}/bps_pwo_3_na22.his.txt"
+    def saveResponseMatrix(R, output_filename="response_matrix.pdf", show=False):
+        im = plt.imshow(R, aspect='auto', origin='lower',
+                    extent=[true_energies[0], true_energies[-1],
+                            measured_energies[0], measured_energies[-1]],
+                    norm=LogNorm(vmin=1e-4, vmax=1))
+
+        plt.xlabel('True Photon Count')
+        plt.ylabel('Measured Photon Count')
+        plt.title('Detector Response Matrix')
+        plt.colorbar(im)
+        plt.savefig(output_filename)
+        if(show):
+            plt.show()
+        plt.close()
     
-    # datapath = "../lightyield/old"
-    # input_file = f"{datapath}/BPS_CH0.his.txt"
+    def saveClosurePlot(unfolder, output_filename="chi2_convergence.pdf", show=False):
+        plt.plot(range(len(unfolder.chi2))[1:], unfolder.chi2[1:], 'bo-')
+        plt.xlabel('Iteration')
+        plt.ylabel('Chi-squared/N_DOF')
+        plt.title('Convergence of Unfolding')
+        plt.grid(True)
+
+        plt.tight_layout()
+        plt.savefig(output_filename, dpi=300)
+        if(show):
+            plt.show()
+        plt.close()
     
+    def saveUnfoldedComparison(true_energies, measured_spectrum, unfolded_spectrum, output_filename="unfoldedSpectrum.pdf", peaks=None, show=False):
+        plt.step(true_energies, measured_spectrum, 'b-', linewidth=2, label='Measured Spectrum')
+        plt.plot(true_energies, unfolded_spectrum, 'g-', linewidth=2, label=f'Unfolded Spectrum')
+        if(peaks):
+            for idx, x_fit in enumerate(peaks[1]):
+                param = peaks[0][idx]
+                plt.plot(x_fit, gaussian(x_fit, *param[0]), 'r--' , label = fr"Peak at {param[0][1]:.2f} ± {param[1][2]:.2f}")
+        plt.xlabel('Photon Count')
+        plt.ylabel('Counts')
+        plt.title('True vs Unfolded Spectrum')
+        plt.legend()
+        plt.grid(True)
+        plt.savefig(output_filename, dpi=300)
+        if(show):
+            plt.show()
+        plt.close()
+    
+    def savePredictedComparison(measured_energies, measured_spectrum, predicted_measured, output_filename="predictedMeasuredSpectrum.pdf", show=False):
+        plt.step(measured_energies, measured_spectrum, 'b-', linewidth=2, label='Measured Spectrum')
+        plt.plot(measured_energies[10:], predicted_measured[10:], color='orange', linewidth=2, label=f'Predicted from Unfolded')
+        plt.xlabel('Photon Count')
+        plt.ylabel('Counts')
+        plt.title('Measured Spectrum vs Prediction')
+        plt.legend()
+        plt.grid(True)
+        plt.savefig(output_filename, dpi=300)
+        if(show):
+            plt.show()
+        plt.close()
+        
+    print("Loading measured spectrum...")   
+
     mean_SPE = 110.342
     sigma_SPE= 10.0004
     mean_ped= 85.5295
     sigma_ped= 0.48595
     PDE = 0.2316
-
-    print(f"Mean SPE: {1}, Sigma SPE: {sigma_SPE/mean_SPE}")
-    print(f"Mean PED: {mean_ped/mean_SPE}, Sigma PED: {sigma_ped/mean_SPE}")
-    # --- Read data from text file ---
+    saveMatrix = False
+    debug = False
+    
+    datapath = "../lightyield/data/2504/flat"
+    input_files = []
+    output_files = []
+    for crystal in range(36):
+        input_files.append(f"{datapath}/bps_pwo_{crystal}_na22.his.txt")
+        output_files.append(f"{datapath}/output/crystal{crystal}")
+        
     measured_spectrum = []
     pe_axis = []
-    with open(input_file, "r") as f:
+
+    with open(input_files[0], "r") as f:
         for line in f:
             if not line.strip() or line.startswith("#"):
                 continue
@@ -725,13 +842,12 @@ if __name__ == "__main__":
     pe_axis = np.array(pe_axis)
     pedastal_idx = np.argmin(np.abs(pe_axis - mean_ped))
     pe_axis = (pe_axis-mean_ped) / (mean_SPE-mean_ped)
+    
     measured_spectrum = measured_spectrum[pedastal_idx:]
     measured_spectrum = np.array(measured_spectrum)
 
 
     unfolder = BayesianUnfoldingWithDRF(n_true_bins=4001-pedastal_idx, n_measured_bins=4001-pedastal_idx, n_iterations=40)
-    # 3. Build response matrix using your DRF
-
 
     maxE = (4001-pedastal_idx-mean_ped)/(mean_SPE-mean_ped)/PDE
     
@@ -751,260 +867,129 @@ if __name__ == "__main__":
             filename="responseMatrix.root")
         
     noisePeak = gaussian(true_energies, amplitude=3775.71, mean=17.9493, sigma=0.990767)
-    measured_spectrum = np.maximum(0, measured_spectrum - noisePeak)
+    # measured_spectrum = np.maximum(0, measured_spectrum - noisePeak)
     
-    responseShape  = R.shape
-    hist1d = ROOT.TH1D("h_measurement", "Measurement", responseShape[0], 0, maxE)
-    hist2d = ROOT.TH2D("h_responseMatrix", "Response Matrix", responseShape[0], 0, maxE, responseShape[1], 0, maxE)
+    if (saveMatrix):
+        responseShape  = R.shape
+        hist1d = ROOT.TH1D("h_measurement", "Measurement", responseShape[0], 0, maxE)
+        hist2d = ROOT.TH2D("h_responseMatrix", "Response Matrix", responseShape[0], 0, maxE, responseShape[1], 0, maxE)
 
-    for i in range(responseShape[0]):
-        for j in range(responseShape[1]):
-            hist2d.SetBinContent(i+1, j+1, R[i, j])  # ROOT bins start at 1
-    for i in range(responseShape[0]):
-        hist1d.SetBinContent(i+1, measured_spectrum[i])  # ROOT bins start at 1
-    
-    root_file = ROOT.TFile("responseMatrix.root", "RECREATE")
-    hist2d.Write()
-    hist1d.Write()
-    root_file.Close()
+        for i in range(responseShape[0]):
+            for j in range(responseShape[1]):
+                hist2d.SetBinContent(i+1, j+1, R[i, j])  # ROOT bins start at 1
+        for i in range(responseShape[0]):
+            hist1d.SetBinContent(i+1, measured_spectrum[i])  # ROOT bins start at 1
+
+        root_file = ROOT.TFile("responseMatrix.root", "RECREATE")
+        hist2d.Write()
+        hist1d.Write()
+        root_file.Close()
 
     print("\nPerforming Bayesian unfolding...")
 
-    initial_prior = np.ones_like(true_energies)  # Flat prior
-    
-    # unfolder.unfold_bayesian(measured_spectrum, measured_spectrum)
+    initial_prior = np.ones_like(true_energies)
     unfolded_spectrum = unfolder.unfold(measured_spectrum, prior=measured_spectrum)
     #unfolded_spectrum = unfolder.unfold_regularized(measured_spectrum, prior=measured_spectrum)
-    
-    # 6. Calculate closure test
-    closure_error, chi2_per_dof, predicted_measured = unfolder.calculate_closure(measured_spectrum)
-    print(f"Closure test error: {closure_error:.4f} ({closure_error*100:.1f}%)")
-    print(f"Chi-squared per DOF: {chi2_per_dof:.2f}")
-    
-    closure_results = unfolder.calculate_closure_fixed(measured_spectrum)
-    predicted_measured = closure_results['predicted']
+    predicted_measured = np.dot(unfolder.R, unfolded_spectrum)
 
-    print(f"\n=== INTERPRETATION GUIDE ===")
-    print(f"RMS Error < 10%: Excellent")
-    print(f"RMS Error 10-20%: Good") 
-    print(f"RMS Error 20-30%: Acceptable")
-    print(f"RMS Error > 30%: Needs improvement")
-    print(f"Correlation > 0.95: Excellent")
-    print(f"Correlation 0.9-0.95: Good")
-    print(f"Correlation < 0.9: Needs improvement")
-
-    unfolder.debug_closure_issue(measured_spectrum, predicted_measured)
-
-    # 7. Plot results
     print("Plotting results...")
-    fig, axes = plt.subplots(2, 2, figsize=(12, 10))
-    
+    if(saveMatrix):
+        file = ROOT.TFile("my_hist.root", "RECREATE")
 
-    file = ROOT.TFile("my_hist.root", "RECREATE")
+        hist = ROOT.TH1D("h_unfold", "Energy / PE", len(true_energies), true_energies[0], true_energies[-1])
+        hist2 = ROOT.TH1D("h_measurement", "Energy / PE", len(true_energies), true_energies[0], true_energies[-1])
+        hist3 = ROOT.TH1D("h_predicted", "Energy / PE", len(true_energies), true_energies[0], true_energies[-1])
+        for index in range(len(true_energies)):
+            hist.SetBinContent(index, unfolded_spectrum[index])
+            hist2.SetBinContent(index, measured_spectrum[index])
+            hist3.SetBinContent(index, predicted_measured[index])
 
-    hist = ROOT.TH1D("h_unfold", "Energy / PE", len(true_energies), true_energies[0], true_energies[-1])
-    hist2 = ROOT.TH1D("h_measurement", "Energy / PE", len(true_energies), true_energies[0], true_energies[-1])
-    hist3 = ROOT.TH1D("h_predicted", "Energy / PE", len(true_energies), true_energies[0], true_energies[-1])
-    for index in range(len(true_energies)):
-        hist.SetBinContent(index, unfolded_spectrum[index])
-        hist2.SetBinContent(index, measured_spectrum[index])
-        hist3.SetBinContent(index, predicted_measured[index])
-    
-    hist.Write()
-    hist2.Write()
-    hist3.Write()
-    file.Close()
+        hist.Write()
+        hist2.Write()
+        hist3.Write()
+        file.Close()
+        
+    selected_peaks, params, x_fits = findPeaks(unfolded_spectrum, true_energies)
 
     R[R < 1e-10] = 1e-10
-
-    peaks, _ = find_peaks(unfolded_spectrum, height=100, distance=50, width=30)
-    selected_peaks = peaks[1:3]  # second and third
-    fits = []
-    x_fits = []
-    x_fit = []
-    popt = []
-    for p in selected_peaks:
-        width = 30
-        mask = (true_energies > true_energies[p] - width) & (true_energies < true_energies[p] + width)
-        x_fit = true_energies[mask]
-        y_fit = unfolded_spectrum[mask]
-
-        amp0 = unfolded_spectrum[p]
-        mean0 = true_energies[p]
-        sigma0 = 2.0
-
-        popt, pcov = curve_fit(gaussian, x_fit, y_fit, p0=[amp0, mean0, sigma0])
-        fits.append(popt)
-        x_fits.append(x_fit)
-
-    # Plot 1: Response matrix
-    im = axes[0, 0].imshow(R, aspect='auto', origin='lower', 
-                          extent=[true_energies[0], true_energies[-1], 
-                                  measured_energies[0], measured_energies[-1]],
-                                  norm=LogNorm(vmin=1e-4, vmax=1))
-    axes[0, 0].set_xlabel('True Photon Count')
-    axes[0, 0].set_ylabel('Measured Photon Count')
-    axes[0, 0].set_title('Detector Response Matrix from DRF')
-    plt.colorbar(im, ax=axes[0, 0], label='Probability')
     
-    min_index = np.argmin(unfolder.chi2[1:]) + 1 
-    
-    # Plot 2: True vs Unfolded spectrum
-    axes[0, 1].step(true_energies, measured_spectrum, 'b-', linewidth=2, label='Measured Spectrum')
-    axes[0, 1].step(true_energies, unfolded_spectrum, 'g-', linewidth=2, label=f'Unfolded Spectrum {len(unfolder.chi2)}')
-    axes[0, 1].plot(true_energies[peaks], unfolded_spectrum[peaks], 'rx', linewidth=2, label=f'Peaks of Unfolded Spectrum')
-    for i, popt in enumerate(fits):
-        x_fit = x_fits[i]
-        axes[0, 1].plot(x_fit, gaussian(x_fit, *popt), 'r--' ,label=f"Peak at {popt[1]:.2f}")
-    axes[0, 1].set_xlabel('Photon Count')
-    axes[0, 1].set_ylabel('Counts')
-    #axes[0, 1].set_yscale('log')
-    axes[0, 1].set_title('True vs Unfolded Spectrum')
-    axes[0, 1].legend()
-    axes[0, 1].grid(True, alpha=0.3)
-    
-    # Plot 3: Measured spectrum and prediction from unfolded
-    axes[1, 0].step(measured_energies, measured_spectrum, 'b-', linewidth=2, label='Measured Spectrum')
-    axes[1, 0].step(measured_energies, predicted_measured, 'r-', linewidth=2, label=f'Predicted from Unfolded {len(unfolder.chi2)}')
-    axes[1, 0].step(measured_energies, np.dot(unfolder.R, unfolder.history[min_index]), 'g-', linewidth=2, label=f'Unfolded Spectrum {min_index+1}')
-    axes[1, 0].set_xlabel('Photon Count')
-    axes[1, 0].set_ylabel('Counts')
-    # axes[1, 0].set_yscale('log')
-    axes[1, 0].set_title('Measured Spectrum vs Prediction')
-    axes[1, 0].legend()
-    axes[1, 0].grid(True, alpha=0.3)
-    
-    # Plot 4: Convergence
-    iterations = range(len(unfolder.chi2))
-    axes[1, 1].plot(iterations, unfolder.chi2, 'bo-')
-    axes[1, 1].plot(iterations, unfolder.closure_errors, 'go-')
-    axes[1, 1].set_xlabel('Iteration')
-    axes[1, 1].set_ylabel('Chi-squared')
-    axes[1, 1].set_title('Convergence of Unfolding')
-    axes[1, 1].grid(True, alpha=0.3)
-    
-    plt.tight_layout()
-    # plt.clf()
-    plt.show()
-    
-    # # Plot the response matrix
-    # im = plt.imshow(R, aspect='auto', origin='lower',
-    #                 extent=[true_energies[0], true_energies[-1],
-    #                         measured_energies[0], measured_energies[-1]],
-    #                 norm=LogNorm(vmin=1e-4, vmax=1))
+    if (debug):
+        fig, axes = plt.subplots(2, 2, figsize=(12, 10))
+        im = axes[0, 0].imshow(R, aspect='auto', origin='lower', 
+                              extent=[true_energies[0], true_energies[-1], 
+                                      measured_energies[0], measured_energies[-1]],
+                                      norm=LogNorm(vmin=1e-4, vmax=1))
+        axes[0, 0].set_xlabel('True Photon Count')
+        axes[0, 0].set_ylabel('Measured Photon Count')
+        axes[0, 0].set_title('Detector Response Matrix from DRF')
+        plt.colorbar(im, ax=axes[0, 0], label='Probability')
 
-    # plt.xlabel('True Photon Count')
-    # plt.ylabel('Measured Photon Count')
-    # plt.title('Detector Response Matrix from DRF')
+        min_index = np.argmin(unfolder.chi2[1:]) + 1 
 
-    # cbar = plt.colorbar(im, label='Probability')
-    # plt.savefig("response_matrix_drf.svg", dpi=300)
-    # plt.show()
-    # # plt.clf()
-    # R_inv = np.linalg.inv(R)
-    # R_inv[R_inv < 1e-10] = 1e-10
-    #     # Plot the response matrix
-    # im = plt.imshow(R_inv, aspect='auto', origin='lower',
-    #                 extent=[true_energies[0], true_energies[-1],
-    #                         measured_energies[0], measured_energies[-1]],
-    #                 norm=LogNorm(vmin=1e-4, vmax=1))
 
-    # plt.xlabel('Measured Photon Count')
-    # plt.ylabel('True Photon Count')
-    # plt.title('Inverse Detector Response Matrix')
+        axes[0, 1].step(true_energies, measured_spectrum, 'b-', linewidth=2, label='Measured Spectrum')
+        axes[0, 1].step(true_energies, unfolded_spectrum, 'g-', linewidth=2, label=f'Unfolded Spectrum')
+        # axes[0, 1].plot(true_energies[peaks], unfolded_spectrum[peaks], 'rx', linewidth=2, label=f'Peaks of Unfolded Spectrum')
+        for i, param in enumerate(params):
+            x_fit = x_fits[i]
+            axes[0, 1].plot(x_fit, gaussian(x_fit, *param[0]), 'r--' , label = fr"Peak at {param[0][1]:.2f} ± {param[1][2]:.2f}")
+        axes[0, 1].set_xlabel('Photon Count')
+        axes[0, 1].set_ylabel('Counts')
+        #axes[0, 1].set_yscale('log')
+        axes[0, 1].set_title('True vs Unfolded Spectrum')
+        axes[0, 1].legend()
+        axes[0, 1].grid(True, alpha=0.3)
 
-    # cbar = plt.colorbar(im, label='Probability')
-    # plt.savefig("response_matrix_inv.svg", dpi=6000)
-    # plt.show()
-    # # plt.clf()
-    # plt.step(true_energies, measured_spectrum, 'b-', linewidth=2, label='Measured Spectrum')
-    # plt.step(true_energies, np.dot(measured_spectrum, R_inv), 'r--', linewidth=2, label=f'Matrix Unfolded Spectrum {len(unfolder.chi2)}')
-    # # plt.step(true_energies, unfolder.history[min_index], 'g-', linewidth=2, label=f'Unfolded Spectrum')
+        axes[1, 0].step(measured_energies, measured_spectrum, 'b-', linewidth=2, label='Measured Spectrum')
+        axes[1, 0].step(measured_energies, predicted_measured, 'r-', linewidth=2, label=f'Predicted from Unfolded')
+        # axes[1, 0].step(measured_energies, np.dot(unfolder.R, unfolder.history[min_index]), 'g-', linewidth=2, label=f'Unfolded Spectrum {min_index+1}')
+        axes[1, 0].set_xlabel('Photon Count')
+        axes[1, 0].set_ylabel('Counts')
+        # axes[1, 0].set_yscale('log')
+        axes[1, 0].set_title('Measured Spectrum vs Prediction')
+        axes[1, 0].legend()
+        axes[1, 0].grid(True, alpha=0.3)
+
+        iterations = range(len(unfolder.chi2))
+        axes[1, 1].plot(iterations, unfolder.chi2, 'bo-')
+        # axes[1, 1].plot(iterations, unfolder.closure_errors, 'go-')
+        axes[1, 1].set_xlabel('Iteration')
+        axes[1, 1].set_ylabel('Chi-squared/N_DOF')
+        axes[1, 1].set_title('Convergence of Unfolding')
+        axes[1, 1].grid(True, alpha=0.3)
+
+        plt.tight_layout()
+        plt.show()
+
+    #analyze all
+    saveResponseMatrix(R, output_filename=f"{datapath}/output/responseMatrix.svg")
+    lightyields = []
+    for crystalidx, infile in enumerate(input_files):
+        print(f"\nAnalyzing crystal {crystalidx}...")
+        measured_spectrum = []
+        with open(infile, "r") as f:
+            for line in f:
+                if not line.strip() or line.startswith("#"):
+                    continue
+                parts = line.split()
+                if len(parts) < 2:
+                    continue
+                _, y = map(float, parts[:2])
+                measured_spectrum.append(y)
+        measured_spectrum = measured_spectrum[pedastal_idx:]
+        measured_spectrum = np.array(measured_spectrum)
+        
+        #initial_prior = np.ones_like(true_energies)
+        ##unfold
+        unfolded_spectrum = unfolder.unfold(measured_spectrum, prior=measured_spectrum)
+        predicted_measured = np.dot(unfolder.R, unfolded_spectrum)
+        selected_peaks, params, x_fits = findPeaks(unfolded_spectrum, true_energies)
+
+        saveUnfoldedComparison(true_energies, measured_spectrum, unfolded_spectrum, output_filename=f"{output_files[crystalidx]}/unfoldedSpectrum.svg", peaks=[params, x_fits], show=False)
+        savePredictedComparison(measured_energies, measured_spectrum, predicted_measured, output_filename=f"{output_files[crystalidx]}/predictedSpectrum.svg", show=False)
+        saveClosurePlot(unfolder, output_filename=f"{output_files[crystalidx]}/chi2_Convergence.svg", show=False)
     
-    # plt.xlabel('Count')
-    # plt.ylabel('Photon Count')
-    # plt.title('Unfolded Spectrum using Inverse Matrix')
-
-    # plt.savefig("unfolded_spectrum_inv.svg", dpi=300)
-    # plt.show()
     
-    # plt.step(true_energies, measured_spectrum, 'b-', linewidth=2, label='Measured Spectrum')
+
     
-    # plt.xlabel('Count')
-    # plt.ylabel('Photon Count')
-    # plt.title('Measured Spectrum')
 
-    # plt.savefig("measured_spectrum.svg", dpi=300)
-    # plt.show()
-    
-    # plt.step(true_energies, measured_spectrum, 'b-', linewidth=2, label='Measured Spectrum')
-    # # plt.step(true_energies, unfolded_spectrum, 'r--', linewidth=2, label=f'Unfolded Spectrum {len(unfolder.chi2)}')
-    # plt.step(true_energies, unfolder.history[min_index], 'r--', linewidth=2, label=f'Unfolded Spectrum')
-    # plt.xlabel('Photon Count')
-    # plt.ylabel('Counts')
-    # plt.title('True vs Unfolded Spectrum')
-    # plt.legend()
-    # plt.grid(True, alpha=0.3)
-    # plt.savefig("true_vs_unfolded_spectrum.svg", dpi=300)
-    # plt.show()
-    
-    # plt.step(measured_energies, measured_spectrum, 'ko', markersize=3, label='Measured')
-    # # plt.step(measured_energies, predicted_measured, 'r-', linewidth=2, label=f'Predicted from Unfolded {len(unfolder.chi2)}')
-    # plt.step(measured_energies, np.dot(unfolder.R, unfolder.history[min_index]), 'r-', linewidth=2, label=f'Unfolded Spectrum')
-    # plt.xlabel('Photon Count')
-    # plt.ylabel('Counts')
-    # plt.title('Measured Spectrum vs Prediction')
-    # plt.legend()
-    # plt.grid(True, alpha=0.3)
-    # plt.savefig("measured_vs_predicted_spectrum.svg", dpi=300)
-    # plt.show()
-    
-    # plt.plot(iterations, unfolder.chi2, 'bo-')
-    # # plt.plot(iterations, unfolder.closure_errors, 'go-')
-    # plt.xlabel('Iteration')
-    # plt.ylabel('Chi-squared/N_DOF')
-    # plt.title('Convergence of Unfolding')
-    # plt.grid(True, alpha=0.3)
-    
-    # plt.tight_layout()
-    # plt.savefig("convergence_of_unfolding.svg", dpi=300)
-    # plt.show()
-    print("\nUnfolding completed successfully!")
-    fig, ax = plt.subplots(figsize=(8, 5))
-
-    indices = [30, len(true_energies)//2, len(true_energies)-30]  # first, middle, last
-    labels = ['Low edge', 'Mid range', 'High edge']
-
-    for idx, label in zip(indices, labels):
-        ax.plot(measured_energies, R[:, idx], label=f"{label} ({true_energies[idx]:.2f} ph)")
-
-    ax.set_xlabel("Photon Count")
-    ax.set_ylabel("Probability Density")
-    ax.set_title("Response Matrix Edge Cases")
-    ax.legend()
-    ax.grid(True)
-    plt.tight_layout()
-    plt.show()
-
-    # os.makedirs("frames", exist_ok=True)
-    # filenames = []
-    # for i, E in enumerate(true_energies):
-    #     fig, ax = plt.subplots(figsize=(6, 4))
-    #     ax.plot(R[:,i], color='C0')
-    #     ax.set_title(f"Response for Energy = {E:.1f} MeV")
-    #     ax.set_xlabel("Detector Channel")
-    #     ax.set_ylabel("Signal (a.u.)")
-    #     ax.set_ylim(0, R[:,i].max()*1.1)
-
-    #     fname = f"gif/frame_{i:03d}.png"
-    #     plt.savefig(fname)
-    #     plt.close(fig)
-    #     filenames.append(fname)
-
-    # # Create GIF
-    # with imageio.get_writer('gif/response_matrix.gif', mode='I', duration=0.1) as writer:
-    #     for filename in filenames:
-    #         image = imageio.imread(filename)
-    #         writer.append_data(image)
-    # for filename in filenames:
-    #     os.remove(filename)
