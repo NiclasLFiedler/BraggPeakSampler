@@ -99,7 +99,7 @@ def get_range_energy(energy, path, enable_output=False, enable_plot=False):
     
     return (energy, mean, abs(sigma))
 
-def analyse_range_energy(data : RangeEnergyRelationship, comparison_data: RangeEnergyRelationship = None):
+def analyse_range_energy(data : RangeEnergyRelationship, comparison_data: RangeEnergyRelationship = None, comparison_data2: RangeEnergyRelationship = None,  comparison_data3: RangeEnergyRelationship = None):
    # Extract energies and ranges from the EnergyRangeData object
     energies = np.array(data.energy)
     ranges = np.array(data.range)
@@ -113,7 +113,7 @@ def analyse_range_energy(data : RangeEnergyRelationship, comparison_data: RangeE
     alpha_stddev, p_stddev = std_devs
     
     # Print the fitting parameters with their standard deviations
-    print(f"Fitted parameters:")
+    print(f"Pbwo4 Fitted parameters:")
     print(f"alpha = {alpha:.3e} ± {alpha_stddev:.3e}")
     print(f"p = {p:.3e} ± {p_stddev:.3e}")
     
@@ -121,41 +121,76 @@ def analyse_range_energy(data : RangeEnergyRelationship, comparison_data: RangeE
     fitted_ranges = range_energy_relationship(energies, *popt)
     
     # Plot the original data
-    plt.rcParams.update({'font.size': 20})
-    plt.figure(figsize=(16, 8))
-    plt.errorbar(energies, ranges, yerr=data.std_dev, fmt='o', ecolor='r', capsize=5, label=f'{name} Simulation')
+    plt.rcParams.update({'font.size': 24})
+    plt.figure(figsize=(20, 15))
+    plt.errorbar(energies, ranges, yerr=data.std_dev, fmt='o', color=colors["PbWO4"][0], capsize=5, label=f'Simulated PbWO4 Data')
 
     # Plot the fitted curve
-    plt.plot(energies, fitted_ranges, 'b-', label=f'Fit {name}: $\\alpha_{{{name}}} = {alpha:.3e}$ $\\frac{{mm}}{{MeV^p}}$; $p_{{{name}}}$ = {p:.3e}')
+    plt.plot(energies, fitted_ranges, color=colors["PbWO4"][1], linewidth = 3, label=f'PbWO4 Fit: $\\alpha_{{PbWO4}} = {alpha:.3e}$ $\\frac{{mm}}{{MeV^p}}$; $p_{{PbWO4}}$ = {p:.3e}')
  
     # If comparison data is provided, plot it
     if comparison_data:
         comp_energies = np.array(comparison_data.energy)
         comp_ranges = np.array(comparison_data.range)
         
+        comp_energies2 = np.array(comparison_data2.energy)
+        comp_ranges2 = np.array(comparison_data2.range)
+
+        comp_energies3 = np.array(comparison_data3.energy)
+        comp_ranges3 = np.array(comparison_data3.range)
+
+
         # Perform curve fitting for the comparison data
         comp_popt, comp_pcov = curve_fit(range_energy_relationship, comp_energies, comp_ranges, maxfev=1000000)
-        
+        comp_popt2, comp_pcov2 = curve_fit(range_energy_relationship, comp_energies2, comp_ranges2, maxfev=1000000)
+        comp_popt3, comp_pcov3 = curve_fit(range_energy_relationship, comp_energies3, comp_ranges3, maxfev=1000000)
+
+
         comp_alpha, comp_p = comp_popt
         comp_std_devs = np.sqrt(np.diag(comp_pcov))
         comp_alpha_stddev, comp_p_stddev = comp_std_devs
         
-        # Print the fitting parameters with their standard deviations
-        print(f"comp_Fitted parameters:")
+        comp_alpha2, comp_p2 = comp_popt2
+        comp_std_devs2 = np.sqrt(np.diag(comp_pcov2))
+        comp_alpha_stddev2, comp_p_stddev2 = comp_std_devs2
+
+        comp_alpha3, comp_p3 = comp_popt3
+        comp_std_devs3 = np.sqrt(np.diag(comp_pcov3))
+        comp_alpha_stddev3, comp_p_stddev3 = comp_std_devs3
+        
+        
+        print(f"PTFE _Fitted parameters:")
         print(f"alpha = {comp_alpha:.3e} ± {comp_alpha_stddev:.3e}")
         print(f"p = {comp_p:.3e} ± {comp_p_stddev:.3e}")
 
+        print(f"H2O_Fitted parameters:")
+        print(f"alpha = {comp_alpha2:.3e} ± {comp_alpha_stddev2:.3e}")
+        print(f"p = {comp_p2:.3e} ± {comp_p_stddev2:.3e}")
+
+        print(f"Alu_Fitted parameters:")
+        print(f"alpha = {comp_alpha3:.3e} ± {comp_alpha_stddev3:.3e}")
+        print(f"p = {comp_p3:.3e} ± {comp_p_stddev3:.3e}")
+
+
         # Generate fitted ranges for comparison data
         comp_fitted_ranges = range_energy_relationship(comp_energies, *comp_popt)
+        comp_fitted_ranges2 = range_energy_relationship(comp_energies2, *comp_popt2)
+        comp_fitted_ranges3 = range_energy_relationship(comp_energies3, *comp_popt3)
         
         # Plot the comparison data
-        plt.errorbar(comp_energies, comp_ranges, yerr=comparison_data.std_dev, fmt='o', ecolor='g', capsize=5, label='ICRU Data')
-        plt.plot(comp_energies, comp_fitted_ranges, label=f'Fit ICRU 49: $\\alpha_{{ICRU}} = {comp_popt[0]:.3e}$ $\\frac{{mm}}{{MeV^p}}$; $p_{{ICRU}}$ = {comp_popt[1]:.3e}')
+        plt.errorbar(comp_energies, comp_ranges, yerr=comparison_data.std_dev, fmt='o', color=colors["PTFE"][0], capsize=5, label='Simulated PTFE Data')
+        plt.plot(comp_energies, comp_fitted_ranges, color=colors["PTFE"][1], linewidth = 3,label=f'PTFE Fit: $\\alpha_{{PTFE}} = {comp_popt[0]:.3e}$ $\\frac{{mm}}{{MeV^p}}$; $p_{{PTFE}}$ = {comp_popt[1]:.3e}')
+
+        plt.errorbar(comp_energies2, comp_ranges2, yerr=comparison_data2.std_dev, fmt='o', color=colors["H2O"][0], capsize=5, label='ICRU H2O Data')
+        plt.plot(comp_energies2, comp_fitted_ranges2, color=colors["H2O"][1], linewidth = 3,label=f'H2O Fit : $\\alpha_{{H2O}} = {comp_popt2[0]:.3e}$ $\\frac{{mm}}{{MeV^p}}$; $p_{{H2O}}$ = {comp_popt2[1]:.3e}')
+
+        plt.errorbar(comp_energies3, comp_ranges3, yerr=comparison_data3.std_dev, fmt='o', color=colors["Al"][0], capsize=5, label='ICRU Al Data')
+        plt.plot(comp_energies3, comp_fitted_ranges3, color=colors["Al"][1], linewidth = 3, label=f'Al Fit : $\\alpha_{{Al}} = {comp_popt3[0]:.3e}$ $\\frac{{mm}}{{MeV^p}}$; $p_{{Al}}$ = {comp_popt3[1]:.3e}')
 
     # Add labels, title, and legend
     plt.xlabel('Energy / MeV')
     plt.ylabel('Range / mm')
-    plt.title(f'Range Energy: Simulated {name} and measured CSDA-Range H2O (ICRU 49)')
+    plt.title(f'Range Energy: ICRU H2O and Al, Simulated PbWO4 and PTFE')
     plt.legend()
 
     # Show the plot
@@ -164,17 +199,28 @@ def analyse_range_energy(data : RangeEnergyRelationship, comparison_data: RangeE
     #plt.savefig(f"air/rangeenergy.pdf", format="pdf", bbox_inches="tight")
     plt.show()
     
-path = "h2o" #h2o pbwo4 air DSB EJ256
-name = "H2O" #H2O PbWO4 AIR DSB EJ-256
+path = "pbwo4" #h2o pbwo4 air DSB EJ256
+name = "PbWO4" #H2O PbWO4 AIR DSB EJ-256
 icru_el = 0 # 0=h20, 1=air 
+
+colors = {
+    "PbWO4":    ("#ff7f0e", "#b35a00"),
+    "PTFE":  ("#2ca02c", "#196619"),
+    "H2O":   ("#17becf", "#0b6b7e"),
+    "Al": ("#1f77b4", "#0c3c70"),    # points, fit
+}
 
 def main():
     data = RangeEnergyRelationship()
+    data2 = RangeEnergyRelationship()
+    datawater = RangeEnergyRelationship()
+    
     energies = [3, 5, 10, 15, 20, 30, 40, 50, 60, 70, 80, 90, 100, 125, 150, 175, 200, 225, 250]
     
     
     rho = []
     rho_h2o = 0.997
+    rho_alu = 2.69890
     rho_h2o_icru = 1.000
     rho_h2o_air=1.2048e-3
     rho.append(rho_h2o_icru)
@@ -183,29 +229,37 @@ def main():
     ICRU_ranges = []
     CSDA_ranges_h20 = [1.499e-2, 3.623e-2, 1.23e-1, 2.539e-1, 4.26e-1, 8.853e-1, 1.489, 2.227, 3.093, 4.080, 5.184, 6.398, 7.718, 1.146e1, 1.577e1, 2.062e1, 2.596e1, 3.174e1, 3.794e1] #g/cm^2
     CSDA_ranges_air= [1.737e-2, 4.173e-2, 1.408e-1, 2.899e-1, 4.855e-1, 1.007, 1.691, 2.528, 3.509, 4.628, 5.876, 7.250, 8.744, 1.297e1, 1.786e1, 2.334e1, 2.937e1, 3.590e1, 4.290e1]
+    CSDA_ranges_alu = [2.193e-02, 5.157e-02, 1.697e-01, 3.448e-01, 5.726e-01, 1.175e+00, 1.961e+00, 2.918e+00, 4.037e+00, 5.309e+00, 6.727e+00, 8.284e+00, 9.976e+00, 1.476e+01, 2.026e+01, 2.644e+01, 3.322e+01, 4.057e+01, 4.843e+01]
     ICRU_ranges.append(CSDA_ranges_h20)
     ICRU_ranges.append(CSDA_ranges_air)
     
-    icru_data= RangeEnergyRelationship()
+
+
+
+    icru_h2o= RangeEnergyRelationship()
+    icru_alu= RangeEnergyRelationship()
     cutoff = 0
     # get_range_energy(15, enable_output=True, enable_plot=True)
     for index, energy in enumerate(energies):
         if(index == len(energies)-cutoff):
             break
-        data.add_data(*get_range_energy(energy, path, enable_output=False, enable_plot=False))
+        data.add_data(*get_range_energy(energy, "pbwo4", enable_output=False, enable_plot=False))
+        data2.add_data(*get_range_energy(energy, "teflon", enable_output=False, enable_plot=False))
+        datawater.add_data(*get_range_energy(energy, "h2o", enable_output=False, enable_plot=False))
 
-    # for index, energy in enumerate(energies):
-    #     print(rf"{energy} MeV ${data.range[index]:.3f} \pm {data.std_dev[index]:.3f}$")
 
     for index, energy in enumerate(energies):
-        print(f"$\SI{{{energy}}}{{\mega\electronvolt}}$ & ${ICRU_ranges[icru_el][index]/rho[icru_el]*10:.2e} \pm {ICRU_ranges[icru_el][index]/rho[icru_el]*10*0.015:.2e}$ &")
-
-    for index, CSDA_range in enumerate(ICRU_ranges[icru_el]):
-        if(index == len(ICRU_ranges[icru_el])-cutoff):
+        if(index == len(energies)-cutoff):
             break
-        icru_data.add_data(energies[index], CSDA_range/rho[icru_el]*10, CSDA_range/rho[icru_el]*0.015*10)
+        icru_h2o.add_data(energies[index], CSDA_ranges_h20[index]/rho_h2o_icru*10, CSDA_ranges_h20[index]/rho_h2o_icru*0.015*10)
+        icru_alu.add_data(energies[index], CSDA_ranges_alu[index]/rho_alu*10, CSDA_ranges_alu[index]/rho_alu*0.015*10)
 
-    analyse_range_energy(data, icru_data)
+    for index, energy in enumerate(energies):
+        print(f"${energy}$ & \\makecell{{$\\num{{{icru_h2o.range[index]:.2e}}} \pm $\\\\$ \\num{{{icru_h2o.std_dev[index]:.2e}}}$}} & \\makecell{{$\\num{{{datawater.range[index]:.2e}}} \pm $\\\\$ \\num{{{datawater.std_dev[index]:.2e}}}$}} & ${(datawater.range[index]-icru_h2o.range[index])/icru_h2o.range[index]*100:.3f}$ & \\makecell{{$\\num{{{icru_alu.range[index]:.2e}}} \pm $\\\\$ \\num{{{icru_alu.std_dev[index]:.2e}}}$}} & \\makecell{{$\\num{{{data.range[index]:.2e}}} \pm $\\\\$ \\num{{{data.std_dev[index]:.2e}}}$}} & \\makecell{{$\\num{{{data2.range[index]:.2e}}} \pm $\\\\$ \\num{{{data2.std_dev[index]:.2e}}}$}} \\\\" )
+
+        #$3$ & $0.1499 \pm 0.002$ & $0.151 \pm 0.002$ & $0.586$ & $0.051 \pm 0.001$ \\
+
+    analyse_range_energy(data, data2, icru_h2o, icru_alu)
 
 if __name__ == "__main__":
     main()

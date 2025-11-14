@@ -702,7 +702,9 @@ if __name__ == "__main__":
         x_fits = []
         x_fit = []
         popt = []
-        for p in selected_peaks:
+        for idx, p in enumerate(selected_peaks):
+            if idx == 1:
+                fwidth = 50
             mask = (true_energies > true_energies[p] - (fwidth-15)) & (true_energies < true_energies[p] + fwidth-15)
             x_fit = true_energies[mask]
             y_fit = unfolded_spectrum[mask]
@@ -788,15 +790,15 @@ if __name__ == "__main__":
         plt.close()
     
     def saveUnfoldedComparison(true_energies, measured_spectrum, unfolded_spectrum, output_filename="unfoldedSpectrum.pdf", peaks=None, show=False):
-        plt.step(true_energies, measured_spectrum, 'b-', linewidth=2, label='Measured Spectrum')
-        plt.plot(true_energies, unfolded_spectrum, 'g-', linewidth=2, label=f'Unfolded Spectrum')
+        plt.step(true_energies, measured_spectrum, color='tab:blue', linewidth=1.2, label='Measured Spectrum')
+        plt.plot(true_energies, unfolded_spectrum, color='tab:orange', linewidth=2, label=f'Unfolded Spectrum')
         if(peaks):
             for idx, x_fit in enumerate(peaks[1]):
                 param = peaks[0][idx]
-                plt.plot(x_fit, gaussian(x_fit, *param[0]), 'r--' , label = fr"Peak at {param[0][1]:.2f} ± {param[1][2]:.2f}")
+                plt.plot(x_fit, gaussian(x_fit, *param[0]), 'k--' , label = fr"Peak at {param[0][1]:.2f} ± {param[1][2]:.2f}")
         plt.xlabel('Photon Count')
         plt.ylabel('Counts')
-        plt.title('True vs Unfolded Spectrum')
+        plt.title('Measured vs Unfolded Spectrum')
         plt.legend()
         plt.grid(True)
         plt.savefig(output_filename, dpi=300)
@@ -805,11 +807,11 @@ if __name__ == "__main__":
         plt.close()
     
     def savePredictedComparison(measured_energies, measured_spectrum, predicted_measured, output_filename="predictedMeasuredSpectrum.pdf", show=False):
-        plt.step(measured_energies, measured_spectrum, 'b-', linewidth=2, label='Measured Spectrum')
-        plt.plot(measured_energies[10:], predicted_measured[10:], color='orange', linewidth=2, label=f'Predicted from Unfolded')
+        plt.step(measured_energies, measured_spectrum, color='tab:blue', linewidth=1.2, label='Measured Spectrum')
+        plt.plot(measured_energies[10:], predicted_measured[10:], color='tab:orange', linewidth=2, label=f'Predicted from Unfolded')
         plt.xlabel('Photon Count')
         plt.ylabel('Counts')
-        plt.title('Measured Spectrum vs Prediction')
+        plt.title('Measured vs Predicted Spectrum')
         plt.legend()
         plt.grid(True)
         plt.savefig(output_filename, dpi=300)
@@ -826,7 +828,7 @@ if __name__ == "__main__":
     PDE = 0.2316
     saveMatrix = False
     debug = False
-    lateral = True
+    lateral = False
 
     datapath = "../lightyield/data/2504/flat"
     if lateral:
@@ -977,7 +979,7 @@ if __name__ == "__main__":
         plt.show()
 
     #analyze all
-    saveResponseMatrix(R, output_filename=f"{datapath}/output/responseMatrix.svg")
+    saveResponseMatrix(R, output_filename=f"{datapath}/output/responseMatrix.pdf")
     lightyields = []
     for crystalidx, infile in enumerate(input_files):
         print(f"\nAnalyzing crystal {crystalidx}...")
@@ -1000,9 +1002,9 @@ if __name__ == "__main__":
         predicted_measured = np.dot(unfolder.R, unfolded_spectrum)
         selected_peaks, params, x_fits = findPeaks(unfolded_spectrum,measured_spectrum, true_energies)
         lightyields.append([params[0][0], params[0][1]])
-        saveUnfoldedComparison(true_energies, measured_spectrum, unfolded_spectrum, output_filename=f"{output_files[crystalidx]}/unfoldedSpectrum.svg", peaks=[params, x_fits], show=False)
-        savePredictedComparison(measured_energies, measured_spectrum, predicted_measured, output_filename=f"{output_files[crystalidx]}/predictedSpectrum.svg", show=False)
-        saveClosurePlot(unfolder, output_filename=f"{output_files[crystalidx]}/chi2_Convergence.svg", show=False)
+        saveUnfoldedComparison(true_energies, measured_spectrum, unfolded_spectrum, output_filename=f"{output_files[crystalidx]}/unfoldedSpectrum.pdf", peaks=[params, x_fits], show=False)
+        savePredictedComparison(measured_energies, measured_spectrum, predicted_measured, output_filename=f"{output_files[crystalidx]}/predictedSpectrum.pdf", show=False)
+        saveClosurePlot(unfolder, output_filename=f"{output_files[crystalidx]}/chi2_Convergence.pdf", show=False)
     
     np.save(f'{datapath}/output/fit_params.npy', np.array(lightyields, dtype=object))
 

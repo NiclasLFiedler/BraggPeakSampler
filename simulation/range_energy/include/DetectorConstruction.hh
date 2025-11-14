@@ -89,6 +89,7 @@ class DetectorConstruction : public G4VUserDetectorConstruction
     G4Material *resinMaterial = nullptr;
     G4Material *lungTissue = nullptr;
     G4Material *homoMaterial = nullptr;
+    G4Material *PTFEmembrane = nullptr;
 
     G4TessellatedSolid *solidHolder, *solidLung;  
     G4Box *soliddetector, *solidworld, *solidHomo;

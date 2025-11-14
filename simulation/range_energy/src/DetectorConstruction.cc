@@ -189,6 +189,11 @@ void DetectorConstruction::DefineMaterials()
   Teflon->AddElement(elC, 2);
   Teflon->AddElement(elF, 4);
 
+  PTFEmembrane = new G4Material("PTFEmembrane", 0.35*g/cm3, 2);
+  PTFEmembrane->AddElement(elC, 2);
+  PTFEmembrane->AddElement(elF, 4);
+
+
   Alu = new G4Material("Alu", 2.71*g/cm3,1);
   Alu->AddElement(elAl,1);
 
@@ -200,7 +205,7 @@ void DetectorConstruction::DefineMaterials()
   PMMA->AddElement(elH, 8);
   PMMA->AddElement(elO, 2);
 
-  //detMaterial = PMMA;
+  detMaterial = Teflon;
 
   G4cout <<"Mean excitation Energy: " << detMaterial->GetIonisation()->GetMeanExcitationEnergy() << G4endl;
   G4cout <<"Density: " << detMaterial->GetDensity()/(g/cm3) << G4endl;
