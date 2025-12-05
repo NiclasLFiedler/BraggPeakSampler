@@ -84,7 +84,7 @@ class DetectorCalibration:
     Represents a detector with multiple calibrated channels.
     """
 
-    def __init__(self, n_channels=32):
+    def __init__(self, n_channels=1):
         self.n_channels = n_channels
         self.channels = {}
 
@@ -107,11 +107,16 @@ class ResponseMatrixBuilder:
     ResponseMatrixBuilder
     """
     
-    def __init__(self, detector_calibration: DetectorCalibration, n_true_bins=4001, n_measured_bins=4001, n_iterations=10):
-        self.n_true_bins = n_true_bins
+    def __init__(self, detector_calibration: DetectorCalibration, n_measured_bins=4001, n_iterations=10):
         self.n_measured_bins = n_measured_bins
         self.n_iterations = n_iterations
-        self.detector_calibration = detector_calibration 
+        self.detector_calibration = detector_calibration
+
+        trueBins = []
+        for i in range(self.detector_calibration.n_channels):
+            trueBins.append(self.detector_calibration.adc_to_energy(i, n_measured_bins))
+        
+        self.n_true_bins = trueBins
     
     def drf_function(self, measured_energy, true_energy, resolution=0.15, tail_strength=0.2):
         """
@@ -144,7 +149,7 @@ class ResponseMatrixBuilder:
             
         return gaussian + tail
     
-    def build_response_matrix(self, true_energy_range, measured_energy_range, custom_drf=None):
+    def build_response_matrix(self, custom_drf=None):
         """
         Build response matrix from DRF function
         
@@ -162,8 +167,10 @@ class ResponseMatrixBuilder:
         drf = custom_drf if custom_drf is not None else self.drf_function
         
         # Create energy bins
-        self.true_edges = np.linspace(true_energy_range[0], true_energy_range[1], self.n_true_bins + 1)
-        self.measured_edges = np.linspace(measured_energy_range[0], measured_energy_range[1], self.n_measured_bins + 1)
+        self.true_edges = np.linspace(0, true_energy_range[1], self.n_true_bins + 1)
+
+    
+        self.measured_edges = np.linspace(0, self.n_measured_bins, self.n_measured_bins + 1)
         
         self.true_centers = (self.true_edges[1:] + self.true_edges[:-1]) / 2
         self.measured_centers = (self.measured_edges[1:] + self.measured_edges[:-1]) / 2
@@ -226,7 +233,6 @@ class ResponseMatrixBuilder:
             print("WARNING: Response matrix has columns with near-zero sum!")
             print("This can cause convergence issues.")
 
-# %%
 def save_response_matrix_th2d(response_matrix, true_edges, measured_edges, 
                              filename="response_matrix.root", histname="response_matrix"):
     """
@@ -274,7 +280,6 @@ def save_response_matrix_th2d(response_matrix, true_edges, measured_edges,
     
     return h_response
 
-# %%
 def save_comprehensive_response_data(response_matrix, true_edges, measured_edges, 
                                    true_centers, measured_centers, efficiency,
                                    filename="response_data.root"):
@@ -447,7 +452,7 @@ if __name__ == "__main__":
         bin_width = builder.true_centers[1]-builder.true_centers[0]
 
         underflow_axis = np.arange(-(bin_width)*400+builder.true_centers[0], -builder.true_centers[0], builder.true_centers[1]-builder.true_centers[0])
-        overflow_axis = np.arange(builder.true_centers[-1]+builder.true_centers[0], (bin_width)*400+builder.true_centers[-1], builder.true_centers[1]-unfolder.true_centers[0])
+        overflow_axis = np.arange(builder.true_centers[-1]+builder.true_centers[0], (bin_width)*400+builder.true_centers[-1], builder.true_centers[1]-builder.true_centers[0])
 
         underflow_response = np.zeros_like(underflow_axis)
         overflow_response = np.zeros_like(overflow_axis)
@@ -544,73 +549,39 @@ if __name__ == "__main__":
         
     print("Loading measured spectrum...")   
 
+    maxMeasured = 16000
+
     mean_SPE = 110.342
     sigma_SPE= 10.0004
     mean_ped= 85.5295
     sigma_ped= 0.48595
-    PDE = 0.2316
+
     saveMatrix = False
     debug = False
     lateral = False
 
-    datapath = "../lightyield/data/2504/flat"
-    if lateral:
-        datapath = "../lightyield/data/2504/lateral"
-    input_files = []
-    output_files = []
-    for crystal in range(36):
-        output_files.append(f"{datapath}/output/crystal{crystal}")
-        if lateral:
-            input_files.append(f"{datapath}/bps_pwo_lateral_{crystal}_na22.his.txt")
-        else:
-            input_files.append(f"{datapath}/bps_pwo_{crystal}_na22.his.txt")
-        
-    measured_spectrum = []
-    pe_axis = []
-
-    with open(input_files[0], "r") as f:
-        for line in f:
-            if not line.strip() or line.startswith("#"):
-                continue
-            parts = line.split()
-            if len(parts) < 2:
-                continue
-            x, y = map(float, parts[:2])
-            pe_axis.append(x)
-            measured_spectrum.append(y)
-
-    pe_axis = np.array(pe_axis)
-    pedastal_idx = np.argmin(np.abs(pe_axis - mean_ped))
-    pe_axis = (pe_axis-mean_ped) / (mean_SPE-mean_ped)
-    
-    measured_spectrum = measured_spectrum[pedastal_idx:]
-    measured_spectrum = np.array(measured_spectrum)
-
     detector = DetectorCalibration()
     
-    for crystal in range(32):
+    for crystal in range(1):
         cal = ChannelCalibration(
-            E1=5.9, E2=59.5,      # keV
-            adc1=120, adc2=2510,  # ADC means
-            std1=4.2, std2=15.7,
-            err1=0.4, err2=1.2
+            E1=0, E2=5.7038,
+            adc1=0, adc2=5419.79,  
+            std1=0, std2=1278.59,
+            err1=0, err2=10
         )
 
         detector.add_channel(crystal, cal)
 
-    builder = ResponseMatrixBuilder(detector, n_true_bins=4001-pedastal_idx, n_measured_bins=4001-pedastal_idx, n_iterations=40)
+    builder = ResponseMatrixBuilder(detector, n_measured_bins=maxMeasured, n_iterations=40)
 
+    R, true_energies, measured_energies = builder.build_response_matrix(custom_drf=sipm_response)
 
     maxE = (4001-pedastal_idx-mean_ped)/(mean_SPE-mean_ped)/PDE
     
     useExistingResponseMatrix = True
     if(not useExistingResponseMatrix):
         print("Building response matrix from DRF function...")
-        R, true_energies, measured_energies = builder.build_response_matrix(
-            true_energy_range=(0, maxE),      # Adjust to your energy range
-            measured_energy_range=(0, maxE),
-            custom_drf=sipm_response            # Use your DRF function
-        )
+        
     else:
         print("Loading response matrix from DRF function...")
         R, true_energies, measured_energies = builder.load_response_matrix(
