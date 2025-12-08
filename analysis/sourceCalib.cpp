@@ -118,8 +118,8 @@ void sourceCalib(){
     // na1415_co01_300s.root(X)
 
 
-    na22.CH = {1572.17, 1540.67, 1394.92, 49.7185, 1853.25, 2078.32, 1007.81, 324.048, 500, 1374.37, 726.037, 900, 514.404, 491.578, 1086.86, 921.839, 500, 500, 1041.1, 217.159, 500, 1008.07, 742.082, 756.624, 500, 353.818, 500, 881.16, 500, 500, 1126.8, 203.876};
-    na22.o_CH = {785.518, 623.046, 681.057, 361.922, 586.363, 534.047, 811.318, 1032.56, 1000, 648.283, 618.388, 1000, 334.118, 874.19, 678.237, 459.7, 1000, 1000, 517.583, 337.498, 1000, 527.741, 498.61, 484.256, 1000, 422.4, 1000, 510.73, 1000, 1000, 604.186, 317.11};
+    // na22.CH = {1572.17, 1540.67, 1394.92, 49.7185, 1853.25, 2078.32, 1007.81, 324.048, 500, 1374.37, 726.037, 900, 514.404, 491.578, 1086.86, 921.839, 500, 500, 1041.1, 217.159, 500, 1008.07, 742.082, 756.624, 500, 353.818, 500, 881.16, 500, 500, 1126.8, 203.876};
+    // na22.o_CH = {785.518, 623.046, 681.057, 361.922, 586.363, 534.047, 811.318, 1032.56, 1000, 648.283, 618.388, 1000, 334.118, 874.19, 678.237, 459.7, 1000, 1000, 517.583, 337.498, 1000, 527.741, 498.61, 484.256, 1000, 422.4, 1000, 510.73, 1000, 1000, 604.186, 317.11};
 
     //          na22                    c060
     //0   1572.17+-785.518              1718.21+-651.8
@@ -202,7 +202,7 @@ void sourceCalib(){
 
     sprintf(in_path, "../data/%s/%s/input/", dataset, filename);
     sprintf(out_path, "../data/%s/%s/output/", dataset, filename);
-    sprintf(file, "%sco2627_na1011_200s.root", in_path);//, filename);
+    sprintf(file, "%sco60test.root", in_path);//, filename);
     cout << "In path: " << file << endl;
     
     TFile *input = new TFile(file, "READ");
@@ -269,17 +269,17 @@ void sourceCalib(){
         }   
     }
     
-    energy_ch muon;
-    muon.CH = {970, 905, 968, 1072.4, 1094.3, 1078.8, 983.6, 177.9, 965.5, 1035.08, 1171.35, 162.08, 172.74, 145, 101.8};
-    muon.o_CH = {100.52, 90.4, 100.65, 98.31, 107.62, 117.89, 98.19, 23.22, 99.15, 96.28, 116.67, 17.89, 19.18, 15.76, 9.33}; //old
-    muon.E = 4.95;
-    muon.o_E = 0.3433;
+    // energy_ch muon;
+    // muon.CH = {970, 905, 968, 1072.4, 1094.3, 1078.8, 983.6, 177.9, 965.5, 1035.08, 1171.35, 162.08, 172.74, 145, 101.8};
+    // muon.o_CH = {100.52, 90.4, 100.65, 98.31, 107.62, 117.89, 98.19, 23.22, 99.15, 96.28, 116.67, 17.89, 19.18, 15.76, 9.33}; //old
+    // muon.E = 4.95;
+    // muon.o_E = 0.3433;
     
-    energy_ch co60;
-    co60.CH = {402.56, 401.75, 421.52, 444.63, 437.76, 428.52, 415.91, 49.03, 403.4, 417.63, 457.43, 52.08, 52.11, 47.11, 35.55};
-    co60.o_CH = {97.79, 97.82, 101.99, 99.31, 115.65, 102.12, 90.23, 11.05, 96.9, 97.69, 111.66, 20.22, 23.25, 19.32, 12.67};
-    co60.E = 1.25275;
-    co60.o_E = 0.068;
+    // energy_ch co60;
+    // co60.CH = {402.56, 401.75, 421.52, 444.63, 437.76, 428.52, 415.91, 49.03, 403.4, 417.63, 457.43, 52.08, 52.11, 47.11, 35.55};
+    // co60.o_CH = {97.79, 97.82, 101.99, 99.31, 115.65, 102.12, 90.23, 11.05, 96.9, 97.69, 111.66, 20.22, 23.25, 19.32, 12.67};
+    // co60.E = 1.25275;
+    // co60.o_E = 0.068;
     
     
     Double_t entries = datatree->GetEntries();
@@ -315,7 +315,7 @@ void sourceCalib(){
     detectorProperties->Process();
 
     Calibration* calib = new Calibration(detectorProperties);
-    calib->energy_extrapolation(co60, muon);
+    // calib->energy_extrapolation(co60, muon);
     
     detectorProperties->SetCalibration(calib);
     
@@ -344,7 +344,7 @@ void sourceCalib(){
     TH1D* h_charge_3 = new TH1D("h_charge_3", "h_charge_3", 1000, 0, ylim);
     TH1D* h_chargeDiff = new TH1D("h_chargeDiff", "h_chargeDiff", 1000, 0, 3000);
     //co2627_na1011_200s
-    int coincChannel = 10;
+    int coincChannel = 0;
     bool useCharge = true;
     bool useCoinc = true;
 
@@ -357,7 +357,6 @@ void sourceCalib(){
         };
         trace_props.SetParameters(*trace, channel, charge, static_cast<double>(timestamp_ps)/1000, static_cast<double>(timestamp_ps), discard_index, bsaveTrace, true);
         // printf("test\n");
-        detector->EnergyHist(channel)->Fill(trace_props.charge);
 
         if (!useCoinc){
             if(channel == coincChannel){
@@ -443,10 +442,13 @@ void sourceCalib(){
     }
 
     if(!useCoinc){
+        h_charge_0->Add(h_charge_2, -1);
+        h_charge_1->Add(h_charge_3, -1);
+
         // h_charge_0->Add(h_charge_2, -0.1666);
         // h_charge_1->Add(h_charge_3, -0.1666);
-        h_charge_0->Add(h_charge_2, -0.333);
-        h_charge_1->Add(h_charge_3, -0.333);
+        // h_charge_0->Add(h_charge_2, -0.333);
+        // h_charge_1->Add(h_charge_3, -0.333);
         // h_charge_0->Add(h_charge_2, -0.366);
         // h_charge_1->Add(h_charge_3, -0.366);
         // h_charge_0->Add(h_charge_2, -0.5);
