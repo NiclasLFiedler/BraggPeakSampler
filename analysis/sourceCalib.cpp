@@ -27,9 +27,9 @@ void sourceCalib(){
     configFile >> allConfigs;
 
     int fileSelect                      = allConfigs["targetSelect"];
-    
+
     const auto& config = allConfigs["detectors"][int(allConfigs["detectorSelect"])];
-    
+
     int datasetSelect                   = config["datasetSelect"];
     std::string detectortype            = config["detectorType"];
     std::string absorberType            = config["absorberType"];
@@ -66,14 +66,14 @@ void sourceCalib(){
     sprintf(dataset, "%s", datasets[datasetSelect]);
     sprintf(filename, "%s", in_data[fileSelect]);
 
-    
+
     Char_t histdesc[100];
     Char_t histname[100];
     Char_t title[100];
     Char_t file[100];
     Char_t in_path[200];
     Char_t out_path[200];
-    
+
     u_int32_t eventCounter = 0; //store tree values measurement
     Int_t channel = 0;
     Int_t board = 0;
@@ -99,7 +99,7 @@ void sourceCalib(){
     Double_t ExitPosZ = 0;
     Double_t phi = 0;
     Int_t TrackID;
-    
+
 
     // background.root            na1617_300s.root (X)
     // background_1516.root       na1819_co23_340s.root (X)
@@ -148,7 +148,7 @@ void sourceCalib(){
     //23 756.624+-484.256                            688.189+-487.616
     //24 500+1000
     //25 353.818+-422.4
-    //26 78.3982+-352.849 
+    //26 78.3982+-352.849
     //27 881.16+-510.73 (785.04+-352.849)
     //28                                             2423.1+-1070.58
     //29                                             696.856+-545.819
@@ -156,7 +156,7 @@ void sourceCalib(){
     //31 203.876+-317.11 (294.426+-582.268)          314.728 +-604.677
 
 
-    //simulated energies 
+    //simulated energies
 
     //0 5.7038 +-   0.14336  5419.79+-1278.59
     //1 5.79716 +-  0.149442 5673.85+-1066.01
@@ -173,11 +173,11 @@ void sourceCalib(){
     //12 5.07636 +- 0.139438 1742.07+-702.544
     //13 5.20989 +- 0.133682 1350.71+-659.381
     //14 5.36086 +- 0.130915 4038.64+-653.853
-    //15 5.57017 +- 0.112131 3880.83+-1328.2    
+    //15 5.57017 +- 0.112131 3880.83+-1328.2
     //16 5.73576 +- 0.116986 1902.56+-799.764
     //17 5.96942 +- 0.112732 1303.45+-760.142
     //18 6.21447 +- 0.118858 3584.7+- 958.492
-    //19 6.52709 +- 0.118496 2008.28+-756.957 
+    //19 6.52709 +- 0.118496 2008.28+-756.957
     //20 6.89378 +- 0.120264 3627.02+-1018.61
     //21 7.29601 +- 0.126596 3616.78+-966.635
     //22 7.88811 +- 0.143783 2946.28+-941.913
@@ -202,9 +202,9 @@ void sourceCalib(){
 
     sprintf(in_path, "../data/%s/%s/input/", dataset, filename);
     sprintf(out_path, "../data/%s/%s/output/", dataset, filename);
-    sprintf(file, "%sco60test.root", in_path);//, filename);
+    sprintf(file, "%sco60_78.root", in_path);//, filename);
     cout << "In path: " << file << endl;
-    
+
     TFile *input = new TFile(file, "READ");
     if (!input || input->IsZombie()) {
         cout << "Error: Failed to open file 'data.root'!" << endl;
@@ -213,7 +213,7 @@ void sourceCalib(){
     TTree *datatree;
     TTree *datatree2;
     TTree *photontree;
-    
+
     datatree = (TTree*)input->Get("RawData");
 
     Char_t backgroundpath[200];
@@ -244,12 +244,12 @@ void sourceCalib(){
     }
     else{
         photontree = (TTree*)input->Get("ptree");
-        
+
         datatree->SetBranchAddress("event", &event);
         datatree->SetBranchAddress("track", &TrackID);
 	    datatree->SetBranchAddress("NDet", &NDet);
 	    datatree->SetBranchAddress("EDep", &EDep);
-        
+
         if(bScintSim){
             if (photontree) {
                 photontree->SetBranchAddress("eventPhotons", &eventPhotons);
@@ -266,22 +266,22 @@ void sourceCalib(){
             else{
                 cout << "Error: Failed to retrieve tree 'ptree' from file!" << endl;
             }
-        }   
+        }
     }
-    
+
     // energy_ch muon;
     // muon.CH = {970, 905, 968, 1072.4, 1094.3, 1078.8, 983.6, 177.9, 965.5, 1035.08, 1171.35, 162.08, 172.74, 145, 101.8};
     // muon.o_CH = {100.52, 90.4, 100.65, 98.31, 107.62, 117.89, 98.19, 23.22, 99.15, 96.28, 116.67, 17.89, 19.18, 15.76, 9.33}; //old
     // muon.E = 4.95;
     // muon.o_E = 0.3433;
-    
+
     // energy_ch co60;
     // co60.CH = {402.56, 401.75, 421.52, 444.63, 437.76, 428.52, 415.91, 49.03, 403.4, 417.63, 457.43, 52.08, 52.11, 47.11, 35.55};
     // co60.o_CH = {97.79, 97.82, 101.99, 99.31, 115.65, 102.12, 90.23, 11.05, 96.9, 97.69, 111.66, 20.22, 23.25, 19.32, 12.67};
     // co60.E = 1.25275;
     // co60.o_E = 0.068;
-    
-    
+
+
     Double_t entries = datatree->GetEntries();
     // entries = 100000;
     Int_t prevEvent = -1;
@@ -289,11 +289,11 @@ void sourceCalib(){
     int pileup_counter = 0;
     int prepeak_step_counter = 0;
     int coinc_layer_counter = 0;
-    
+
     TraceProperties trace_props;
-    
+
     DetectorProperties* detectorProperties = new DetectorProperties();
-    
+
     detectorProperties->SetScintillator(detectortype);
     detectorProperties->SetBeamEnergy(beamEnergy);
     detectorProperties->SetNLayers(nLayers);
@@ -311,45 +311,45 @@ void sourceCalib(){
     detectorProperties->SetSimulationStatus(simulationStatus);
     detectorProperties->SetCalibrationStatus(false);
     detectorProperties->SetAbsorberStatus(absorberStatus);
-    
+
     detectorProperties->Process();
 
     Calibration* calib = new Calibration(detectorProperties);
     // calib->energy_extrapolation(co60, muon);
-    
+
     detectorProperties->SetCalibration(calib);
-    
-    
+
+
     Detector* detector = new Detector(detectorProperties);
     detector->Info();
-    
+
     std::vector<Particle> particles;
     std::vector<Particle> ScintParticles;
-    
+
     Particle proton(nLayers, coincidenceTime, coincidenceLayer, calib);
     std::unordered_map<double, TraceProperties> initialEvents;
     std::multimap<double, TraceProperties> postEvents;
-    bool bsaveTrace = false; 
+    bool bsaveTrace = false;
     Plotter plotter(coincidenceTime);
 
     cout << "Dataset: " << dataset << endl;
     cout << "Input file: " << filename << endl;
-    
+
     cout << "Measurement: Getting raw data." << endl;
 
-    double ylim = 10000;
+    double ylim = 16000;
     TH1D* h_charge_0 = new TH1D("h_charge_0", "h_charge_0", 1000, 0, ylim);
     TH1D* h_charge_1 = new TH1D("h_charge_1", "h_charge_1", 1000, 0, ylim);
     TH1D* h_charge_2 = new TH1D("h_charge_2", "h_charge_2", 1000, 0, ylim);
     TH1D* h_charge_3 = new TH1D("h_charge_3", "h_charge_3", 1000, 0, ylim);
     TH1D* h_chargeDiff = new TH1D("h_chargeDiff", "h_chargeDiff", 1000, 0, 3000);
     //co2627_na1011_200s
-    int coincChannel = 0;
+    int coincChannel = 7;
     bool useCharge = true;
-    bool useCoinc = true;
+    bool useCoinc = false;
 
     for (double e = 0; e<entries; e++){
-        trace_props.Clear();    
+        trace_props.Clear();
         datatree->GetEntry(e);
         if (board == 1) {
             channel += 16;
@@ -379,13 +379,13 @@ void sourceCalib(){
 
 
     for (double e = 0; e<entries; e++){
-        trace_props.Clear();    
+        trace_props.Clear();
         datatree2->GetEntry(e);
         if (board == 1) {
             channel += 16;
             timestamp_ps += 32*1000;
         };
-        
+
         trace_props.SetParameters(*trace, channel, charge, static_cast<double>(timestamp_ps)/1000, static_cast<double>(timestamp_ps), discard_index, bsaveTrace, true);
         //detector->EnergyHist(channel)->Fill(trace_props.amp);
 
@@ -413,11 +413,11 @@ void sourceCalib(){
         proton.Clear();
         proton.Insert(initialTrace);
         auto lowerTraces = postEvents.lower_bound(initialTime - coincidenceTime*1000);
-        auto upperTraces = postEvents.upper_bound(initialTime + coincidenceTime*1000);            
-        for (auto coincTrace = lowerTraces; coincTrace != upperTraces; ++coincTrace) {                                
+        auto upperTraces = postEvents.upper_bound(initialTime + coincidenceTime*1000);
+        for (auto coincTrace = lowerTraces; coincTrace != upperTraces; ++coincTrace) {
             proton.Coincidence(coincTrace->second, coincChannel);
             if(coincTrace->second.channel == coincChannel+1) h_timediff->Fill(static_cast<double>(coincTrace->first-initialTime)/1000);
-        }            
+        }
         particles.push_back(proton);
     }
 
@@ -426,12 +426,12 @@ void sourceCalib(){
             coinProton.Test();
             if(coinProton.GetCharge(coincChannel+1) != 0){
                 if(useCharge){
-                    
+
                     if(std::abs(coinProton.GetCharge(coincChannel)-coinProton.GetCharge(coincChannel+1)) > 0){
                         h_charge_0->Fill(coinProton.GetCharge(coincChannel));
-                        h_charge_1->Fill(coinProton.GetCharge(coincChannel+1)); 
+                        h_charge_1->Fill(coinProton.GetCharge(coincChannel+1));
                         h_chargeDiff->Fill(std::abs(coinProton.GetCharge(coincChannel)-coinProton.GetCharge(coincChannel+1)));
-                    }    
+                    }
                 }
                 else{
                     h_charge_0->Fill(coinProton.GetAmplitude(coincChannel));
@@ -442,8 +442,8 @@ void sourceCalib(){
     }
 
     if(!useCoinc){
-        h_charge_0->Add(h_charge_2, -1);
-        h_charge_1->Add(h_charge_3, -1);
+        // h_charge_0->Add(h_charge_2, -1);
+        // h_charge_1->Add(h_charge_3, -1);
 
         // h_charge_0->Add(h_charge_2, -0.1666);
         // h_charge_1->Add(h_charge_3, -0.1666);
@@ -471,7 +471,7 @@ void sourceCalib(){
     // std::cout << "  Sigma     = " << sigma << "\n";
 
     // h_charge_1->Fit(gaus, "Q"); // "Q" = quiet, remove for verbose
-    
+
     // mean  = gaus->GetParameter(1);
     // sigma = gaus->GetParameter(2);
     // ampl  = gaus->GetParameter(0);
@@ -504,7 +504,7 @@ void sourceCalib(){
     h_charge_1->GetXaxis()->SetTitle("Charge");
     h_charge_1->GetYaxis()->SetTitle("Counts");
     h_charge_1->Draw();
-    
+
     c1->cd(3);
     h_timediff->SetLineColor(kRed);
     h_timediff->SetTitle("Time Spectrum Channel 1");
