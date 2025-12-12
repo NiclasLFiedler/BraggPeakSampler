@@ -91,20 +91,20 @@
     },
     {
       "detectorID": 3,
-      "comment": "Photon Detector",
+      "comment": "Detector",
       "datasetSelect": 1,
       "detectorType": "pbwo4",
       "beamEnergy": 220,
-      "nLayers": 25,
+      "nLayers": 32,
       "crystalSize": [
         30,
         30,
-        3
+        2
       ],
-      "gapSizeZ": 0.1,
-      "secondaryLayerStatus": false,
-      "nSecondaryLayers": 0,
-      "secLayerSizeZ": 0,
+      "gapSizeZ": 0.2,
+      "secondaryLayerStatus": true,
+      "nSecondaryLayers": 11,
+      "secLayerSizeZ": 3,
       "absorberStatus": false,
       "absorberType": "pmma",
       "absorberSize": 0,

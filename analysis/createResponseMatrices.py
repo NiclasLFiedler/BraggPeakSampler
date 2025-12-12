@@ -418,11 +418,15 @@ if __name__ == "__main__":
     def gaussian(x, amplitude, mean, sigma):
         return amplitude * np.exp(-0.5 * ((x - mean) / sigma)**2)
 
-    def meanCell(energy):
+    def EnergytoADC(energy):
         a = 0.1
         b = 1
-        return a*energy+b
+        return a*energy/(1+12.68*0.001+energy/3)+b
 
+    def EnergytoCell(energy):
+        adc = EnergytoADC(energy)
+        spe = 100
+        return adc/spe
     def sipm_response(energy, pe_axis, n_max=1000):
         """
         Calculate SiPM response function for a given energy deposition
@@ -459,10 +463,10 @@ if __name__ == "__main__":
         components = []
 
         for n in range(0, n_max + 1):   
-            cell_prob = 1 - np.exp(-meanCell(energy) / Ncells)
+            cell_prob = 1 - np.exp(-EnergytoCell(energy) / Ncells)
             binomial_prob = binom.pmf(Ncells, n, cell_prob) 
             if binomial_prob > 1e-10:  
-                sigma_n = np.sqrt((np.sqrt(n) * sigma_SPE)**2+sigma_ped**2) if n > 0 else np.sqrt(sigma_SPE**2+sigma_ped**2)
+                sigma_n = np.sqrt((np.sqrt(n) * sigma_SPE)**2) if n > 0 else np.sqrt(sigma_SPE**2)
                 if sigma_n < 1e-10:
                     sigma_n = sigma_SPE
                 gaussian = (1 / (np.sqrt(2 * np.pi) * sigma_n)) * \
