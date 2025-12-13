@@ -7,7 +7,7 @@ import uproot
 def gaussian(x, A, mu, sigma):
     return A * np.exp(-(x - mu)**2 / (2 * sigma**2))
 
-show = True
+show = False
 file = uproot.open("../data/paperBeamtime/rawData/SPEmeasurment.root")
 tree = file["RawData"]
 charge = tree["Charge"].array(library="np")
@@ -46,7 +46,7 @@ for ch in unique_channels:
 params = []
 
 for selectCH in unique_channels:
-    if selectCH == 8 & selectCH == 9:
+    if selectCH == 8 or selectCH == 9 or selectCH == 0:
         continue
 
     bin_centers = 0.5 * (bin_edges[selectCH][1:] + bin_edges[selectCH][:-1])
@@ -84,7 +84,7 @@ for selectCH in unique_channels:
 
         fits.append((popt, np.sqrt(np.diag(pcov))))
 
-    print("=== SPE Peak Fit Results ===")
+    print(f"=== SPE Peak Fit Results {selectCH} ===")
     for i, ((A, mu, sigma), (dA, dmu, dsigma)) in enumerate(fits, start=1):
         print(f"Peak {i}:")
         print(f"   Mean μ{i}       = {mu:.3f} ± {dmu:.3f}")
@@ -100,11 +100,17 @@ for selectCH in unique_channels:
 
     # Gains between peaks
 
-    sigma_gain = np.sqrt(sigmas[1]**2 - sigmas[0]**2)
+    pxt = 0.2
+    print(f"Sigma 1: {sigmas[0]}")
+    print(f"Sigma 2: {sigmas[1]}")
+    sigma_gain = np.sqrt((sigmas[1]**2 - sigmas[0]**2))
     sigma_elec = np.sqrt(sigmas[0]**2-sigma_gain**2)
+
     print(f"Sigma gain {sigma_gain}")
     print(f"Sigma elec {sigma_elec}")
-
+    if np.isnan(sigma_elec):
+        print("ERROR: sigma_elec is NaN → stopping.")
+        raise SystemExit
     gains = mus[1:] - mus[:-1]
     gains_err = np.sqrt(mus_err[1:]**2 + mus_err[:-1]**2)
 
