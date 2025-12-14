@@ -24,7 +24,7 @@ histograms = {}      # store hist arrays
 bin_edges = {}        # store bin edges
 
 for ch in unique_channels:
-    hist, bins = np.histogram(charges_per_channel[ch], bins=8000, range=(0, 32000))
+    hist, bins = np.histogram(charges_per_channel[ch], bins=8000, range=(0, 32768))
     histograms[ch] = hist
     bin_edges[ch] = bins
 
@@ -46,14 +46,14 @@ for ch in unique_channels:
 params = []
 
 for selectCH in unique_channels:
-    if selectCH == 8 or selectCH == 9 or selectCH == 0:
+    if selectCH == 8 or selectCH == 9:
         continue
 
     bin_centers = 0.5 * (bin_edges[selectCH][1:] + bin_edges[selectCH][:-1])
     y = histograms[selectCH]
 
     distance=100
-    width = 5
+    width = 8
 
     peaks, properties = find_peaks(y, distance=distance, width = width)
     # plt.plot(bin_centers[peaks], y[peaks], "x", color="red", label="Detected Peaks")
@@ -71,6 +71,10 @@ for selectCH in unique_channels:
         # Choose a fitting window around each peak
         left = max(0, p - 25)
         right = min(len(bin_centers), p + 25)
+
+        # if (selectCH == 0):
+        #     left = max(0, p - 75)
+        #     right = min(len(bin_centers), p + 75)
 
         x_fit = bin_centers[left:right]
         y_fit = y[left:right]
@@ -90,38 +94,53 @@ for selectCH in unique_channels:
         print(f"   Mean μ{i}       = {mu:.3f} ± {dmu:.3f}")
         print(f"   Width σ{i}      = {sigma:.3f} ± {dsigma:.3f}")
         print("")
-
+      
     # Extract μ and σ values
-    mus = np.array([f[0][1] for f in fits])
-    sigmas = np.array([f[0][2] for f in fits])
+    if  selectCH == 0:
+        mus = np.array([912.633,  1803.96])
+        sigmas = np.array([69.3187, 92.3195])
+        mus_err = np.array([0.503949, 1.92606])
+        sigmas_err = np.array([0.497741, 2.1473])
+    else:    
+        mus = np.array([f[0][1] for f in fits])
+        sigmas = np.array([f[0][2] for f in fits])
 
-    mus_err = np.array([f[1][1] for f in fits])
-    sigmas_err = np.array([f[1][2] for f in fits])
+        mus_err = np.array([f[1][1] for f in fits])
+        sigmas_err = np.array([f[1][2] for f in fits])
 
     # Gains between peaks
 
     pxt = 0.2
     print(f"Sigma 1: {sigmas[0]}")
     print(f"Sigma 2: {sigmas[1]}")
-    sigma_gain = np.sqrt((sigmas[1]**2 - sigmas[0]**2))
-    sigma_elec = np.sqrt(sigmas[0]**2-sigma_gain**2)
+    sigma_gain = np.sqrt((sigmas[1:]**2 - sigmas[:-1]**2))
+    sigma_elec = np.sqrt(sigmas[:-1]**2-sigma_gain**2)
 
     print(f"Sigma gain {sigma_gain}")
     print(f"Sigma elec {sigma_elec}")
-    if np.isnan(sigma_elec):
+    if np.isnan(sigma_elec[0]):
         print("ERROR: sigma_elec is NaN → stopping.")
         raise SystemExit
     gains = mus[1:] - mus[:-1]
     gains_err = np.sqrt(mus_err[1:]**2 + mus_err[:-1]**2)
 
     # Gain widths
-    gain_sigmas = np.sqrt(sigmas[1:]**2 + sigmas[:-1]**2)
+    gain_sigmas = np.sqrt((sigmas[1:]**2 - sigmas[:-1]**2))
     gain_sigmas_err = np.sqrt(
         (sigmas[1:] * sigmas_err[1:] / gain_sigmas)**2 +
         (sigmas[:-1] * sigmas_err[:-1] / gain_sigmas)**2
     )
-
-    params.append([])
+        
+    gains = gains/16
+    gains_err = gains_err/16
+    gain_sigmas = gain_sigmas/16
+    gain_sigmas_err = gain_sigmas_err/16
+    sigma_elec = sigma_elec/16
+    
+    if selectCH == 7:
+        params.append([gains[0], gains_err[0], gain_sigmas[0], gain_sigmas_err[0], sigma_elec[0]])
+        params.append([gains[0]/4, gains_err[0]/4, gain_sigmas[0]/4, gain_sigmas_err[0]/4, sigma_elec[0]/4])    
+    params.append([gains[0], gains_err[0], gain_sigmas[0], gain_sigmas_err[0], sigma_elec[0]])
 
     print("=== SiPM Physical Parameters ===")
     for i in range(len(gains)):
@@ -149,3 +168,4 @@ for selectCH in unique_channels:
         plt.show()
     else:
         plt.close()
+np.save("SPEparams.npy", params)

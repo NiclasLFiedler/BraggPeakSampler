@@ -58,7 +58,7 @@ void analysis(){
     bool bPhotons = false;
 
 
-    const char* datasets[3] = {"MIT_05_2024", "simulation", "beamtime"};
+    const char* datasets[3] = {"MIT_05_2024", "simulation", "paperBeamtime"};
     const char* in_data[3] = {"notarget", "homotarget", "heterotarget"};
     const char* target_data[3] = {"without a target", "with the homogeneous target", "with the heterogeneous target"};
 
@@ -195,16 +195,13 @@ void analysis(){
     detectorProperties->SetNormStatus(normStatus);
     detectorProperties->SetReversedStatus(reversedStatus);
     detectorProperties->SetSimulationStatus(simulationStatus);
-    detectorProperties->SetCalibrationStatus(true);
+    detectorProperties->SetCalibrationStatus(false);
     detectorProperties->SetAbsorberStatus(absorberStatus);
     
     detectorProperties->Process();
 
     Calibration* calib = new Calibration(detectorProperties);
     calib->energy_extrapolation(co60_1, co60_2);
-    for(int i=0; i<nLayers; i++){
-        printf("Layer %i: Channel Position %f Current: %f \n", i, calib->GetChannel(i, 1.275), na22.CH[i]);    
-    }
     detectorProperties->SetCalibration(calib);
     
     
@@ -228,6 +225,16 @@ void analysis(){
     cout << "Dataset: " << dataset << endl;
     cout << "Input file: " << filename << endl;
     bool bTraceDisable = true;
+
+    sprintf(file, "%scoincidence_output.root", out_path);
+    TFile* f = new TFile(file, "RECREATE");
+
+
+    TTree* t = new TTree("events", "Coincident events");
+
+    double Q[32];
+    t->Branch("Charge", Q, "Q[32]/D");
+
     if(!simulationStatus){
         cout << "Measurement: Getting raw data." << endl;
         for (double e = 0; e<entries; e++){
@@ -241,10 +248,12 @@ void analysis(){
             trace_props.SetParameters(*trace, channel, charge, static_cast<double>(timestamp_ps)/1000,  timestamp_ps, discard_index, bsaveTrace, bTraceDisable);
             
             if(trace_props.charge > 0) {
-                detector->EnergyHist(channel)->Fill(calib->GetQuenchedEnergy(channel, trace_props.charge)); //todo set birks to 0 if no quenching // sometimes double accounted for
+                detector->EnergyHist(channel)->Fill(trace_props.charge);
+                // detector->EnergyHist(channel)->Fill(calib->GetQuenchedEnergy(channel, trace_props.charge));
             }
             else{
-                detector->EnergyHist(channel)->Fill(-1); //todo set birks to 0 if no quenching // sometimes double accounted for
+                std::cout << "Energy zero or negative!" << " WARNING " << trace_props.charge << std::endl;
+                // detector->EnergyHist(channel)->Fill(-trace_props.charge); 
             }
             if(trace_props.channel == 0){
                 initialEvents.insert({trace_props.time_ps, trace_props});
@@ -263,19 +272,19 @@ void analysis(){
         Long64_t time2 = 0;
         Long64_t timeDiff = 0;
         int iMod = 0;
-        for(const auto& [secondaryTime, secondaryTrace] : secondaryEvents) {
-            //h_inittime->Fill(secondaryTime/1000);
-            if(time1 == 0){
-                time1 = secondaryTime;
-            }
-            else{
-                time2 = secondaryTime;
-                timeDiff = (time2-time1)/1000;
-                printf("Time1 %lld Tim2: %lld ps Timediff: %lld ns \n", time1, time2, timeDiff);
-                h_timediff->Fill(timeDiff);
-                time1 = time2;
-            }
-        }
+        // for(const auto& [secondaryTime, secondaryTrace] : secondaryEvents) {
+        //     //h_inittime->Fill(secondaryTime/1000);
+        //     if(time1 == 0){
+        //         time1 = secondaryTime;
+        //     }
+        //     else{
+        //         time2 = secondaryTime;
+        //         timeDiff = (time2-time1)/1000;
+        //         printf("Time1 %lld Tim2: %lld ps Timediff: %lld ns \n", time1, time2, timeDiff);
+        //         h_timediff->Fill(timeDiff);
+        //         time1 = time2;
+        //     }
+        // }
 
         for(const auto& [initialTime, initialTrace] : initialEvents) {
             // h_inittime->Fill(initialTime/1000);
@@ -292,10 +301,10 @@ void analysis(){
 
             proton.Clear();
             proton.Insert(initialTrace);
-            if((timeDiff)<1200){
-                // cout << "Short time difference: " << timeDiff/1000 << " us, Event: " << iMod << endl;
-                detector->StoppedEnergyHist(0)->Fill(proton.GetEDep(0));
-            }
+            // if((timeDiff)<1200){
+            //     // cout << "Short time difference: " << timeDiff/1000 << " us, Event: " << iMod << endl;
+            //     detector->StoppedEnergyHist(0)->Fill(proton.GetEDep(0));
+            // }
             auto lowerTraces = postEvents.lower_bound(initialTime - coincidenceTime*1000);
             auto upperTraces = postEvents.upper_bound(initialTime + coincidenceTime*1000);            
             for (auto coincTrace = lowerTraces; coincTrace != upperTraces; ++coincTrace) {                                
@@ -309,14 +318,6 @@ void analysis(){
                 missing_buffer_counter++;
                 continue;
             }
-            if(coinProton.pileupStatus == true){
-                pileup_counter++;
-                //continue;
-            }
-            if(coinProton.ampOffsetStatus == true){
-                prepeak_step_counter++;
-                //continue;
-            }
             if(coinProton.coinc_layer < coincidenceLayer){
                 coinc_layer_counter++;
                 continue;
@@ -325,10 +326,12 @@ void analysis(){
             coinProton.SumEDep();
             detector->TotalEnergyHist()->Fill(coinProton.total_edep);
             for(int i=0; i<coinProton.traces.size(); i++){
-                if(coinProton.GetEDep(i)!=0){
+                if(coinProton.GetEDep(i)>0){
+                    Q[i] = coinProton.GetEDep(i);
                     detector->CoincEnergyHist(i)->Fill(coinProton.GetEDep(i));
                 }
             }
+            t->Fill();
             for (int i = coinProton.traces.size() - 1; i >= 0; --i) {
                 if(coinProton.GetEDep(i)!=0){
                     //detector->StoppedEnergyHist(i)->Fill(coinProton.GetEDep(i));
@@ -336,6 +339,9 @@ void analysis(){
                 }
             }
         }
+        t->Write();
+        f->Close();
+        cout << "Data acquisition & Histograms finished" << endl;
     }
     else{
         cout << "Simulation: Getting raw data from ROOT file." << endl;
@@ -438,8 +444,8 @@ void analysis(){
     for(int i = 0; i<nLayers; i++){
         c1->cd(i+1);
         plotter.Histogram1D(detector->EnergyHist(i), "EDep [MeV]", "Counts");
-        // detector->CoincEnergyHist(i)->SetLineColor(kRed+1);
-        // detector->CoincEnergyHist(i)->Draw("HIST SAME");
+        detector->CoincEnergyHist(i)->SetLineColor(kRed+1);
+        detector->CoincEnergyHist(i)->Draw("HIST SAME");
         // detector->StoppedEnergyHist(i)->SetLineColor(kOrange+1);
         // detector->StoppedEnergyHist(i)->Draw("HIST SAME");
         plotter.Legend(detector->EnergyHist(i));

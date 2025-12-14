@@ -68,8 +68,9 @@ def hist_to_numpy(hist):
 # h = f.Get("your_hist_name")
 
 # Replace these two lines with your actual code:
-channel = 1
+
 useCutoff = True
+show = False
 if(useCutoff):
     f = ROOT.TFile.Open("../data/paperBeamtime/notarget/output/Histograms.root")
 else:
@@ -78,100 +79,109 @@ else:
 
 cutoff = [4000, 3500, 4500, 4000, 3500, 4000, 3500, 3500, 5000, 3000, 3500, 4000, 4000, 4000, 4000, 4000, 4000, 4000, 4000, 4000, 5000, 5000, 5500, 5000, 5000, 5000, 5000, 5500, 5000, 5000, 5000, 5000]
 
-h = f.Get(f"h_coincCharge_{channel}")
+params = []
+for channel in range(32):
+    h = f.Get(f"h_coincCharge_{channel}")
 
-xdata, ydata = hist_to_numpy(h)
+    xdata, ydata = hist_to_numpy(h)
 
-# -------- Initial guesses ----------
-a_guess = 1/5000
-b_guess = 0.005
-A1_guess = 30
-A2_guess = A1_guess
-sigma_guess = 300
+    # -------- Initial guesses ----------
+    a_guess = 1/5000
+    b_guess = 0.005
+    A1_guess = 30
+    A2_guess = A1_guess
+    sigma_guess = 300
 
-# p0 = [a_guess, b_guess,
-#       A1_guess, A2_guess,
-#       sigma_guess, sigma_guess+50]
- 
-# p0 = [a_guess, b_guess,
-#       A1_guess, A2_guess,
-#       sigma_guess]
+    # p0 = [a_guess, b_guess,
+    #       A1_guess, A2_guess,
+    #       sigma_guess, sigma_guess+50]
+    
+    # p0 = [a_guess, b_guess,
+    #       A1_guess, A2_guess,
+    #       sigma_guess]
 
-p0 = [a_guess, b_guess,
-      A1_guess,
-      sigma_guess]
+    p0 = [a_guess, b_guess,
+          A1_guess,
+          sigma_guess]
 
-# Bounds (to keep model physical)
-# lower = [0, 0, 0, 0, 0.1, 0.1]
-# upper = [1,  0.05,  2000, 2000, 20000, 20000]
+    # Bounds (to keep model physical)
+    # lower = [0, 0, 0, 0, 0.1, 0.1]
+    # upper = [1,  0.05,  2000, 2000, 20000, 20000]
 
-# lower = [0, 0, 15, 15, 0.1]
-# upper = [1,  0.05,  2000, 2000, 20000]
+    # lower = [0, 0, 15, 15, 0.1]
+    # upper = [1,  0.05,  2000, 2000, 20000]
 
-lower = [0, 0, 0, 0.1]
-upper = [1,  0.01,  20000, 20000]
+    lower = [0, 0, 0, 0.1]
+    upper = [1,  0.01,  20000, 20000]
 
-# -------- Perform fit ----------
-p02 = [a_guess, b_guess, A1_guess, sigma_guess]
-lower2 = [0, 0, 0, 0.1]
-upper2 = [1, 0.1, 2000, 20000]
-popt2, pcov2 = curve_fit(gauss_calib1, xdata, ydata, p0=p02, bounds=(lower2, upper2), maxfev=1000000)
+    # -------- Perform fit ----------
+    p02 = [a_guess, b_guess, A1_guess, sigma_guess]
+    lower2 = [0, 0, 0, 0.1]
+    upper2 = [1, 0.1, 2000, 20000]
+    popt2, pcov2 = curve_fit(gauss_calib1, xdata, ydata, p0=p02, bounds=(lower2, upper2), maxfev=1000000)
 
-a_fit2, b_fit2, A1_fit2, sigma1_fit2 = popt2[0], popt2[1], popt2[2], popt2[3]
+    a_fit2, b_fit2, A1_fit2, sigma1_fit2 = popt2[0], popt2[1], popt2[2], popt2[3]
 
-c3 = ((E1+E2)/2 - b_fit2) / a_fit2
+    c3 = ((E1+E2)/2 - b_fit2) / a_fit2
 
-print(f"länge: {len(xdata)}" )
-# popt, pcov = curve_fit(two_gauss_calib2, xdata, ydata, p0=p0, bounds=(lower, upper), maxfev=1000000)
+    print(f"länge: {len(xdata)}" )
+    # popt, pcov = curve_fit(two_gauss_calib2, xdata, ydata, p0=p0, bounds=(lower, upper), maxfev=1000000)
 
-if useCutoff:
-    popt, pcov = curve_fit(two_gauss_calib3, xdata[int(cutoff[channel]/80):], ydata[int(cutoff[channel]/80):], p0=p0, bounds=(lower, upper), maxfev=1000000)
-else:
-    popt, pcov = curve_fit(two_gauss_calib3, xdata, ydata, p0=p0, bounds=(lower, upper), maxfev=1000000)
+    if useCutoff:
+        popt, pcov = curve_fit(two_gauss_calib3, xdata[int(cutoff[channel]/80):], ydata[int(cutoff[channel]/80):], p0=p0, bounds=(lower, upper), maxfev=1000000)
+    else:
+        popt, pcov = curve_fit(two_gauss_calib3, xdata, ydata, p0=p0, bounds=(lower, upper), maxfev=1000000)
 
-perr = np.sqrt(np.diag(pcov))
-# a_fit, b_fit, A1_fit, A2_fit, sigma1_fit, sigma2_fit = popt[0], popt[1], popt[2], popt[3], popt[4], popt[5]
-# a_err, b_err, A1_error, A2_error, sigma1_error, sigma2_error = perr[0], perr[1], perr[2], perr[3], perr[4], perr[5]
+    perr = np.sqrt(np.diag(pcov))
+    # a_fit, b_fit, A1_fit, A2_fit, sigma1_fit, sigma2_fit = popt[0], popt[1], popt[2], popt[3], popt[4], popt[5]
+    # a_err, b_err, A1_error, A2_error, sigma1_error, sigma2_error = perr[0], perr[1], perr[2], perr[3], perr[4], perr[5]
 
-# a_fit, b_fit, A1_fit, A2_fit, sigma1_fit = popt[0], popt[1], popt[2], popt[3], popt[4]
-# a_err, b_err, A1_error, A2_error, sigma1_error = perr[0], perr[1], perr[2], perr[3], perr[4]
+    # a_fit, b_fit, A1_fit, A2_fit, sigma1_fit = popt[0], popt[1], popt[2], popt[3], popt[4]
+    # a_err, b_err, A1_error, A2_error, sigma1_error = perr[0], perr[1], perr[2], perr[3], perr[4]
 
-a_fit, b_fit, A1_fit, sigma1_fit = popt[0], popt[1], popt[2], popt[3]
-a_err, b_err, A1_error, sigma1_error = perr[0], perr[1], perr[2], perr[3]
+    a_fit, b_fit, A1_fit, sigma1_fit = popt[0], popt[1], popt[2], popt[3]
+    a_err, b_err, A1_error, sigma1_error = perr[0], perr[1], perr[2], perr[3]
 
-# -------- Print results ----------
-print("\n=== Energy Calibration Fit Results ===")
-print(f"a = {a_fit:.6f} ± {a_err:.6f}   (keV/channel)")
-print(f"b = {b_fit:.3f} ± {b_err:.3f}   (keV)")
-print(f"A1 = {A1_fit:.2f} ± {A1_error:.2f}   (counts)")
-# print(f"A2 = {A2_fit:.2f} ± {A2_error:.2f}   (counts)")
-print(f"sigma1 = {sigma1_fit:.2f} ± {sigma1_error:.2f}   (channels)")
-# print(f"sigma2 = {sigma2_fit:.2f} ± {sigma2_error:.2f}   (channels)")
+    params.append([a_fit*4, a_err*4, b_fit*4, b_err*4])
 
-c1 = (E1 - b_fit) / a_fit
-c2 = (E2 - b_fit) / a_fit
-print(f"Peak centers (channels): c1 = {c1:.2f}, c2 = {c2:.2f}")
-print(f"Separation: {c2 - c1:.2f} channels")
-print(f"BeamPo: {(a_fit*8155.6*4+b_fit):.2f} MeV")
+    # -------- Print results ----------
+    print(f"\n=== Energy Calibration Fit Results {channel} ===")
+    print(f"a = {a_fit:.6f} ± {a_err:.6f}   (keV/channel)")
+    print(f"b = {b_fit:.3f} ± {b_err:.3f}   (keV)")
+    print(f"A1 = {A1_fit:.2f} ± {A1_error:.2f}   (counts)")
+    # print(f"A2 = {A2_fit:.2f} ± {A2_error:.2f}   (counts)")
+    print(f"sigma1 = {sigma1_fit:.2f} ± {sigma1_error:.2f}   (channels)")
+    # print(f"sigma2 = {sigma2_fit:.2f} ± {sigma2_error:.2f}   (channels)")
 
-# ---------- Plot ----------
-plt.figure(figsize=(10,6))
-# plt.step(xdata, two_gauss_calib(xdata, *p0), where="mid", label="Fit", color="red", linewidth=2)
-plt.step(xdata, ydata, where="mid", label="Data")
-# plt.plot(xdata, gauss_calib1(xdata, a_fit, b_fit, A1_fit, sigma1_fit), label="1173.23 keV", color="green", linewidth=2)
-plt.plot(xdata, gauss_calib1(xdata, a_fit, b_fit, A1_fit, sigma1_fit), label="1173.23 keV", color="green", linewidth=2)
-# plt.plot(xdata, gauss_calib2(xdata, a_fit, b_fit, A2_fit, sigma2_fit), label="1332.49 keV", color="red", linewidth=2)
-# plt.plot(xdata, gauss_calib2(xdata, a_fit, b_fit, A2_fit, sigma1_fit), label="1332.49 keV", color="red", linewidth=2)
-plt.plot(xdata, gauss_calib2(xdata, a_fit, b_fit, A1_fit, sigma1_fit), label="1332.49 keV", color="red", linewidth=2)
-xf = np.linspace(min(xdata), max(xdata), 2000)
-yf = two_gauss_calib3(xf, *popt)
+    c1 = (E1 - b_fit) / a_fit
+    c2 = (E2 - b_fit) / a_fit
+    print(f"Peak centers (channels): c1 = {c1:.2f}, c2 = {c2:.2f}")
+    print(f"Separation: {c2 - c1:.2f} channels")
+    print(f"BeamPo: {(a_fit*8155.6*4+b_fit):.2f} MeV")
 
-plt.plot(xf, yf, label="Fit", linewidth=2)
+    # ---------- Plot ----------
+    plt.figure(figsize=(10,6))
+    # plt.step(xdata, two_gauss_calib(xdata, *p0), where="mid", label="Fit", color="red", linewidth=2)
+    plt.step(xdata, ydata, where="mid", label="Data")
+    # plt.plot(xdata, gauss_calib1(xdata, a_fit, b_fit, A1_fit, sigma1_fit), label="1173.23 keV", color="green", linewidth=2)
+    plt.plot(xdata, gauss_calib1(xdata, a_fit, b_fit, A1_fit, sigma1_fit), label="1173.23 keV", color="green", linewidth=2)
+    # plt.plot(xdata, gauss_calib2(xdata, a_fit, b_fit, A2_fit, sigma2_fit), label="1332.49 keV", color="red", linewidth=2)
+    # plt.plot(xdata, gauss_calib2(xdata, a_fit, b_fit, A2_fit, sigma1_fit), label="1332.49 keV", color="red", linewidth=2)
+    plt.plot(xdata, gauss_calib2(xdata, a_fit, b_fit, A1_fit, sigma1_fit), label="1332.49 keV", color="red", linewidth=2)
+    xf = np.linspace(min(xdata), max(xdata), 2000)
+    yf = two_gauss_calib3(xf, *popt)
 
-plt.xlabel("Channel")
-plt.ylabel("Counts")
-# plt.yscale("log")
-plt.legend()
-plt.grid(alpha=0.3)
-plt.tight_layout()
-plt.show()
+    plt.plot(xf, yf, label="Fit", linewidth=2)
+
+    plt.xlabel("Channel")
+    plt.ylabel("Counts")
+    # plt.yscale("log")
+    plt.legend()
+    plt.grid(alpha=0.3)
+    plt.tight_layout()
+    if show:
+        plt.show()
+    else:
+        plt.close()
+print("\n=== Summary of Calibration Parameters ===")
+np.save("calibParams.npy", params)

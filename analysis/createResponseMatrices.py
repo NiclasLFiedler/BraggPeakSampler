@@ -1,16 +1,3 @@
-# ---
-# jupyter:
-#   jupytext:
-#     cell_metadata_filter: -all
-#     formats: ipynb,py:percent
-#     text_representation:
-#       extension: .py
-#       format_name: percent
-#       format_version: '1.3'
-#       jupytext_version: 1.18.1
-# ---
-
-# %%
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import stats
@@ -30,74 +17,114 @@ import matplotlib
 matplotlib.use('TkAgg')  # or 'Agg' for non-interactive
 import os
 
+class SiPM:
+    """
+    Simple container for SiPM single-photoelectron parameters.
+    All values are assumed to be in consistent units (e.g. ADC counts or charge).
+    """
+
+    def __init__(self, gain, gain_err, gain_width, gain_width_err, elec_width):
+        """
+        Parameters
+        ----------
+        gain : float
+            Mean gain (1 p.e. peak position)
+        gain_width : float
+            Width (sigma) of the 1 p.e. gain distribution
+        elec_width : float
+            Width (sigma) of the electronic noise (pedestal)
+        """
+        self.gain = float(gain)
+        self.gain_err = float(gain_width)
+        self.gain_width = float(gain_width)
+        self.gain_width_err = float(gain_width)
+        self.elec_width = float(elec_width)
+
+    def __repr__(self):
+        return (
+            f"SiPM(gain={self.gain}, "
+            f"gain_width={self.gain_width}, "
+            f"elec_width={self.elec_width})"
+        )
 
 class ChannelCalibration:
     """
     Represents the energy calibration of one detector channel using two points.
     """
 
-    def __init__(self,
-                 E1, E2,
-                 adc1, adc2,
-                 std1=None, std2=None,
-                 err1=None, err2=None):
-        """
-        Parameters:
-        E1, E2     : known energies [MeV or keV]
-        adc1, adc2 : corresponding ADC means
-        std1, std2 : standard deviations of ADC peaks
-        err1, err2 : error of ADC means
-        """
-
-        self.E1 = E1
-        self.E2 = E2
-        self.adc1 = adc1
-        self.adc2 = adc2
-        self.std1 = std1
-        self.std2 = std2
-        self.err1 = err1
-        self.err2 = err2
-
-        # Calculate linear calibration: E = m * ADC + b
-        self.m, self.b = self._calculate_calibration()
-
-    def _calculate_calibration(self):
-        m = (self.E2 - self.E1) / (self.adc2 - self.adc1)
-        b = self.E1 - m * self.adc1
-        return m, b
-
+    def __init__(self, a, b, a_err, b_err, channelWidth):
+        self.kB = 12.68 * 0.001
+        self.a = a
+        self.b = b
+        self.a_err1 = a_err
+        self.b_err = b_err
+        self.channelWidth = channelWidth
+        
     def adc_to_energy(self, adc_value):
-        return self.m * adc_value + self.b
+        linearenergy = self.a * adc_value + self.b
+        return 1/(1/linearenergy - self.kB/self.channelWidth)
 
     def energy_to_adc(self, energy):
-        return (energy - self.b) / self.m
+        energy = energy/(1 + self.kB * energy/self.channelWidth)
+        return (energy - self.b) / self.a
 
     def __repr__(self):
         return (
             f"ChannelCalibration(\n"
-            f"  slope = {self.m:.6f}, offset = {self.b:.6f}\n"
-            f"  Points: ({self.adc1} → {self.E1}), ({self.adc2} → {self.E2})\n)"
+            f"  slope = {self.a:.6f}, offset = {self.b:.6f}\n"
         )
 
-class DetectorCalibration:
+class Detector:
     """
     Represents a detector with multiple calibrated channels.
     """
 
-    def __init__(self, n_channels=1):
+    def __init__(self, n_channels=32):
         self.n_channels = n_channels
         self.channels = {}
+        self.sipms = {}
 
-    def add_channel(self, channel_id, calibration: ChannelCalibration):
+    def add_channel(self, channel_id, calibration: ChannelCalibration, sipm : SiPM = None):
         if channel_id < 0 or channel_id >= self.n_channels:
             raise ValueError(f"Channel must be between 0 and {self.n_channels-1}")
         self.channels[channel_id] = calibration
+        self.sipms[channel_id] = sipm
 
     def adc_to_energy(self, channel_id, adc_value):
         return self.channels[channel_id].adc_to_energy(adc_value)
 
     def energy_to_adc(self, channel_id, energy):
         return self.channels[channel_id].energy_to_adc(energy)
+
+    def sipm_gain(self, channel_id):
+        sipm = self.sipms.get(channel_id)
+        if sipm is None:
+            raise ValueError(f"No SiPM parameters for channel {channel_id}")
+        return sipm.gain
+
+    def sipm_gain_width(self, channel_id):
+        sipm = self.sipms.get(channel_id)
+        if sipm is None:
+            raise ValueError(f"No SiPM parameters for channel {channel_id}")
+        return sipm.gain_width
+    
+    def sipm_elec_width(self, channel_id):
+        sipm = self.sipms.get(channel_id)
+        if sipm is None:
+            raise ValueError(f"No SiPM parameters for channel {channel_id}")
+        return sipm.elec_width
+    
+    def sipm_gain_err(self, channel_id):
+        sipm = self.sipms.get(channel_id)
+        if sipm is None:
+            raise ValueError(f"No SiPM parameters for channel {channel_id}")
+        return sipm.gain_err
+    
+    def sipm_gain_width_err(self, channel_id):
+        sipm = self.sipms.get(channel_id)
+        if sipm is None:
+            raise ValueError(f"No SiPM parameters for channel {channel_id}")
+        return sipm.gain_width_err
 
     def __repr__(self):
         return f"DetectorCalibration({len(self.channels)}/{self.n_channels} channels)"
@@ -107,18 +134,29 @@ class ResponseMatrixBuilder:
     ResponseMatrixBuilder
     """
     
-    def __init__(self, detector_calibration: DetectorCalibration, n_measured_bins=4001, n_iterations=10):
+    def __init__(self, detector: Detector, n_measured_bins=16384, n_iterations=10):
+        adcrange = 32768
+        
         self.n_measured_bins = n_measured_bins
         self.n_iterations = n_iterations
-        self.detector_calibration = detector_calibration
+        self.detector = detector
 
-        trueBins = []
-        for i in range(self.detector_calibration.n_channels):
-            trueBins.append(self.detector_calibration.adc_to_energy(i, n_measured_bins))
+        true_edges = []
+        true_centers = []
+        true_bin_widths = []
+        for i in range(self.detector.n_channels):
+            true_edges.append(np.linspace(0, self.detector.adc_to_energy(i, adcrange), n_measured_bins + 1))
+            true_centers.append((true_edges[-1][1:] + true_edges[-1][:-1]) / 2)
+            true_bin_widths.append(true_centers[-1][1:] - true_centers[-1][:-1])
+            
+        self.true_edges = np.array(true_edges)
+        self.true_centers = np.array(true_centers)
+        self.measured_edges = np.linspace(0, adcrange, self.n_measured_bins + 1)
+        self.measured_centers = (self.measured_edges[1:] + self.measured_edges[:-1]) / 2
+        self.meas_bin_width = self.measured_edges[1] - self.measured_edges[0]
+        self.true_bin_widths = np.array(true_bin_widths)
         
-        self.n_true_bins = trueBins
-    
-    def drf_function(self, measured_energy, true_energy, resolution=0.15, tail_strength=0.2):
+    def drf_function(self, measured_energy, true_energy, channel = 0, resolution=0.15, tail_strength=0.2):
         """
         EXAMPLE DRF function - REPLACE THIS WITH YOUR ACTUAL DRF!
         
@@ -149,7 +187,7 @@ class ResponseMatrixBuilder:
             
         return gaussian + tail
     
-    def build_response_matrix(self, custom_drf=None):
+    def build_response_matrix(self, custom_drf=None, channel=0):
         """
         Build response matrix from DRF function
         
@@ -166,22 +204,12 @@ class ResponseMatrixBuilder:
         # Use custom DRF if provided, otherwise use example
         drf = custom_drf if custom_drf is not None else self.drf_function
         
-        # Create energy bins
-        self.true_edges = np.linspace(0, true_energy_range[1], self.n_true_bins + 1)
-
-    
-        self.measured_edges = np.linspace(0, self.n_measured_bins, self.n_measured_bins + 1)
-        
-        self.true_centers = (self.true_edges[1:] + self.true_edges[:-1]) / 2
-        self.measured_centers = (self.measured_edges[1:] + self.measured_edges[:-1]) / 2
-        bin_widths = self.measured_edges[1:] - self.measured_edges[:-1]
-        
-        response_matrix = np.zeros((self.n_measured_bins, self.n_true_bins))
+        response_matrix = np.zeros((self.n_measured_bins, self.n_measured_bins))
         
         print("Building response matrix...")
-        for j, true_energy in enumerate(self.true_centers):
-            if j % 100 == 0:
-                print(f"  Processing true energy bin {j+1}/{self.n_true_bins}")
+        for j, true_energy in enumerate(self.true_centers[channel]):
+            if j % 10 == 0:
+                print(f"  Processing true energy bin {j+1}/{self.n_measured_bins}")
             
             # For each true energy, calculate probability in each measured bin
             # for i in range(self.n_measured_bins):
@@ -193,15 +221,15 @@ class ResponseMatrixBuilder:
             #     integral, error = quad(drf, low, high, args=(true_energy))
             #     response_matrix[i, j] = integral
             
-            energyResponse = drf(true_energy, self.measured_centers)
+            energyResponse = drf(true_energy, self.measured_centers, channel)
             
-            response_matrix[:, j] = energyResponse * bin_widths
+            response_matrix[:, j] = energyResponse * builder.meas_bin_width
         
         # Normalize each column (true energy) to sum to 1
         response_matrix = response_matrix / np.sum(response_matrix, axis=0, keepdims=True)
 
         self.R = response_matrix
-        return response_matrix, self.true_centers, self.measured_centers
+        return response_matrix, self.true_centers[channel], self.measured_centers
     
     def load_response_matrix(self, true_energy_range, measured_energy_range, filename):
         self.true_edges = np.linspace(true_energy_range[0], true_energy_range[1], self.n_true_bins + 1)
@@ -427,7 +455,20 @@ if __name__ == "__main__":
         adc = EnergytoADC(energy)
         spe = 100
         return adc/spe
-    def sipm_response(energy, pe_axis, n_max=1000):
+    
+    def plotResponseMatrix(R, trueEnergies, measuredEnergies):
+        im = plt.imshow(R, aspect='auto', origin='lower',
+                    extent=[trueEnergies[0], trueEnergies[-1],
+                            measuredEnergies[0], measuredEnergies[-1]],
+                    norm=LogNorm(vmin=1e-4, vmax=1))
+
+        plt.xlabel('True Photon Count')
+        plt.ylabel('Measured Photon Count')
+        plt.title('Detector Response Matrix')
+        plt.colorbar(im)
+        plt.show()
+    
+    def sipm_response(energy, measured_centers, channel, n_max=2000):
         """
         Calculate SiPM response function for a given energy deposition
         Parameters:
@@ -445,37 +486,39 @@ if __name__ == "__main__":
         """
 
         Ncells = 8334
-        mean_SPE = 110.342
-        sigma_SPE= 10.0004
-        mean_ped= 85.5295
-        sigma_ped= 0.48595
-        PDE = 0.2316
-        sigma_SPE = (sigma_SPE) / (mean_SPE-mean_ped)#/0.2316
-        sigma_ped = (sigma_ped) / (mean_SPE-mean_ped)#/0.2316
-        response = np.zeros_like(pe_axis)
-        bin_width = builder.true_centers[1]-builder.true_centers[0]
 
-        underflow_axis = np.arange(-(bin_width)*400+builder.true_centers[0], -builder.true_centers[0], builder.true_centers[1]-builder.true_centers[0])
-        overflow_axis = np.arange(builder.true_centers[-1]+builder.true_centers[0], (bin_width)*400+builder.true_centers[-1], builder.true_centers[1]-builder.true_centers[0])
+        response = np.zeros_like(measured_centers)
+        bin_width = builder.meas_bin_width
+        boundaryInclusion = 100
+        sipm = builder.detector.sipms[channel]
+        gain = sipm.gain
+        sigma_SPE = sipm.gain_width
+        sigma_elec = sipm.elec_width
+        
+        underflow_axis = np.arange(-(bin_width)*boundaryInclusion+builder.measured_centers[0], -builder.measured_centers[0], bin_width)
+        overflow_axis = np.arange(builder.measured_centers[-1]+builder.measured_centers[0], (bin_width)*boundaryInclusion+builder.measured_centers[-1], bin_width)
 
         underflow_response = np.zeros_like(underflow_axis)
         overflow_response = np.zeros_like(overflow_axis)
+        
         components = []
 
         for n in range(0, n_max + 1):   
-            cell_prob = 1 - np.exp(-EnergytoCell(energy) / Ncells)
-            binomial_prob = binom.pmf(Ncells, n, cell_prob) 
+            cell_prob = 1 - np.exp(-builder.detector.energy_to_adc(channel, energy) /(gain*Ncells))
+            binomial_prob = binom.pmf(n, Ncells, cell_prob) 
             if binomial_prob > 1e-10:  
-                sigma_n = np.sqrt((np.sqrt(n) * sigma_SPE)**2) if n > 0 else np.sqrt(sigma_SPE**2)
+                sigma_n = np.sqrt((np.sqrt(n) * sigma_SPE)**2+sigma_elec**2)
+
                 if sigma_n < 1e-10:
                     sigma_n = sigma_SPE
+                    
                 gaussian = (1 / (np.sqrt(2 * np.pi) * sigma_n)) * \
-                          np.exp(-0.5 * ((pe_axis*PDE - n) / sigma_n) ** 2)
+                          np.exp(-0.5 * ((measured_centers - n*gain) / sigma_n) ** 2)
                 component = binomial_prob * gaussian
 
                 if(component[0]>1e-6):
                     underflow_gaussian = (1 / (np.sqrt(2 * np.pi) * sigma_n)) * \
-                              np.exp(-0.5 * ((underflow_axis*PDE - n) / sigma_n) ** 2)
+                              np.exp(-0.5 * ((underflow_axis - n*gain) / sigma_n) ** 2)
                     underflow_component = binomial_prob * underflow_gaussian
 
                     underflow_response += underflow_component
@@ -483,14 +526,14 @@ if __name__ == "__main__":
                 
                 if(component[-1]>1e-6):
                     overflow_gaussian = (1 / (np.sqrt(2 * np.pi) * sigma_n)) * \
-                              np.exp(-0.5 * ((overflow_axis*PDE - n) / sigma_n) ** 2)
+                              np.exp(-0.5 * ((overflow_axis - n*gain) / sigma_n) ** 2)
                     overflow_component = binomial_prob * overflow_gaussian
 
                     overflow_response += overflow_component
                     component[-1] += np.sum(overflow_component)
-                components.append((n, n, sigma_n, component))
+      
+                components.append((channel, n, sigma_n, component))
                 response += component
-                
         return response
 
     
@@ -552,63 +595,58 @@ if __name__ == "__main__":
         plt.close()
         
     print("Loading measured spectrum...")   
+    datapath = "../data/paperBeamtime/detector/"
+    maxMeasured = 4096
+    maxMeasured = 256
 
-    maxMeasured = 16000
+    saveMatrix = True
 
-    mean_SPE = 110.342
-    sigma_SPE= 10.0004
-    mean_ped= 85.5295
-    sigma_ped= 0.48595
-
-    saveMatrix = False
-    debug = False
-    lateral = False
-
-    detector = DetectorCalibration()
+    detector = Detector()
+    speParams = np.load(f"{datapath}/SPEparams.npy")
+    calibParams = np.load(f"{datapath}/calibParams.npy")
+    channelWidth = 3
     
-    for crystal in range(1):
-        cal = ChannelCalibration(
-            E1=0, E2=5.7038,
-            adc1=0, adc2=5419.79,  
-            std1=0, std2=1278.59,
-            err1=0, err2=10
+    for crystal in range(32):
+        if crystal > 10:
+            channelWidth = 2
+            
+        calib = ChannelCalibration(
+            a = calibParams[crystal][0],
+            b = calibParams[crystal][2],
+            a_err = calibParams[crystal][1],
+            b_err = calibParams[crystal][3],
+            channelWidth=channelWidth
         )
 
-        detector.add_channel(crystal, cal)
+        sipm = SiPM(
+            gain = speParams[crystal][0],
+            gain_err = speParams[crystal][1],
+            gain_width = speParams[crystal][2],
+            gain_width_err = speParams[crystal][3],
+            elec_width = speParams[crystal][4],
+        )
+    
+        detector.add_channel(crystal, calibration=calib, sipm=sipm)
+
 
     builder = ResponseMatrixBuilder(detector, n_measured_bins=maxMeasured, n_iterations=40)
 
-    R, true_energies, measured_energies = builder.build_response_matrix(custom_drf=sipm_response)
-
-    maxE = (4001-pedastal_idx-mean_ped)/(mean_SPE-mean_ped)/PDE
+    # data = np.load(f"{datapath}/responseMatrix_CH0.npz")
     
-    useExistingResponseMatrix = True
-    if(not useExistingResponseMatrix):
-        print("Building response matrix from DRF function...")
-        
-    else:
-        print("Loading response matrix from DRF function...")
-        R, true_energies, measured_energies = builder.load_response_matrix(
-            true_energy_range=(0, maxE), 
-            measured_energy_range=(0, maxE),
-            filename="responseMatrix.root")
+    # R  = data["response_matrix"]
+    # E_true = data["true_energy"]
+    # E_meas = data["measured_energy"]
     
-    if (saveMatrix):
-        responseShape  = R.shape
-        hist1d = ROOT.TH1D("h_measurement", "Measurement", responseShape[0], 0, maxE)
-        hist2d = ROOT.TH2D("h_responseMatrix", "Response Matrix", responseShape[0], 0, maxE, responseShape[1], 0, maxE)
+    # # plt.plot(builder.measured_centers, sipm_response(0.1, builder.measured_centers, channel=0))
+    # # plt.show()
+    # plotResponseMatrix(R, E_true, E_meas)    
 
-        for i in range(responseShape[0]):
-            for j in range(responseShape[1]):
-                hist2d.SetBinContent(i+1, j+1, R[i, j])  # ROOT bins start at 1
-        for i in range(responseShape[0]):
-            hist1d.SetBinContent(i+1, measured_spectrum[i])  # ROOT bins start at 1
+    print("Building response matrices for all channels...")
+    for channel in range(32):
+        R, true_energies, measured_energies = builder.build_response_matrix(custom_drf=sipm_response, channel=channel)
 
-        root_file = ROOT.TFile("responseMatrix.root", "RECREATE")
-        hist2d.Write()
-        hist1d.Write()
-        root_file.Close()
+        # plotResponseMatrix(R, true_energies, measured_energies)    
+               
+        np.savez(f"{datapath}responseMatrix_CH{channel}.npz", response_matrix=R, true_energy=true_energies, measured_energy=measured_energies)
 
-    saveResponseMatrix(R, output_filename=f"{datapath}/output/responseMatrix.pdf")
-    
 

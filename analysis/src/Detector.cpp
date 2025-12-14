@@ -7,7 +7,9 @@ Detector::Detector(DetectorProperties* detectorProperties)
 
     Char_t histdesc[100];
     Char_t histname[100];
-    int binningEdep[3] = {200, 0, 40};
+    
+
+    int binningEdep[3] = {32768/8, 0, 32768};
     int binningPhotons[3] = {200, 0, 50};
     int binningEntry[3] = {200, -static_cast<int>(detectorProperties->GetLayerSizeX())/2, static_cast<int>(detectorProperties->GetLayerSizeX())/2};
     int binningAngle[3] = {400, 0, 4};
