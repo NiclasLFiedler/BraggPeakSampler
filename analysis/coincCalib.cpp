@@ -154,7 +154,7 @@ void coincCalib(){
 
     cout << "Measurement: Getting raw data." << endl;
 
-    double ylim = 32000;
+    double ylim = 65535;
     std::vector<TH1D*> h_coincCharge;
     std::vector<TH1D*> h_timediff;
     for (int i = 0; i < nLayers; i++){
@@ -219,6 +219,7 @@ void coincCalib(){
         for (double e = 0; e<entries; e++){
             trace_props.Clear();
             datatree->GetEntry(e);
+            if(charge < 0) charge += 65536;
             if (board == 1) {
                 channel += 16;
                 timestamp_ps += 32*1000;

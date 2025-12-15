@@ -135,7 +135,7 @@ class ResponseMatrixBuilder:
     """
     
     def __init__(self, detector: Detector, n_measured_bins=16384, n_iterations=10):
-        adcrange = 32768
+        adcrange = 65536
         
         self.n_measured_bins = n_measured_bins
         self.n_iterations = n_iterations
@@ -597,7 +597,7 @@ if __name__ == "__main__":
     print("Loading measured spectrum...")   
     datapath = "../data/paperBeamtime/detector/"
     maxMeasured = 4096
-    maxMeasured = 256
+    maxMeasured = 512
 
     saveMatrix = True
 

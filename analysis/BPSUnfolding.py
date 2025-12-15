@@ -195,7 +195,7 @@ class BPSUnfolding:
             self.chi2.append(chi2)
             self.closure_errors.append(closure_error)
             
-            if(self.chi2[-2]-self.chi2[-1]<0.05 and iteration>3):
+            if(self.chi2[-2]-self.chi2[-1]<0.01 and iteration>3):
                 print(f"Converged after {iteration+1} iterations")
                 f = f_unsmoothed
                 self.history.append(f.copy())
@@ -438,7 +438,7 @@ class BPSUnfolding:
         if zero_bins > 0:
             print("WARNING: Zero bins in measured spectrum can inflate closure error!")
     
-    def saveClosurePlot(unfolder, output_filename="chi2_convergence.pdf", show=False):
+    def saveClosurePlot(self):
         plt.plot(range(len(unfolder.chi2))[1:], unfolder.chi2[1:], 'bo-')
         plt.xlabel('Iteration')
         plt.ylabel('Chi-squared/N_DOF')
@@ -446,9 +446,7 @@ class BPSUnfolding:
         plt.grid(True)
 
         plt.tight_layout()
-        plt.savefig(output_filename, dpi=300)
-        if(show):
-            plt.show()
+        plt.show()
         plt.close()
     
     def saveUnfoldedComparison(self, true_energies, measured_spectrum, unfolded_spectrum, show=False):
@@ -477,6 +475,18 @@ class BPSUnfolding:
         if(show):
             plt.show()
         plt.close()
+
+    def plotResponseMatrix(self, R, trueEnergies, measuredEnergies):
+        im = plt.imshow(R, aspect='auto', origin='lower',
+                    extent=[trueEnergies[0], trueEnergies[-1],
+                            measuredEnergies[0], measuredEnergies[-1]],
+                    norm=LogNorm(vmin=1e-4, vmax=1))
+
+        plt.xlabel('True Photon Count')
+        plt.ylabel('Measured Photon Count')
+        plt.title('Detector Response Matrix')
+        plt.colorbar(im)
+        plt.show()
         
 if __name__ == "__main__":
     np.random.seed(42)
@@ -527,41 +537,73 @@ if __name__ == "__main__":
     eedges = []
 
     for i in range(32):
-        c, e = np.histogram(charge[:, i], bins=256, range=(0, 32768))
+        c, e = np.histogram(charge[:, i], bins=512, range=(0, 65536))
         hist.append(c)
         edges.append(e)
-        c, e = np.histogram(detector.adc_to_energy(i, charge[:, i]), bins=256, range=(0, detector.adc_to_energy(i, 32768)))
+        c, e = np.histogram(detector.adc_to_energy(i, charge[:, i]), 
+        bins=512, range=(0, detector.adc_to_energy(i, 65536)))
         ehist.append(c)
         eedges.append(e)
 
+
+    
     hist = np.array(hist) 
     ehist = np.array(ehist) 
 
-    data = np.load(f"{detectorpath}/responseMatrix_CH0.npz")
+    fig, axes = plt.subplots(16, 2, figsize=(32, 8))  # 4x8 grid
+    axes = axes.flatten()
     
-    R  = data["response_matrix"]
-    E_true = data["true_energy"]
-    E_meas = data["measured_energy"]
-    
-    unfolder = BPSUnfolding(R, E_true, E_meas, n_iterations=40)
+    doses = []
 
-    print("\nPerforming Bayesian unfolding...")
+    for ch in range(32):
+        data = np.load(f"{detectorpath}/responseMatrix_CH{ch}.npz")
 
-    initial_prior = np.ones_like(E_true)
-    unfolded_spectrum = unfolder.unfold(hist[0] , prior=hist[0])
-    #unfolded_spectrum = unfolder.unfold_regularized(measured_spectrum, prior=measured_spectrum)
-    predicted_measured = np.dot(unfolder.R, unfolded_spectrum)
+        R  = data["response_matrix"]
+        E_true = data["true_energy"]
+        E_meas = data["measured_energy"]
+        
+        unfolder = BPSUnfolding(R, E_true, E_meas, n_iterations=40)
 
-    # unfolder.saveUnfoldedComparison(E_true, ehist[0], unfolded_spectrum, True)
-    
-    plt.step(eedges, ehist[0], color='tab:blue', linewidth=1.2, label='Measured Spectrum')
-    plt.plot(E_true, unfolded_spectrum, color='tab:orange', linewidth=2, label=f'Unfolded Spectrum')
-    plt.xlabel('Energy / MeV')
-    plt.ylabel('Counts')
-    plt.title('Measured vs Unfolded Spectrum')
-    plt.legend()
-    plt.grid(True)
+        # for i in range(32):
+        #     data = np.load(f"{detectorpath}/responseMatrix_CH0.npz")
+
+        #     R  = data["response_matrix"]
+        #     E_true = data["true_energy"]
+        #     E_meas = data["measured_energy"]
+        #     unfolder.plotResponseMatrix(R, E_true, E_meas)
+
+
+
+        print("\nPerforming Bayesian unfolding...")
+
+        initial_prior = np.ones_like(E_true)
+        unfolded_spectrum = unfolder.unfold(hist[ch] , prior=hist[ch])
+        #unfolded_spectrum = unfolder.unfold_regularized(measured_spectrum, prior=measured_spectrum)
+        predicted_measured = np.dot(unfolder.R, unfolded_spectrum)
+
+        # unfolder.saveUnfoldedComparison(E_true, ehist[ch], unfolded_spectrum, True)
+
+        # axes[ch].plot(E_true, unfolded_spectrum, color='tab:blue', linewidth=1.2, label='Unfolded Spectrum')
+        axes[ch].step(E_true, ehist[ch], color='tab:orange', linewidth=2, label=f'Measured Spectrum')
+
+        dose=0
+        for idx, value in enumerate(E_true):
+            dose += value*unfolded_spectrum[idx]
+
+        # doses.append(dose/detector.channels[ch].channelWidth)
+        # doses.append(np.mean(unfolded_spectrum)/detector.channels[ch].channelWidth)
+        doses.append(np.sum(E_true*unfolded_spectrum)/(np.sum(unfolded_spectrum)*detector.channels[ch].channelWidth))
+
+        axes[ch].set_xlabel('Energy / MeV')
+        axes[ch].set_ylabel('Counts')
+        axes[ch].set_title('Measured vs Unfolded Spectrum')
+        axes[ch].legend()
+        axes[ch].grid(True)
+        
+        # unfolder.savePredictedComparison(E_meas, hist[ch], predicted_measured, True)
+
+        # unfolder.saveClosurePlot()
     plt.show()
     plt.close()
-    
-    unfolder.savePredictedComparison(E_true, ehist[0], predicted_measured, True)
+    plt.plot(range(32), doses, "x")
+    plt.show()

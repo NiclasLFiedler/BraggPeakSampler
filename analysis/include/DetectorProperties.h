@@ -79,8 +79,8 @@ struct DetectorProperties {
         double kB_ej200 = 0.154;
         double R_ej200 = CalcRange(alpha_ej200, p_ej200, energy);
         
-        double alpha_teflon = 1.459e-2;
-        double p_teflon = 1.733;
+        double alpha_teflon = 9.158e-2;
+        double p_teflon = 1.734;
         double kB_teflon = 0;
         double R_teflon = CalcRange(alpha_teflon, p_teflon, energy);
         

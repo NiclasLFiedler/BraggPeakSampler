@@ -111,6 +111,7 @@ class DetectorConstruction : public G4VUserDetectorConstruction
     G4Material *SiPMGlassMat = nullptr;
     G4Material *SiPMSiliconMat = nullptr;
     G4Material* PMMA = nullptr;
+    G4Material* PTFEmembrane=nullptr;
     
     G4TessellatedSolid *solidHolder, *solidLung;  
     G4Box *solidDetector, *solidAbsorber, *solidworld, *solidHomo, *solidVoxel, *solidContainer, *solidAluFoil, *solidAluFoilAbs, *solidTeflonFoil, *solidTeflonFoilAbs, *solidPassiveAbsorber;

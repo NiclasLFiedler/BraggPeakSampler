@@ -348,6 +348,12 @@ void DetectorConstruction::DefineMaterials()
   Teflon->AddElement(elC, 2);
   Teflon->AddElement(elF, 4);
   
+  PTFEmembrane = new G4Material("PTFEmembrane", 0.35*g/cm3, 2);
+  PTFEmembrane->AddElement(elC, 2);
+  PTFEmembrane->AddElement(elF, 4);
+
+  Teflon=PTFEmembrane;
+
   wrappingSurface = new G4OpticalSurface("WrappingSurface");
   wrappingSurface->SetType(dielectric_metal);
   wrappingSurface->SetModel(unified);

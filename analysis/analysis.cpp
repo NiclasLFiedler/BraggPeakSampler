@@ -239,6 +239,7 @@ void analysis(){
         cout << "Measurement: Getting raw data." << endl;
         for (double e = 0; e<entries; e++){
             datatree->GetEntry(e);
+            if(charge < 0) charge += 65536;
             // printf("Timestamp: %llu ps, Timestamp<static> %f ps, \n", timestamp_ps, static_cast<double>(timestamp_ps));
             if (board == 1) {
                 channel += 16;
@@ -253,7 +254,6 @@ void analysis(){
             }
             else{
                 std::cout << "Energy zero or negative!" << " WARNING " << trace_props.charge << std::endl;
-                // detector->EnergyHist(channel)->Fill(-trace_props.charge); 
             }
             if(trace_props.channel == 0){
                 initialEvents.insert({trace_props.time_ps, trace_props});

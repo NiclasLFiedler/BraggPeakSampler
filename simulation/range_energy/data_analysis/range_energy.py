@@ -244,7 +244,7 @@ def main():
         if(index == len(energies)-cutoff):
             break
         data.add_data(*get_range_energy(energy, "pbwo4", enable_output=False, enable_plot=False))
-        data2.add_data(*get_range_energy(energy, "teflon", enable_output=False, enable_plot=False))
+        data2.add_data(*get_range_energy(energy, "ptfe", enable_output=False, enable_plot=False))
         datawater.add_data(*get_range_energy(energy, "h2o", enable_output=False, enable_plot=False))
 
 

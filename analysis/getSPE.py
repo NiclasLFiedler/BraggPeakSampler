@@ -24,7 +24,7 @@ histograms = {}      # store hist arrays
 bin_edges = {}        # store bin edges
 
 for ch in unique_channels:
-    hist, bins = np.histogram(charges_per_channel[ch], bins=8000, range=(0, 32768))
+    hist, bins = np.histogram(charges_per_channel[ch], bins=16384, range=(0, 65536))
     histograms[ch] = hist
     bin_edges[ch] = bins
 

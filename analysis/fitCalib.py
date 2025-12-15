@@ -127,8 +127,10 @@ for channel in range(32):
     print(f"länge: {len(xdata)}" )
     # popt, pcov = curve_fit(two_gauss_calib2, xdata, ydata, p0=p0, bounds=(lower, upper), maxfev=1000000)
 
+    print(xdata[int(cutoff[channel]/160)])
+
     if useCutoff:
-        popt, pcov = curve_fit(two_gauss_calib3, xdata[int(cutoff[channel]/80):], ydata[int(cutoff[channel]/80):], p0=p0, bounds=(lower, upper), maxfev=1000000)
+        popt, pcov = curve_fit(two_gauss_calib3, xdata[int(cutoff[channel]/160):], ydata[int(cutoff[channel]/160):], p0=p0, bounds=(lower, upper), maxfev=1000000)
     else:
         popt, pcov = curve_fit(two_gauss_calib3, xdata, ydata, p0=p0, bounds=(lower, upper), maxfev=1000000)
 
