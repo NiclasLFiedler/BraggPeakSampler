@@ -70,7 +70,7 @@ def hist_to_numpy(hist):
 # Replace these two lines with your actual code:
 
 useCutoff = True
-show = False
+show = True
 if(useCutoff):
     f = ROOT.TFile.Open("../data/paperBeamtime/notarget/output/Histograms.root")
 else:
@@ -117,7 +117,7 @@ for channel in range(32):
     # -------- Perform fit ----------
     p02 = [a_guess, b_guess, A1_guess, sigma_guess]
     lower2 = [0, 0, 0, 0.1]
-    upper2 = [1, 0.1, 2000, 20000]
+    upper2 = [1, 0.1, 20000, 20000]
     popt2, pcov2 = curve_fit(gauss_calib1, xdata, ydata, p0=p02, bounds=(lower2, upper2), maxfev=1000000)
 
     a_fit2, b_fit2, A1_fit2, sigma1_fit2 = popt2[0], popt2[1], popt2[2], popt2[3]

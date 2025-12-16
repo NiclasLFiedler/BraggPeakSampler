@@ -5,10 +5,10 @@
 #include <iostream>
 
 struct energy_ch {
-    std::vector<Double_t> E;          // Energy value
-    std::vector<Double_t> o_E;        // Energy uncertainty
-    std::vector<Double_t> CH;  // Channel values
-    std::vector<Double_t> o_CH;  // Channel uncertainties
+    std::vector<Double_t> E = std::vector<Double_t>(32, 0);          // Energy value
+    std::vector<Double_t> o_E = std::vector<Double_t>(32, 0);        // Energy uncertainty
+    std::vector<Double_t> CH = std::vector<Double_t>(32, 0);  // Channel values
+    std::vector<Double_t> o_CH = std::vector<Double_t>(32, 0);  // Channel uncertainties
 
     // Constructor to initialize values
     energy_ch() {}

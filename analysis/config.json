@@ -1,5 +1,5 @@
 {
-  "detectorSelect": 3,
+  "detectorSelect": 0,
   "targetSelect": 0,
   "detectors": [
     {
@@ -27,7 +27,7 @@
       "teflonThickness": 0.5,
       "aluThickness": 0.04,
       "coincidenceTime": 50,
-      "coincidenceLayer": 20,
+      "coincidenceLayer": 24,
       "discardIndex": 50,
       "targetThickness": 0
     },
@@ -53,8 +53,8 @@
       "reversedStatus": true,
       "normStatus": true,
       "simulationStatus": false,
-      "teflonThickness": 0.000001,
-      "aluThickness": 0.000001,
+      "teflonThickness": 1e-06,
+      "aluThickness": 1e-06,
       "coincidenceTime": 20000,
       "coincidenceLayer": 1,
       "discardIndex": 50,

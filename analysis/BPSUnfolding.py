@@ -160,7 +160,8 @@ class BPSUnfolding:
         f = prior.copy()
         
         # Normalize prior
-        f = f / np.sum(f) * np.sum(g)
+        if np.sum(f) != 0:                
+            f = f / np.sum(f) * np.sum(g)
         
         if efficiency is None:
             efficiency = np.sum(self.R, axis=0)
@@ -537,11 +538,14 @@ if __name__ == "__main__":
     eedges = []
 
     for i in range(32):
-        c, e = np.histogram(charge[:, i], bins=512, range=(0, 65536))
+        q = charge[:, i]
+        q_nz = q[q != 0]
+        print(len(q_nz))
+        c, e = np.histogram(q_nz, bins=1024, range=(0, 65536))
         hist.append(c)
         edges.append(e)
-        c, e = np.histogram(detector.adc_to_energy(i, charge[:, i]), 
-        bins=512, range=(0, detector.adc_to_energy(i, 65536)))
+        c, e = np.histogram(detector.adc_to_energy(i, q_nz), 
+        bins=1024, range=(0, detector.adc_to_energy(i, 65536)))
         ehist.append(c)
         eedges.append(e)
 
@@ -583,8 +587,8 @@ if __name__ == "__main__":
 
         # unfolder.saveUnfoldedComparison(E_true, ehist[ch], unfolded_spectrum, True)
 
-        # axes[ch].plot(E_true, unfolded_spectrum, color='tab:blue', linewidth=1.2, label='Unfolded Spectrum')
-        axes[ch].step(E_true, ehist[ch], color='tab:orange', linewidth=2, label=f'Measured Spectrum')
+        axes[ch].plot(E_true, unfolded_spectrum, color='tab:blue', linewidth=1.2, label='Unfolded Spectrum')
+        # axes[ch].step(E_meas, hist[ch], color='tab:orange', linewidth=2, label=f'Measured Spectrum')
 
         dose=0
         for idx, value in enumerate(E_true):
@@ -592,8 +596,8 @@ if __name__ == "__main__":
 
         # doses.append(dose/detector.channels[ch].channelWidth)
         # doses.append(np.mean(unfolded_spectrum)/detector.channels[ch].channelWidth)
-        doses.append(np.sum(E_true*unfolded_spectrum)/(np.sum(unfolded_spectrum)*detector.channels[ch].channelWidth))
-
+        doses.append(np.sum(E_true*unfolded_spectrum)/(detector.channels[ch].channelWidth))
+        # doses.append(np.mean(ehist[ch])/(detector.channels[ch].channelWidth*np.sum(ehist[ch])))
         axes[ch].set_xlabel('Energy / MeV')
         axes[ch].set_ylabel('Counts')
         axes[ch].set_title('Measured vs Unfolded Spectrum')

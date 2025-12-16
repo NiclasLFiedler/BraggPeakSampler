@@ -156,18 +156,23 @@ void analysis(){
         }   
     }
     
-    energy_ch co60_2;
-    co60_2.CH = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    co60_2.o_CH = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    co60_2.E = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    co60_2.o_E = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    
     energy_ch co60_1;
-    co60_1.CH = {1572.17, 1540.67, 1394.92, 49.7185, 1853.25, 2078.32, 1007.81, 324.048, 500, 1374.37, 726.037, 900, 514.404, 491.578, 1086.86, 921.839, 500, 500, 1041.1, 217.159, 500, 1008.07, 742.082, 756.624, 500, 353.818, 500, 881.16, 500, 500, 1126.8, 203.876};
-    co60_1.o_CH = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-    co60_1.E = {5.7038, 5.79716, 5.94443, 6.03835, 6.16728, 6.3360, 6.45465, 6.6303, 6.83547, 7.03770, 7.2600, 4.93424, 5.07636, 5.20989, 5.36086, 5.57017, 5.73576, 5.96942, 6.21447, 6.52709, 6.89378, 7.29601, 7.88811, 8.56514, 9.53018, 10.9653, 13.5613, 20.5618, 11.2318, 5.7038, 5.7038, 5.7038};
-    co60_1.o_E = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-
+    co60_1.CH = {6410.23, 6008.26, 7291.29, 7270.89, 6354.13, 6787.23, 6553.78, 6340.23, 7951.94, 6043.47, 5709.45, 5186.46, 5187.57, 4614.36, 4608.14, 4652.09, 4479.48, 4501.15, 4317.02, 4119.14, 4686.39, 4788.02, 5525.51, 4077.01, 5684.99, 5131.04, 6410.33, 6605.79, 5964.62, 7388.72, 7951.13, 9030.46};
+    for (int i = 0; i<32; i++){
+        co60_1.CH.at(i)=co60_1.CH.at(i)/4;
+        co60_1.E.at(i) = 1.17323;
+        co60_1.o_CH.at(i) = 0;
+        co60_1.o_E.at(i) = 0;
+    }
+    
+    energy_ch co60_2;
+    co60_2.CH = {7280.39, 6823.85, 8281.04, 8257.88, 7216.67, 7708.56, 7443.42, 7200.89, 9031.37, 6863.84, 6484.48, 5890.50, 5891.76, 5240.74, 5233.67, 5283.58, 5087.55, 5112.15, 4903.04, 4678.29, 5322.54, 5437.97, 6282.01, 4635.20, 6456.70, 5833.00, 7280.50, 7502.49, 6774.28, 8391.70, 8079.49, 9176.24};
+    for (int i = 0; i<32; i++){
+        co60_2.CH.at(i)=co60_2.CH.at(i)/4;
+        co60_2.E.at(i) = 1.33249;
+        co60_2.o_CH.at(i) = 0;
+        co60_2.o_E.at(i) = 0;
+    }
 
     Double_t entries = datatree->GetEntries();
     Int_t prevEvent = -1;
@@ -232,8 +237,8 @@ void analysis(){
 
     TTree* t = new TTree("events", "Coincident events");
 
-    double Q[32];
-    t->Branch("Charge", Q, "Q[32]/D");
+    double Q[32] = {0.0};
+    t->Branch("Charge", Q, "Charge[32]/D");
 
     if(!simulationStatus){
         cout << "Measurement: Getting raw data." << endl;
@@ -249,8 +254,8 @@ void analysis(){
             trace_props.SetParameters(*trace, channel, charge, static_cast<double>(timestamp_ps)/1000,  timestamp_ps, discard_index, bsaveTrace, bTraceDisable);
             
             if(trace_props.charge > 0) {
-                detector->EnergyHist(channel)->Fill(trace_props.charge);
-                // detector->EnergyHist(channel)->Fill(calib->GetQuenchedEnergy(channel, trace_props.charge));
+                // detector->EnergyHist(channel)->Fill(trace_props.charge);
+                detector->EnergyHist(channel)->Fill(calib->GetQuenchedEnergy(channel, trace_props.charge));
             }
             else{
                 std::cout << "Energy zero or negative!" << " WARNING " << trace_props.charge << std::endl;
@@ -313,6 +318,7 @@ void analysis(){
             particles.push_back(proton);
         }
         for(auto coinProton : particles){
+            std::fill(Q, Q + 32, 0.0);
             coinProton.Test();
             if(coinProton.missingChannel == true){
                 missing_buffer_counter++;

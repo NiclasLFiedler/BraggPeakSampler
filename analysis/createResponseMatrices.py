@@ -226,8 +226,8 @@ class ResponseMatrixBuilder:
             response_matrix[:, j] = energyResponse * builder.meas_bin_width
         
         # Normalize each column (true energy) to sum to 1
+        response_matrix[response_matrix < 1e-10] = 1e-10
         response_matrix = response_matrix / np.sum(response_matrix, axis=0, keepdims=True)
-
         self.R = response_matrix
         return response_matrix, self.true_centers[channel], self.measured_centers
     
@@ -597,7 +597,7 @@ if __name__ == "__main__":
     print("Loading measured spectrum...")   
     datapath = "../data/paperBeamtime/detector/"
     maxMeasured = 4096
-    maxMeasured = 512
+    maxMeasured = 1024
 
     saveMatrix = True
 

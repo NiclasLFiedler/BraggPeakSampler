@@ -9,7 +9,17 @@ Detector::Detector(DetectorProperties* detectorProperties)
     Char_t histname[100];
     
 
-    int binningEdep[3] = {65536/8, 0, 65535};
+    int binningEdep[3];
+    if(detectorProperties->GetSimulationStatus()){
+        binningEdep[0] = 400;
+        binningEdep[1] = 0;
+        binningEdep[2] = 40;
+    }
+    else{
+        binningEdep[0] = 65536/64;
+        binningEdep[1] = 0;
+        binningEdep[2] = 65535;
+    }
     int binningPhotons[3] = {200, 0, 50};
     int binningEntry[3] = {200, -static_cast<int>(detectorProperties->GetLayerSizeX())/2, static_cast<int>(detectorProperties->GetLayerSizeX())/2};
     int binningAngle[3] = {400, 0, 4};
