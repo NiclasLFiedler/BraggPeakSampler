@@ -172,7 +172,7 @@ void coincCalib(){
     }
 
     bool useCharge = true;
-    bool useCoinc = false;
+    bool useCoinc = true;
     Double_t entries;
 
     TFile *input;
@@ -181,7 +181,7 @@ void coincCalib(){
     TFile *input2;
 
 
-    for (int firstchannel = 0; firstchannel < nLayers/2; firstchannel++){
+    for (int firstchannel = 7; firstchannel < nLayers/2; firstchannel++){
         particles.clear();
         initialEvents.clear();
         postEvents.clear();
@@ -191,6 +191,10 @@ void coincCalib(){
 
         int coincChannel = first;
         sprintf(file, "%sco60_%d%d.root", in_path, first, second);//, filename);
+        if(firstchannel==7){
+            sprintf(file, "%sco60ch1415.root", in_path);//, 
+        }
+
         cout << "In path: " << file << endl;
 
         input = new TFile(file, "READ");

@@ -80,7 +80,7 @@ else:
 cutoff = [4000, 3500, 4500, 4000, 3500, 4000, 3500, 3500, 5000, 3000, 3500, 4000, 4000, 4000, 4000, 4000, 4000, 4000, 4000, 4000, 5000, 5000, 5500, 5000, 5000, 5000, 5000, 5500, 5000, 5000, 5000, 5000]
 
 params = []
-for channel in range(32):
+for channel in range(30,32):
     h = f.Get(f"h_coincCharge_{channel}")
 
     xdata, ydata = hist_to_numpy(h)
