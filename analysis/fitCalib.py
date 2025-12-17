@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 # -------- Known gamma energies (keV) ----------
 E1 = 1.17323
 E2 = 1.33249
+# E1 = (E1+E2)/2
 # E1 = 0.963
 # E2 = 1.117
 # -------- Define the composite model ----------
@@ -80,7 +81,7 @@ else:
 cutoff = [4000, 3500, 4500, 4000, 3500, 4000, 3500, 3500, 5000, 3000, 3500, 4000, 4000, 4000, 4000, 4000, 4000, 4000, 4000, 4000, 5000, 5000, 5500, 5000, 5000, 5000, 5000, 5500, 5000, 5000, 5000, 5000]
 
 params = []
-for channel in range(0,32):
+for channel in range(2,32):
     if(channel == 20):
         useCutoff = True
     else:
@@ -88,9 +89,9 @@ for channel in range(0,32):
     h = f.Get(f"h_coincCharge_{channel}")
 
     xdata, ydata = hist_to_numpy(h)
-
-    a_guess = 1/5000
-    b_guess = 0.005
+    xdata = xdata/16
+    a_guess = 1/50
+    b_guess = 0.0005
     A1_guess = 30
     A2_guess = A1_guess
     sigma_guess = 300
@@ -121,6 +122,9 @@ for channel in range(0,32):
     p02 = [a_guess, b_guess, A1_guess, sigma_guess]
     lower2 = [0, 0, 0, 0.1]
     upper2 = [1, 0.1, 20000, 20000]
+    
+    prefitchannels = [8200, 7110, 8900, 8750, 8600, 8750, 8250, 8521, 11830, 8550, 8240, 4230, 4300, 4000, 4250, 4500, 3668, 4470, 3871, 4200, 4260, 3540, 3700, 4870, 4900, 7725, 8381, 4700, 4472, 5500, 5400]
+    
     popt2, pcov2 = curve_fit(gauss_calib1, xdata, ydata, p0=p02, bounds=(lower2, upper2), maxfev=1000000)
 
     a_fit2, b_fit2, A1_fit2, sigma1_fit2 = popt2[0], popt2[1], popt2[2], popt2[3]
@@ -147,10 +151,7 @@ for channel in range(0,32):
     a_fit, b_fit, A1_fit, sigma1_fit = popt[0], popt[1], popt[2], popt[3]
     a_err, b_err, A1_error, sigma1_error = perr[0], perr[1], perr[2], perr[3]
 
-    multiplier = 4
-    if(channel < 10 and channel != 20 and channel !=21):
-        multiplier = 16
-    params.append([a_fit*multiplier, a_err*multiplier, b_fit*multiplier, b_err*multiplier])
+    params.append([a_fit, a_err, b_fit, b_err])
 
     # -------- Print results ----------
     print(f"\n=== Energy Calibration Fit Results {channel} ===")
@@ -165,7 +166,7 @@ for channel in range(0,32):
     c2 = (E2 - b_fit) / a_fit
     print(f"Peak centers (channels): c1 = {c1:.2f}, c2 = {c2:.2f}")
     print(f"Separation: {c2 - c1:.2f} channels")
-    print(f"BeamPo: {(a_fit*8155.6*4+b_fit):.2f} MeV")
+    print(f"BeamPo: {(a_fit*prefitchannels[channel]+b_fit):.2f} MeV")
 
     # ---------- Plot ----------
     plt.figure(figsize=(10,6))

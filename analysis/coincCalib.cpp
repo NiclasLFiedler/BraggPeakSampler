@@ -180,117 +180,99 @@ void coincCalib(){
     TTree *datatree2;
     TFile *input2;
 
-    int testchannel = 0;
-    for (int firstchannel = testchannel; firstchannel < nLayers/2; firstchannel++){
-        if (firstchannel != testchannel){
-            break;
-        }
-        particles.clear();
-        initialEvents.clear();
-        postEvents.clear();
+    int channel = 0;
+    bool second = true;
+    particles.clear();
+    initialEvents.clear();
+    postEvents.clear();
 
-        int first = firstchannel*2;
-        int second = firstchannel*2+1;
-
-        int coincChannel = first;
-        sprintf(file, "%sch%d%d_co60.root", in_path, first, second);//, filename);
-        // sprintf(file, "%sco60_%d%d.root", in_path, first, second);//, filename);
-        // if(firstchannel>=5 && firstchannel !=10){
-        //     sprintf(file, "%sco60ch%d%d.root", in_path, first, second);//, 
-        // }
-        // if(firstchannel == 10){
-        //     useCoinc = false;
-        // }
-        // else{
-        //     useCoinc = true;
-        // }
-
-        cout << "In path: " << file << endl;
-
-        input = new TFile(file, "READ");
-        if (!input || input->IsZombie()) {
-            cout << "Error: Failed to open file 'data.root'!" << endl;
-            return;
-        }
-
-        datatree = (TTree*)input->Get("RawData");
-
-        if (!datatree) {
-            cout << "Error: Failed to retrieve tree 'tree' from file!" << endl;
-            input->Close();
-            return;
-        }
-
-        datatree->SetBranchAddress("EventCounter", &eventCounter);
-        datatree->SetBranchAddress("Channel", &channel);
-        datatree->SetBranchAddress("Board", &board);
-        datatree->SetBranchAddress("Charge", &charge);
-        datatree->SetBranchAddress("TimeStamp", &timestamp_ps);
-        datatree->SetBranchAddress("Trace", &trace);
-
-        entries = datatree->GetEntries();
-
-        for (double e = 0; e<entries; e++){
-            trace_props.Clear();
-            datatree->GetEntry(e);
-            if(charge < 0) charge += 65536;
-            if (board == 1) {
-                channel += 16;
-                timestamp_ps += 32*1000;
-            };
-            trace_props.SetParameters(*trace, channel, charge, static_cast<double>(timestamp_ps)/1000, static_cast<double>(timestamp_ps), discard_index, bsaveTrace, true);
-            if (!useCoinc){
-                if(channel == coincChannel){
-                    h_coincCharge.at(first)->Fill(trace_props.charge);
-                }
-                else if(channel == coincChannel+1)
-                {
-                    h_coincCharge.at(second)->Fill(trace_props.charge);
-                }
-            }
-            if(trace_props.channel == coincChannel){
-                initialEvents.insert({trace_props.time_ps, trace_props});
-            }
-            else{
-                postEvents.insert({trace_props.time_ps, trace_props});
-            }
-        }
-
-        cout << "Measurement: Processing raw data." << endl;
-        for(const auto& [initialTime, initialTrace] : initialEvents) {
-            proton.Clear();
-            proton.Insert(initialTrace);
-            auto lowerTraces = postEvents.lower_bound(initialTime - coincidenceTime*1000);
-            auto upperTraces = postEvents.upper_bound(initialTime + coincidenceTime*1000);
-            for (auto coincTrace = lowerTraces; coincTrace != upperTraces; ++coincTrace) {
-                proton.Coincidence(coincTrace->second, coincChannel);
-                if(coincTrace->second.channel == coincChannel+1) h_timediff.at(first/2)->Fill(static_cast<double>(coincTrace->first-initialTime)/1000);
-            }
-            particles.push_back(proton);
-        }
-
-        if (useCoinc){
-            for(auto coinProton : particles){
-                coinProton.Test();
-                if(coinProton.GetCharge(coincChannel+1) != 0){
-                    if(std::abs(coinProton.GetCharge(coincChannel)-coinProton.GetCharge(coincChannel+1)) > 0){
-                        h_coincCharge.at(first)->Fill(coinProton.GetCharge(coincChannel));
-                        h_coincCharge.at(second)->Fill(coinProton.GetCharge(coincChannel+1));
-                    }
-                }
-            }
-        }
-        particles.clear();
-    }    
-
-    sprintf(outFile_path, "../data/%s/%s/output/coincHistograms.root", dataset, filename);
-    TFile* outputFile = new TFile(outFile_path, "RECREATE");
-
-    for (int i = 0; i < nLayers; i++){
-        h_coincCharge.at(i)->Write();
+    //0 sco60_%d%d.root 
+    //1 ch%d%d_co60_2.root
+    //2
+    int coincChannel = channel;
+    sprintf(file, "%sch%d%d_co60_2.root", in_path, first, second);//, filename);
+    // sprintf(file, "%sco60_%d%d.root", in_path, first, second);//, filename);
+    // if(firstchannel>=5 && firstchannel !=10){
+    //     sprintf(file, "%sco60ch%d%d.root", in_path, first, second);//, 
+    // }
+    // if(firstchannel == 10){
+    //     useCoinc = false;
+    // }
+    // else{
+    //     useCoinc = true;
+    // }
+    cout << "In path: " << file << endl;
+    input = new TFile(file, "READ");
+    if (!input || input->IsZombie()) {
+        cout << "Error: Failed to open file 'data.root'!" << endl;
+        return;
     }
-    for (int i = 0; i < nLayers/2; i++){
-        h_timediff.at(i)->Write();
-    }   
+    datatree = (TTree*)input->Get("RawData");
+    if (!datatree) {
+        cout << "Error: Failed to retrieve tree 'tree' from file!" << endl;
+        input->Close();
+        return;
+    }
+    datatree->SetBranchAddress("EventCounter", &eventCounter);
+    datatree->SetBranchAddress("Channel", &channel);
+    datatree->SetBranchAddress("Board", &board);
+    datatree->SetBranchAddress("Charge", &charge);
+    datatree->SetBranchAddress("TimeStamp", &timestamp_ps);
+    datatree->SetBranchAddress("Trace", &trace);
+    entries = datatree->GetEntries();
+    for (double e = 0; e<entries; e++){
+        trace_props.Clear();
+        datatree->GetEntry(e);
+        if(charge < 0) charge += 65536;
+        if (board == 1) {
+            channel += 16;
+            timestamp_ps += 32*1000;
+        };
+        trace_props.SetParameters(*trace, channel, charge, static_cast<double>(timestamp_ps)/1000, static_cast<double>(timestamp_ps), discard_index, bsaveTrace, true);
+        if (!useCoinc){
+            if(channel == coincChannel){
+                h_coincCharge.at(first)->Fill(trace_props.charge);
+            }
+            else if(channel == coincChannel+1)
+            {
+                h_coincCharge.at(second)->Fill(trace_props.charge);
+            }
+        }
+        if(trace_props.channel == coincChannel){
+            initialEvents.insert({trace_props.time_ps, trace_props});
+        }
+        else{
+            postEvents.insert({trace_props.time_ps, trace_props});
+        }
+    }
+    cout << "Measurement: Processing raw data." << endl;
+    for(const auto& [initialTime, initialTrace] : initialEvents) {
+        proton.Clear();
+        proton.Insert(initialTrace);
+        auto lowerTraces = postEvents.lower_bound(initialTime - coincidenceTime*1000);
+        auto upperTraces = postEvents.upper_bound(initialTime + coincidenceTime*1000);
+        for (auto coincTrace = lowerTraces; coincTrace != upperTraces; ++coincTrace) {
+            proton.Coincidence(coincTrace->second, coincChannel);
+            if(coincTrace->second.channel == coincChannel+1) h_timediff.at(first/2)->Fill(static_cast<double>(coincTrace->first-initialTime)/1000);
+        }
+        particles.push_back(proton);
+    }
+    if (useCoinc){
+        for(auto coinProton : particles){
+            coinProton.Test();
+            if(coinProton.GetCharge(coincChannel+1) != 0){
+                if(std::abs(coinProton.GetCharge(coincChannel)-coinProton.GetCharge(coincChannel+1)) > 0){
+                    h_coincCharge.at(first)->Fill(coinProton.GetCharge(coincChannel));
+                    h_coincCharge.at(second)->Fill(coinProton.GetCharge(coincChannel+1));
+                }
+            }
+        }
+    }
+    sprintf(outFile_path, "../data/%s/%s/output/coincHistograms%d.root", dataset, filename, firstchannel);
+    TFile* outputFile = new TFile(outFile_path, "RECREATE");
+    channel++;
+    h_coincCharge.at(savechannel)->Write();
+    h_timediff.at(savechannel)->Write();
     outputFile->Close();
+    particles.clear();
 }
