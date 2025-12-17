@@ -597,7 +597,7 @@ if __name__ == "__main__":
     print("Loading measured spectrum...")   
     datapath = "../data/paperBeamtime/detector/"
     maxMeasured = 4096
-    maxMeasured = 1024
+    maxMeasured = 256
 
     saveMatrix = True
 

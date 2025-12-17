@@ -69,7 +69,7 @@ def hist_to_numpy(hist):
 
 # Replace these two lines with your actual code:
 
-useCutoff = True
+useCutoff = False
 show = True
 if(useCutoff):
     f = ROOT.TFile.Open("../data/paperBeamtime/notarget/output/Histograms.root")
@@ -80,12 +80,15 @@ else:
 cutoff = [4000, 3500, 4500, 4000, 3500, 4000, 3500, 3500, 5000, 3000, 3500, 4000, 4000, 4000, 4000, 4000, 4000, 4000, 4000, 4000, 5000, 5000, 5500, 5000, 5000, 5000, 5000, 5500, 5000, 5000, 5000, 5000]
 
 params = []
-for channel in range(30,32):
+for channel in range(0,32):
+    if(channel == 20):
+        useCutoff = True
+    else:
+        useCutoff = False
     h = f.Get(f"h_coincCharge_{channel}")
 
     xdata, ydata = hist_to_numpy(h)
 
-    # -------- Initial guesses ----------
     a_guess = 1/5000
     b_guess = 0.005
     A1_guess = 30
@@ -144,7 +147,10 @@ for channel in range(30,32):
     a_fit, b_fit, A1_fit, sigma1_fit = popt[0], popt[1], popt[2], popt[3]
     a_err, b_err, A1_error, sigma1_error = perr[0], perr[1], perr[2], perr[3]
 
-    params.append([a_fit*4, a_err*4, b_fit*4, b_err*4])
+    multiplier = 4
+    if(channel < 10 and channel != 20 and channel !=21):
+        multiplier = 16
+    params.append([a_fit*multiplier, a_err*multiplier, b_fit*multiplier, b_err*multiplier])
 
     # -------- Print results ----------
     print(f"\n=== Energy Calibration Fit Results {channel} ===")

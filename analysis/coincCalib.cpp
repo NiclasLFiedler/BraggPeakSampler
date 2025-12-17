@@ -160,7 +160,7 @@ void coincCalib(){
     for (int i = 0; i < nLayers; i++){
         sprintf(histname, "h_coincCharge_%d", i);
         sprintf(histdesc, "h_coincCharge_%d", i);
-        TH1D* h_coincCharge_i = new TH1D(histname, histdesc, 400, 0, ylim);
+        TH1D* h_coincCharge_i = new TH1D(histname, histdesc, 200, 0, ylim);
         h_coincCharge.push_back(h_coincCharge_i);
     }
 
@@ -180,8 +180,11 @@ void coincCalib(){
     TTree *datatree2;
     TFile *input2;
 
-
-    for (int firstchannel = 7; firstchannel < nLayers/2; firstchannel++){
+    int testchannel = 0;
+    for (int firstchannel = testchannel; firstchannel < nLayers/2; firstchannel++){
+        if (firstchannel != testchannel){
+            break;
+        }
         particles.clear();
         initialEvents.clear();
         postEvents.clear();
@@ -190,10 +193,17 @@ void coincCalib(){
         int second = firstchannel*2+1;
 
         int coincChannel = first;
-        sprintf(file, "%sco60_%d%d.root", in_path, first, second);//, filename);
-        if(firstchannel==7){
-            sprintf(file, "%sco60ch1415.root", in_path);//, 
-        }
+        sprintf(file, "%sch%d%d_co60.root", in_path, first, second);//, filename);
+        // sprintf(file, "%sco60_%d%d.root", in_path, first, second);//, filename);
+        // if(firstchannel>=5 && firstchannel !=10){
+        //     sprintf(file, "%sco60ch%d%d.root", in_path, first, second);//, 
+        // }
+        // if(firstchannel == 10){
+        //     useCoinc = false;
+        // }
+        // else{
+        //     useCoinc = true;
+        // }
 
         cout << "In path: " << file << endl;
 
@@ -270,9 +280,10 @@ void coincCalib(){
                 }
             }
         }
+        particles.clear();
     }    
 
-    sprintf(outFile_path, "../data/%s/%s/output/Histograms.root", dataset, filename);
+    sprintf(outFile_path, "../data/%s/%s/output/coincHistograms.root", dataset, filename);
     TFile* outputFile = new TFile(outFile_path, "RECREATE");
 
     for (int i = 0; i < nLayers; i++){
