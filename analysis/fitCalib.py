@@ -74,23 +74,28 @@ useCutoff = False
 show = True
 if(useCutoff):
     f = ROOT.TFile.Open("../data/paperBeamtime/notarget/output/Histograms.root")
-else:
-    f = ROOT.TFile.Open("../data/paperBeamtime/notarget/output/coincHistograms.root")
 
+cutoff = [4000, 3500, 4500, 4000, 3500, 4000, 3500, 3500, 5000, 1000, 3500, 4000, 500, 500, 500, 800, 4000, 4000, 4000, 4000, 5000, 5000, 5500, 5000, 5000, 5000, 5000, 5500, 5000, 5000, 5000, 5000]
 
-cutoff = [4000, 3500, 4500, 4000, 3500, 4000, 3500, 3500, 5000, 3000, 3500, 4000, 4000, 4000, 4000, 4000, 4000, 4000, 4000, 4000, 5000, 5000, 5500, 5000, 5000, 5000, 5000, 5500, 5000, 5000, 5000, 5000]
-
+highgain = [0,4,5]
+highgain = [0]
 params = []
-for channel in range(2,32):
-    if(channel == 20):
+cutoffch = [12,13,14,15]
+for channel in range(16,32):
+    f = ROOT.TFile.Open(f"../data/paperBeamtime/notarget/output/coincHistogram{channel}.root")
+    if(channel in cutoffch ):
         useCutoff = True
     else:
         useCutoff = False
+
     h = f.Get(f"h_coincCharge_{channel}")
 
     xdata, ydata = hist_to_numpy(h)
-    xdata = xdata/16
-    a_guess = 1/50
+    a_guess = 1/500
+    xdata = xdata/4
+    if channel not in highgain:
+        xdata = xdata/4
+        a_guess = 1/50
     b_guess = 0.0005
     A1_guess = 30
     A2_guess = A1_guess
@@ -135,9 +140,9 @@ for channel in range(2,32):
     # popt, pcov = curve_fit(two_gauss_calib2, xdata, ydata, p0=p0, bounds=(lower, upper), maxfev=1000000)
 
     print(xdata[int(cutoff[channel]/160)])
-
+    diff = xdata[1]-xdata[0]
     if useCutoff:
-        popt, pcov = curve_fit(two_gauss_calib3, xdata[int(cutoff[channel]/160):], ydata[int(cutoff[channel]/160):], p0=p0, bounds=(lower, upper), maxfev=1000000)
+        popt, pcov = curve_fit(two_gauss_calib3, xdata[int(cutoff[channel]/diff):], ydata[int(cutoff[channel]/diff):], p0=p0, bounds=(lower, upper), maxfev=1000000)
     else:
         popt, pcov = curve_fit(two_gauss_calib3, xdata, ydata, p0=p0, bounds=(lower, upper), maxfev=1000000)
 

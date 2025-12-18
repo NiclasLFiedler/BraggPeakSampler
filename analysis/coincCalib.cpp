@@ -180,27 +180,48 @@ void coincCalib(){
     TTree *datatree2;
     TFile *input2;
 
-    int channel = 0;
-    bool second = true;
+    int coincChannel = 16;
+    bool second = 1;
     particles.clear();
     initialEvents.clear();
     postEvents.clear();
 
-    //0 sco60_%d%d.root 
-    //1 ch%d%d_co60_2.root
-    //2
-    int coincChannel = channel;
-    sprintf(file, "%sch%d%d_co60_2.root", in_path, first, second);//, filename);
-    // sprintf(file, "%sco60_%d%d.root", in_path, first, second);//, filename);
-    // if(firstchannel>=5 && firstchannel !=10){
-    //     sprintf(file, "%sco60ch%d%d.root", in_path, first, second);//, 
-    // }
-    // if(firstchannel == 10){
-    //     useCoinc = false;
-    // }
-    // else{
-    //     useCoinc = true;
-    // }
+    //0 co60_%d%d.root 25ns 5.8
+    //1                                     ch%d%d_co60_2.root 2ns 6.3
+    //2                                     ch%d%d_co60_2.root 2ns 7.3
+    //3                                     ch%d%d_co60_2.root 2ns 7.5
+    //4 co60_%d%d.root 25ns 6               ch%d%d_co60_2.root 2ns 7.8
+    //5 co60_%d%d.root 25ns 6               ch%d%d_co60_2.root 2ns 8
+    //6 co60_%d%d.root 25ns 6               ch%d%d_co60_2.root 2ns 7.5  1ns 7.3
+    //7 co60_%d%d.root 25ns 6.3             ch%d%d_co60_2.root 2ns 7.6  1ns 7.5
+    //8 co60_%d%d.root 25ns 7
+    //9 co60_%d%d.root 25ns 6.8
+
+    //4 co60_%d%d.root 25ns 6               ch%d%d_co60_2.root 2ns 7.8
+    //5 co60_%d%d.root 25ns 6               ch%d%d_co60_2.root 2ns 8
+    //6 co60_%d%d.root 25ns 6               ch%d%d_co60_2.root 2ns 7.5  1ns 7.3
+    //7 co60_%d%d.root 25ns 6.3             ch%d%d_co60_2.root 2ns 7.6  1ns 7.5
+    //8 co60_%d%d.root 25ns 7               
+    //9 co60_%d%d.root 25ns 6.8             ch%d%d_co60_2.root 2ns 8.9  1ns (shaky) 8.14
+    //10 co60_%d%d.root 25ns 6.7             ch%d%d_co60_2.root 2ns 8.4  1ns 8.07
+    //11 co60_%d%d.root 25ns 3.6             ch%d%d_co60_2.root 2ns 5.6  1ns 5.2
+    //12                                     ch%d%d_co60_2.root 2ns 6.3   with 500 cutoff
+    //13                                     ch%d%d_co60_2.root 2ns 6.6  with 500 cutoff
+    //14                                     ch%d%d_co60.root 2ns 5.8 with 500 cutoff 
+    //15                                     co60ch%d%d.root 1ns 6  with 800 cutoff 
+
+    //16                                     ch%d%d_co60_2.root 2ns 6.3 1ns 5.9 ch%d%d_co60.root 2ns 6
+    //17                                     ch%d%d_co60_2.root 2ns 7.9 1ns 7.5 ch%d%d_co60.root 2ns 5.9
+    //18                                     ch%d%d_co60_2.root 2ns 8.9  
+    //19                                     ch%d%d_co60_2.root 2ns 8.9  
+    //20                                     ch%d%d_co60_2.root 2ns 8.9  
+    //21                                     ch%d%d_co60_2.root 2ns 8.9  
+    //22                                     ch%d%d_co60_2.root 2ns 8.9  
+
+    // sprintf(file, "%sch%d%d_co60.root", in_path, coincChannel, coincChannel+1);//, filename);
+    // sprintf(file, "%sco60_%d%d.root", in_path, coincChannel, coincChannel+1);//, filename);
+    sprintf(file, "%sco60ch%d%d.root", in_path, coincChannel, coincChannel+1);//, 
+
     cout << "In path: " << file << endl;
     input = new TFile(file, "READ");
     if (!input || input->IsZombie()) {
@@ -229,15 +250,17 @@ void coincCalib(){
             timestamp_ps += 32*1000;
         };
         trace_props.SetParameters(*trace, channel, charge, static_cast<double>(timestamp_ps)/1000, static_cast<double>(timestamp_ps), discard_index, bsaveTrace, true);
+
         if (!useCoinc){
             if(channel == coincChannel){
-                h_coincCharge.at(first)->Fill(trace_props.charge);
+                h_coincCharge.at(coincChannel)->Fill(trace_props.charge);
             }
             else if(channel == coincChannel+1)
             {
-                h_coincCharge.at(second)->Fill(trace_props.charge);
+                h_coincCharge.at(coincChannel+1)->Fill(trace_props.charge);
             }
         }
+
         if(trace_props.channel == coincChannel){
             initialEvents.insert({trace_props.time_ps, trace_props});
         }
@@ -253,8 +276,9 @@ void coincCalib(){
         auto upperTraces = postEvents.upper_bound(initialTime + coincidenceTime*1000);
         for (auto coincTrace = lowerTraces; coincTrace != upperTraces; ++coincTrace) {
             proton.Coincidence(coincTrace->second, coincChannel);
-            if(coincTrace->second.channel == coincChannel+1) h_timediff.at(first/2)->Fill(static_cast<double>(coincTrace->first-initialTime)/1000);
+            if(coincTrace->second.channel == coincChannel+1) h_timediff.at(coincChannel/2)->Fill(static_cast<double>(coincTrace->first-initialTime)/1000);
         }
+        
         particles.push_back(proton);
     }
     if (useCoinc){
@@ -262,17 +286,18 @@ void coincCalib(){
             coinProton.Test();
             if(coinProton.GetCharge(coincChannel+1) != 0){
                 if(std::abs(coinProton.GetCharge(coincChannel)-coinProton.GetCharge(coincChannel+1)) > 0){
-                    h_coincCharge.at(first)->Fill(coinProton.GetCharge(coincChannel));
-                    h_coincCharge.at(second)->Fill(coinProton.GetCharge(coincChannel+1));
+                    h_coincCharge.at(coincChannel)->Fill(coinProton.GetCharge(coincChannel));
+                    h_coincCharge.at(coincChannel+1)->Fill(coinProton.GetCharge(coincChannel+1));
                 }
             }
         }
     }
-    sprintf(outFile_path, "../data/%s/%s/output/coincHistograms%d.root", dataset, filename, firstchannel);
+    
+    if(second) coincChannel++;
+    sprintf(outFile_path, "../data/%s/%s/output/coincHistogram%d.root", dataset, filename, coincChannel);
     TFile* outputFile = new TFile(outFile_path, "RECREATE");
-    channel++;
-    h_coincCharge.at(savechannel)->Write();
-    h_timediff.at(savechannel)->Write();
+    h_coincCharge.at(coincChannel)->Write();
+    h_timediff.at(int(coincChannel/2))->Write();
     outputFile->Close();
     particles.clear();
 }

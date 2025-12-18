@@ -83,13 +83,13 @@ Double_t Particle::GetEDepDeviation(int channel){
 }
 
 void Particle::Coincidence(TraceProperties trace, int channel=0){
-    
+        
     if(GetTimePS(trace.channel) != 0){
         std::cout << "Already filled channel " << trace.channel << ", duplicate event" << std::endl;
         return;
     }
-    if(std::abs(GetTimePS(channel) - trace.time_ps) <= coincidence_time*1000){
-        Insert(trace);
+    if(std::abs(GetTimePS(channel) - trace.time_ps) <= coincidence_time*1000){        
+        Insert(trace);        
     }
     else{
         std::cout << "No coincidence found" << std::endl;
