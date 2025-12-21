@@ -180,7 +180,7 @@ void coincCalib(){
     TTree *datatree2;
     TFile *input2;
 
-    int coincChannel = 16;
+    int coincChannel = 18;
     bool second = 1;
     particles.clear();
     initialEvents.clear();
@@ -218,9 +218,9 @@ void coincCalib(){
     //21                                     ch%d%d_co60_2.root 2ns 8.9  
     //22                                     ch%d%d_co60_2.root 2ns 8.9  
 
-    // sprintf(file, "%sch%d%d_co60.root", in_path, coincChannel, coincChannel+1);//, filename);
+    sprintf(file, "%sch%d%d_co60_2.root", in_path, coincChannel, coincChannel+1);//, filename);
     // sprintf(file, "%sco60_%d%d.root", in_path, coincChannel, coincChannel+1);//, filename);
-    sprintf(file, "%sco60ch%d%d.root", in_path, coincChannel, coincChannel+1);//, 
+    // sprintf(file, "%sco60ch%d%d.root", in_path, coincChannel, coincChannel+1);//, 
 
     cout << "In path: " << file << endl;
     input = new TFile(file, "READ");

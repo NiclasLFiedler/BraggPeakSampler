@@ -81,7 +81,7 @@ highgain = [0,4,5]
 highgain = [0]
 params = []
 cutoffch = [12,13,14,15]
-for channel in range(16,32):
+for channel in range(18,32):
     f = ROOT.TFile.Open(f"../data/paperBeamtime/notarget/output/coincHistogram{channel}.root")
     if(channel in cutoffch ):
         useCutoff = True

@@ -3,8 +3,6 @@ import matplotlib.pyplot as plt
 from scipy import stats
 from scipy.integrate import quad
 from scipy.optimize import curve_fit
-
-# %%
 from scipy.stats import poisson
 from scipy.signal import convolve
 from scipy.signal import find_peaks
@@ -16,6 +14,7 @@ import uproot
 import matplotlib
 matplotlib.use('TkAgg')  # or 'Agg' for non-interactive
 import os
+import json
 
 
 class SiPM:
@@ -609,5 +608,61 @@ if __name__ == "__main__":
         # unfolder.saveClosurePlot()
     plt.show()
     plt.close()
+    
+    with open("config.json", "r") as file:
+        fullConfig = json.load(file)
+
+    detectorSelect = fullConfig["detectorSelect"]
+    targetSelect = fullConfig["targetSelect"]
+    plotEnable = fullConfig["plotEnable"]
+
+    config = fullConfig["detectors"][detectorSelect]
+
+    datasetSelect = config["datasetSelect"]
+    detectorType = config["detectorType"]
+    beamEnergy = config["beamEnergy"]
+    nLayers = config["nLayers"]
+    crystalSize = config["crystalSize"]
+    gapSizeZ = config["gapSizeZ"]
+    secondaryLayerStatus = config["secondaryLayerStatus"]
+    nSecondaryLayers = config["nSecondaryLayers"]
+    secLayerSizeZ = config["secLayerSizeZ"]
+    absorberStatus = config["absorberStatus"]
+    absorberSize = config["absorberSize"]
+    reversedStatus = config["reversedStatus"]
+    normStatus = config["normStatus"]
+    simulationStatus = config["simulationStatus"]
+    teflonThickness = config["teflonThickness"]
+    aluThickness = config["aluThickness"]
+    coincidenceTime = config["coincidenceTime"]
+    coincidenceLayer = config["coincidenceLayer"]
+    discardIndex = config["discardIndex"]
+
+    datasets = ["MIT_05_2024", "simulation", "beamtime"]
+    in_data = ["notarget", "homotarget", "heterotarget"]
+    in_title = ["without a target", "with the homogeneous target", "with the heterogeneous target"]
+
+    dataset = datasets[datasetSelect]
+    file = in_data[targetSelect]
+    if targetSelect == 2: file = in_data[0]
+
+    nosave = False
+
+    bhetero = False
+    if targetSelect == 2: bhetero = True
+    nbOfFits = 0
+    nbOfFitsHetero = 0
+    lineWidth = 2
+    capSize = 3
+
+    targetfile = uproot.open(f"../data/{dataset}/{file}/output/{file}Means.root")
+    targettree = targetfile["meantree"]
+    y_data1 = targettree["mean"].array().to_numpy()
+    y_sigma1 = targettree["error"].array().to_numpy()
+    x_data = targettree["x"].array().to_numpy()
+    x_data = [x/10 for x in x_data]
+    x_sigma = targettree["x_sigma"].array().to_numpy()
+    x_sigma = [x/10 for x in x_sigma]
+    
     plt.plot(range(32), doses, "x")
     plt.show()

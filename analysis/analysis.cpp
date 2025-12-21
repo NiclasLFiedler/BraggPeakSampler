@@ -574,12 +574,12 @@ void analysis(){
 
     hfile->Close();
     
-    Char_t heteroPath[200];
-    sprintf(heteroPath, "../data/modulation/output/%ium_%immMeans.root", pmod, heteroThickness);
-    std::cout << "Out Path: " << heteroPath << std::endl;
-    TFile* heteroFile = new TFile(heteroPath, "RECREATE");
-    detector->TotalEnergyHist()->Write();
-    heteroFile->Close();
+    // Char_t heteroPath[200];
+    // sprintf(heteroPath, "../data/modulation/output/%ium_%immMeans.root", pmod, heteroThickness);
+    // std::cout << "Out Path: " << heteroPath << std::endl;
+    // TFile* heteroFile = new TFile(heteroPath, "RECREATE");
+    // detector->TotalEnergyHist()->Write();
+    // heteroFile->Close();
     
-    c2->Close();   
+    // c2->Close();   
 }
