@@ -8,6 +8,8 @@ E2 = 1.33249
 # E1 = (E1+E2)/2
 # E1 = 0.963
 # E2 = 1.117
+# E1 = 1.3
+# E2 = 1.5
 # -------- Define the composite model ----------
 def two_gauss_calib(x, a, b, A1, A2, sigma1, sigma2):
     # Convert energy to channel
@@ -74,22 +76,26 @@ useCutoff = False
 show = True
 if(useCutoff):
     f = ROOT.TFile.Open("../data/paperBeamtime/notarget/output/Histograms.root")
-
-cutoff = [4000, 3500, 4500, 4000, 3500, 4000, 3500, 3500, 5000, 1000, 3500, 4000, 500, 500, 500, 800, 4000, 4000, 4000, 4000, 5000, 5000, 5500, 5000, 5000, 5000, 5000, 5500, 5000, 5000, 5000, 5000]
+                                                                                                                            #20
+cutoff = [4000, 3500, 4500, 4000, 3500, 4000, 3500, 3500, 5000, 1000, 3500, 4000, 500, 500, 500, 800, 4000, 4000, 4000, 500, 620, 1200, 0, 500, 600, 600, 5000, 5500, 5000, 5000, 5000, 5000]
 
 highgain = [0,4,5]
 highgain = [0]
+highcut = []
 params = []
-cutoffch = [12,13,14,15]
-for channel in range(18,32):
+cutoffch = [12, 13, 24, 25]
+for channel in range(14,16):
+    # if channel == 21: channel-=1
     f = ROOT.TFile.Open(f"../data/paperBeamtime/notarget/output/coincHistogram{channel}.root")
     if(channel in cutoffch ):
         useCutoff = True
+        print("usecutoff") 
     else:
         useCutoff = False
 
     h = f.Get(f"h_coincCharge_{channel}")
 
+    # channel += +1
     xdata, ydata = hist_to_numpy(h)
     a_guess = 1/500
     xdata = xdata/4
@@ -97,9 +103,9 @@ for channel in range(18,32):
         xdata = xdata/4
         a_guess = 1/50
     b_guess = 0.0005
-    A1_guess = 30
+    A1_guess = 50
     A2_guess = A1_guess
-    sigma_guess = 300
+    sigma_guess = 500
 
     # p0 = [a_guess, b_guess,
     #       A1_guess, A2_guess,
@@ -128,7 +134,7 @@ for channel in range(18,32):
     lower2 = [0, 0, 0, 0.1]
     upper2 = [1, 0.1, 20000, 20000]
     
-    prefitchannels = [8200, 7110, 8900, 8750, 8600, 8750, 8250, 8521, 11830, 8550, 8240, 4230, 4300, 4000, 4250, 4500, 3668, 4470, 3871, 4200, 4260, 3540, 3700, 4870, 4900, 7725, 8381, 4700, 4472, 5500, 5400]
+    prefitchannels = [8200, 7110, 8900, 8750, 8600, 8750, 8250, 8521, 11830, 8550, 8240, 4230, 4300, 4000, 4250, 4500, 3668, 3780, 4470, 3871, 4200, 4260, 3540, 3700, 4870, 4900, 7725, 8381, 4700, 4472, 5500, 5400]
     
     popt2, pcov2 = curve_fit(gauss_calib1, xdata, ydata, p0=p02, bounds=(lower2, upper2), maxfev=1000000)
 
@@ -142,7 +148,11 @@ for channel in range(18,32):
     print(xdata[int(cutoff[channel]/160)])
     diff = xdata[1]-xdata[0]
     if useCutoff:
-        popt, pcov = curve_fit(two_gauss_calib3, xdata[int(cutoff[channel]/diff):], ydata[int(cutoff[channel]/diff):], p0=p0, bounds=(lower, upper), maxfev=1000000)
+        if channel in highcut:
+            print("hightcut")
+            popt, pcov = curve_fit(two_gauss_calib3, xdata[:int(cutoff[channel]/diff)], ydata[:int(cutoff[channel]/diff)], p0=p0, bounds=(lower, upper), maxfev=1000000)
+        else: 
+            popt, pcov = curve_fit(two_gauss_calib3, xdata[int(cutoff[channel]/diff):], ydata[int(cutoff[channel]/diff):], p0=p0, bounds=(lower, upper), maxfev=1000000)
     else:
         popt, pcov = curve_fit(two_gauss_calib3, xdata, ydata, p0=p0, bounds=(lower, upper), maxfev=1000000)
 
@@ -171,7 +181,13 @@ for channel in range(18,32):
     c2 = (E2 - b_fit) / a_fit
     print(f"Peak centers (channels): c1 = {c1:.2f}, c2 = {c2:.2f}")
     print(f"Separation: {c2 - c1:.2f} channels")
-    print(f"BeamPo: {(a_fit*prefitchannels[channel]+b_fit):.2f} MeV")
+    energy = (a_fit*prefitchannels[channel]+b_fit)
+    print(f"Energy {energy}")
+    kB = 12.68*0.001
+    channelWidth = 3
+    if(channel>10): channelWidth = 2
+    quenched = 1/(1/energy - kB/channelWidth)
+    print(f"BeamPo: {quenched:.2f} MeV")
 
     # ---------- Plot ----------
     plt.figure(figsize=(10,6))
@@ -182,10 +198,9 @@ for channel in range(18,32):
     # plt.plot(xdata, gauss_calib2(xdata, a_fit, b_fit, A2_fit, sigma2_fit), label="1332.49 keV", color="red", linewidth=2)
     # plt.plot(xdata, gauss_calib2(xdata, a_fit, b_fit, A2_fit, sigma1_fit), label="1332.49 keV", color="red", linewidth=2)
     plt.plot(xdata, gauss_calib2(xdata, a_fit, b_fit, A1_fit, sigma1_fit), label="1332.49 keV", color="red", linewidth=2)
-    xf = np.linspace(min(xdata), max(xdata), 2000)
-    yf = two_gauss_calib3(xf, *popt)
+    yf = two_gauss_calib3(xdata, *popt)
 
-    plt.plot(xf, yf, label="Fit", linewidth=2)
+    plt.plot(xdata, yf, label="Fit", linewidth=2)
 
     plt.xlabel("Channel")
     plt.ylabel("Counts")

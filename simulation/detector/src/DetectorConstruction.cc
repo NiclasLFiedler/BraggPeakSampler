@@ -146,8 +146,8 @@ void DetectorConstruction::DefineMaterials()
   G4Element *elPb = nistManager->FindOrBuildElement("Pb");  // 82
 
   // Air defined using NIST Manager
-  //worldMat = nistManager->FindOrBuildMaterial("G4_AIR"); 
-  worldMat = nistManager->FindOrBuildMaterial("G4_Galactic"); 
+  worldMat = nistManager->FindOrBuildMaterial("G4_AIR"); 
+  // worldMat = nistManager->FindOrBuildMaterial("G4_Galactic"); 
   urethandimethacrylat = new G4Material("urethandimethacrylat", 1.11*g/cm3,4);
   urethandimethacrylat->AddElement(elC,23);
   urethandimethacrylat->AddElement(elH,38);

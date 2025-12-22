@@ -146,7 +146,7 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event* anEvent)
 
     // G4ParticleDefinition* particle = G4Gamma::GammaDefinition();
     fParticleGun->SetParticleDefinition(particle);
-    G4double energy = 221*MeV;
+    G4double energy = 222*MeV;
 
     // G4double energy;
     // if(G4UniformRand()<0.5){

@@ -160,7 +160,7 @@ void coincCalib(){
     for (int i = 0; i < nLayers; i++){
         sprintf(histname, "h_coincCharge_%d", i);
         sprintf(histdesc, "h_coincCharge_%d", i);
-        TH1D* h_coincCharge_i = new TH1D(histname, histdesc, 200, 0, ylim);
+        TH1D* h_coincCharge_i = new TH1D(histname, histdesc, 65536/512, 0, ylim);
         h_coincCharge.push_back(h_coincCharge_i);
     }
 
@@ -180,7 +180,7 @@ void coincCalib(){
     TTree *datatree2;
     TFile *input2;
 
-    int coincChannel = 18;
+    int coincChannel = 14;
     bool second = 1;
     particles.clear();
     initialEvents.clear();
@@ -210,18 +210,29 @@ void coincCalib(){
     //14                                     ch%d%d_co60.root 2ns 5.8 with 500 cutoff 
     //15                                     co60ch%d%d.root 1ns 6  with 800 cutoff 
 
-    //16                                     ch%d%d_co60_2.root 2ns 6.3 1ns 5.9 ch%d%d_co60.root 2ns 6
-    //17                                     ch%d%d_co60_2.root 2ns 7.9 1ns 7.5 ch%d%d_co60.root 2ns 5.9
-    //18                                     ch%d%d_co60_2.root 2ns 8.9  
-    //19                                     ch%d%d_co60_2.root 2ns 8.9  
-    //20                                     ch%d%d_co60_2.root 2ns 8.9  
-    //21                                     ch%d%d_co60_2.root 2ns 8.9  
-    //22                                     ch%d%d_co60_2.root 2ns 8.9  
+    
+    
+    //16                                     co60ch%d%d.root 1ns 5.95 
+    //17                                     co60ch%d%d.root 1ns 6.14
+    //18                                     co60ch%d%d.root 10ns 6.5  
+    //19                                     co60ch%d%d.root 40ns 6.79  
+    //20                                     co60ch%d%d.root 30ns 7.2 
+    //21                                     co60ch%d%d.root 40ns 7.7
+    //22                                     sch%d%d_co60.root 2ns 8.2 
+    //23                                     ch%d%d_co60.root 10ns 9
+    //24                                     %sch%d%d_co60.root 14ns 10.1
+    //25                                     %sch%d%d_co60.root 2ns 12.26
+    //26                                     ch%d%d_co60.root 12ns 17.32
+    //27                                     ch%d%d_co60.root 12ns 19.24
+    //28                                     sch%d%d_co60 15ns 12.9
+    //29                                     %sco60_%d%d.root 2ns 2.9
+    //30                                     %sco60_%d%d.root 2ns 3.32
+    //31                                     %sco60_%d%d.root 2ns 3.2
 
-    sprintf(file, "%sch%d%d_co60_2.root", in_path, coincChannel, coincChannel+1);//, filename);
-    // sprintf(file, "%sco60_%d%d.root", in_path, coincChannel, coincChannel+1);//, filename);
-    // sprintf(file, "%sco60ch%d%d.root", in_path, coincChannel, coincChannel+1);//, 
-
+    // sprintf(file, "%sch%d%d_co60_2.root", in_path, coincChannel, coincChannel+1);
+    // sprintf(file, "%sco60_%d%d.root", in_path, coincChannel, coincChannel+1);
+    sprintf(file, "%sco60ch%d%d.root", in_path, coincChannel, coincChannel+1);
+    // sprintf(file, "%sbeamtimebackground.root", in_path); 
     cout << "In path: " << file << endl;
     input = new TFile(file, "READ");
     if (!input || input->IsZombie()) {
@@ -287,7 +298,7 @@ void coincCalib(){
             if(coinProton.GetCharge(coincChannel+1) != 0){
                 if(std::abs(coinProton.GetCharge(coincChannel)-coinProton.GetCharge(coincChannel+1)) > 0){
                     h_coincCharge.at(coincChannel)->Fill(coinProton.GetCharge(coincChannel));
-                    h_coincCharge.at(coincChannel+1)->Fill(coinProton.GetCharge(coincChannel+1));
+                    h_coincCharge.at(coincChannel+1)->Fill(coinProton.GetCharge(coincChannel));
                 }
             }
         }
@@ -296,6 +307,9 @@ void coincCalib(){
     if(second) coincChannel++;
     sprintf(outFile_path, "../data/%s/%s/output/coincHistogram%d.root", dataset, filename, coincChannel);
     TFile* outputFile = new TFile(outFile_path, "RECREATE");
+    // if(coincChannel == 21){
+    //     h_coincCharge.at(coincChannel) = h_coincCharge.at(coincChannel+1)    
+    // }
     h_coincCharge.at(coincChannel)->Write();
     h_timediff.at(int(coincChannel/2))->Write();
     outputFile->Close();
