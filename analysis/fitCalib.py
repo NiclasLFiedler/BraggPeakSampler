@@ -76,15 +76,15 @@ useCutoff = False
 show = True
 if(useCutoff):
     f = ROOT.TFile.Open("../data/paperBeamtime/notarget/output/Histograms.root")
-                                                                                                                            #20
-cutoff = [4000, 3500, 4500, 4000, 3500, 4000, 3500, 3500, 5000, 1000, 3500, 4000, 500, 500, 500, 800, 4000, 4000, 4000, 500, 620, 1200, 0, 500, 600, 600, 5000, 5500, 5000, 5000, 5000, 5000]
+                                                                                                                            
+cutoff = [4000, 3500, 4500, 4000, 3500, 4000, 3500, 3500, 5000, 1000, 3500, 4000, 900, 700, 500, 800, 4000, 4000, 4000, 500, 620, 1200, 0, 500, 600, 600, 5000, 5500, 5000, 5000, 5000, 5000]
 
-highgain = [0,4,5]
-highgain = [0]
+highgain = [0,4,5,10]
+
 highcut = []
 params = []
-cutoffch = [12, 13, 24, 25]
-for channel in range(14,16):
+cutoffch = [12,24,25]
+for channel in range(10,11):
     # if channel == 21: channel-=1
     f = ROOT.TFile.Open(f"../data/paperBeamtime/notarget/output/coincHistogram{channel}.root")
     if(channel in cutoffch ):

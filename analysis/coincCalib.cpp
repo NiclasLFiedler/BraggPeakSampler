@@ -160,7 +160,7 @@ void coincCalib(){
     for (int i = 0; i < nLayers; i++){
         sprintf(histname, "h_coincCharge_%d", i);
         sprintf(histdesc, "h_coincCharge_%d", i);
-        TH1D* h_coincCharge_i = new TH1D(histname, histdesc, 65536/512, 0, ylim);
+        TH1D* h_coincCharge_i = new TH1D(histname, histdesc, 65536/256, 0, ylim);
         h_coincCharge.push_back(h_coincCharge_i);
     }
 
@@ -180,8 +180,8 @@ void coincCalib(){
     TTree *datatree2;
     TFile *input2;
 
-    int coincChannel = 14;
-    bool second = 1;
+    int coincChannel = 10;
+    bool second = 0;
     particles.clear();
     initialEvents.clear();
     postEvents.clear();
@@ -203,15 +203,14 @@ void coincCalib(){
     //7 co60_%d%d.root 25ns 6.3             ch%d%d_co60_2.root 2ns 7.6  1ns 7.5
     //8 co60_%d%d.root 25ns 7               
     //9 co60_%d%d.root 25ns 6.8             ch%d%d_co60_2.root 2ns 8.9  1ns (shaky) 8.14
-    //10 co60_%d%d.root 25ns 6.7             ch%d%d_co60_2.root 2ns 8.4  1ns 8.07
-    //11 co60_%d%d.root 25ns 3.6             ch%d%d_co60_2.root 2ns 5.6  1ns 5.2
-    //12                                     ch%d%d_co60_2.root 2ns 6.3   with 500 cutoff
-    //13                                     ch%d%d_co60_2.root 2ns 6.6  with 500 cutoff
-    //14                                     ch%d%d_co60.root 2ns 5.8 with 500 cutoff 
-    //15                                     co60ch%d%d.root 1ns 6  with 800 cutoff 
 
-    
-    
+    //10 co60_%d%d.root 25ns 6.7             ch%d%d_co60_2.root 2ns 8.4  1ns 8.07
+
+    //11                                     ch%d%d_co6.root 3ns 5.1
+    //12                                     co60ch%d%d.root 4ns 5.25 cutoff 900
+    //13                                     co60ch%d%d.root 6ns 5.37 
+    //14                                     co60ch%d%d.root 1ns 5.56
+    //15                                     co60ch%d%d.root 2ns 5.82 
     //16                                     co60ch%d%d.root 1ns 5.95 
     //17                                     co60ch%d%d.root 1ns 6.14
     //18                                     co60ch%d%d.root 10ns 6.5  
@@ -229,9 +228,9 @@ void coincCalib(){
     //30                                     %sco60_%d%d.root 2ns 3.32
     //31                                     %sco60_%d%d.root 2ns 3.2
 
-    // sprintf(file, "%sch%d%d_co60_2.root", in_path, coincChannel, coincChannel+1);
-    // sprintf(file, "%sco60_%d%d.root", in_path, coincChannel, coincChannel+1);
-    sprintf(file, "%sco60ch%d%d.root", in_path, coincChannel, coincChannel+1);
+    // sprintf(file, "%sch%d%d_co60.root", in_path, coincChannel, coincChannel+1);
+    sprintf(file, "%sco60_%d%d.root", in_path, coincChannel, coincChannel+1);
+    // sprintf(file, "%sco60ch%d%d.root", in_path, coincChannel, coincChannel+1);
     // sprintf(file, "%sbeamtimebackground.root", in_path); 
     cout << "In path: " << file << endl;
     input = new TFile(file, "READ");
