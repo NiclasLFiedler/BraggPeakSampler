@@ -73,20 +73,23 @@ def hist_to_numpy(hist):
 # Replace these two lines with your actual code:
 
 useCutoff = False
-show = True
-if(useCutoff):
-    f = ROOT.TFile.Open("../data/paperBeamtime/notarget/output/Histograms.root")
-                                                                                                                            
-cutoff = [4000, 3500, 4500, 4000, 3500, 4000, 3500, 3500, 5000, 1000, 3500, 4000, 900, 700, 500, 800, 4000, 4000, 4000, 500, 620, 1200, 0, 500, 600, 600, 5000, 5500, 5000, 5000, 5000, 5000]
+show = False
 
-highgain = [0,4,5,10]
+datapath = "../data/paperBeamtime"
+
+if(useCutoff):
+    f = ROOT.TFile.Open(f"{datapath}/notarget/output/Histograms.root")
+                                                                                                                            
+cutoff = [4000, 3500, 4500, 1640, 3500, 1700, 1410, 1630, 5000, 1200, 1150, 4000, 900, 700, 500, 800, 4000, 4000, 4000, 500, 620, 1200, 0, 500, 600, 600, 5000, 5500, 5000, 5000, 5000, 5000]
+
+highgain = [0,1,2,4,8, 29, 30, 31]
 
 highcut = []
 params = []
-cutoffch = [12,24,25]
-for channel in range(10,11):
+cutoffch = [3, 5,6,7,9,10,12,24,25]
+for channel in range(0,32):
     # if channel == 21: channel-=1
-    f = ROOT.TFile.Open(f"../data/paperBeamtime/notarget/output/coincHistogram{channel}.root")
+    f = ROOT.TFile.Open(f"{datapath}/notarget/output/coincHistogram{channel}.root")
     if(channel in cutoffch ):
         useCutoff = True
         print("usecutoff") 
@@ -103,9 +106,9 @@ for channel in range(10,11):
         xdata = xdata/4
         a_guess = 1/50
     b_guess = 0.0005
-    A1_guess = 50
+    A1_guess = 30
     A2_guess = A1_guess
-    sigma_guess = 500
+    sigma_guess = 700
 
     # p0 = [a_guess, b_guess,
     #       A1_guess, A2_guess,
@@ -165,7 +168,7 @@ for channel in range(10,11):
 
     a_fit, b_fit, A1_fit, sigma1_fit = popt[0], popt[1], popt[2], popt[3]
     a_err, b_err, A1_error, sigma1_error = perr[0], perr[1], perr[2], perr[3]
-
+    print(f"a_fit: {a_fit}")
     params.append([a_fit, a_err, b_fit, b_err])
 
     # -------- Print results ----------
@@ -213,4 +216,4 @@ for channel in range(10,11):
     else:
         plt.close()
 print("\n=== Summary of Calibration Parameters ===")
-np.save("calibParams.npy", params)
+np.save(f"{datapath}/detector/calibParams.npy", params)

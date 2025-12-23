@@ -172,7 +172,7 @@ void coincCalib(){
     }
 
     bool useCharge = true;
-    bool useCoinc = true;
+    bool useCoinc = false;
     Double_t entries;
 
     TFile *input;
@@ -180,51 +180,45 @@ void coincCalib(){
     TTree *datatree2;
     TFile *input2;
 
-    int coincChannel = 10;
-    bool second = 0;
+    int coincChannel = 28;
+    bool second = 1;
     particles.clear();
     initialEvents.clear();
     postEvents.clear();
 
-    //0 co60_%d%d.root 25ns 5.8
-    //1                                     ch%d%d_co60_2.root 2ns 6.3
-    //2                                     ch%d%d_co60_2.root 2ns 7.3
-    //3                                     ch%d%d_co60_2.root 2ns 7.5
-    //4 co60_%d%d.root 25ns 6               ch%d%d_co60_2.root 2ns 7.8
-    //5 co60_%d%d.root 25ns 6               ch%d%d_co60_2.root 2ns 8
-    //6 co60_%d%d.root 25ns 6               ch%d%d_co60_2.root 2ns 7.5  1ns 7.3
-    //7 co60_%d%d.root 25ns 6.3             ch%d%d_co60_2.root 2ns 7.6  1ns 7.5
-    //8 co60_%d%d.root 25ns 7
-    //9 co60_%d%d.root 25ns 6.8
-
-    //4 co60_%d%d.root 25ns 6               ch%d%d_co60_2.root 2ns 7.8
-    //5 co60_%d%d.root 25ns 6               ch%d%d_co60_2.root 2ns 8
-    //6 co60_%d%d.root 25ns 6               ch%d%d_co60_2.root 2ns 7.5  1ns 7.3
-    //7 co60_%d%d.root 25ns 6.3             ch%d%d_co60_2.root 2ns 7.6  1ns 7.5
-    //8 co60_%d%d.root 25ns 7               
-    //9 co60_%d%d.root 25ns 6.8             ch%d%d_co60_2.root 2ns 8.9  1ns (shaky) 8.14
-
-    //10 co60_%d%d.root 25ns 6.7             ch%d%d_co60_2.root 2ns 8.4  1ns 8.07
-
+    //0 co60_%d%d.root 50ns 5.99
+    //1 co60_%d%d.root nocinc 5.76
+    //2 co60_%d%d.root nocoinc 6.04
+    //3 ch%d%d_co60_2.root 2ns 6.22 1640
+    //4 co60_%d%d.root 4ns 6.3 
+    //5 ch%d%d_co60.root 25ns 6.4  1700
+    //6 %sch%d%d_co60  1ns 6.52 cutoff 1410
+    //7 ch%d%d_co60_2.root 25ns 6.93  1630
+    //8 co60_%d%d.root 2ns 7.02               
+    //9 sch%d%d_co60.root 1ns 7.16 
+    //10 co60_%d%d.root 25ns 6.7             ch%d%d_co60_2.root 1ns 7.4 cutoff 1150
     //11                                     ch%d%d_co6.root 3ns 5.1
     //12                                     co60ch%d%d.root 4ns 5.25 cutoff 900
-    //13                                     co60ch%d%d.root 6ns 5.37 
+    //13                                     co60ch%d%d.root 20ns 5.38 
     //14                                     co60ch%d%d.root 1ns 5.56
     //15                                     co60ch%d%d.root 2ns 5.82 
     //16                                     co60ch%d%d.root 1ns 5.95 
     //17                                     co60ch%d%d.root 1ns 6.14
-    //18                                     co60ch%d%d.root 10ns 6.5  
-    //19                                     co60ch%d%d.root 40ns 6.79  
-    //20                                     co60ch%d%d.root 30ns 7.2 
-    //21                                     co60ch%d%d.root 40ns 7.7
-    //22                                     sch%d%d_co60.root 2ns 8.2 
-    //23                                     ch%d%d_co60.root 10ns 9
-    //24                                     %sch%d%d_co60.root 14ns 10.1
-    //25                                     %sch%d%d_co60.root 2ns 12.26
+    //18                                     co60ch%d%d.root 10ns 6.47  
+    //19                                     co60ch%d%d.root 40ns 6.84  
+    //20                                     co60ch%d%d.root 30ns 7.22 
+    //21                                     co60ch%d%d.root 40ns 7.73
+    //22                                     sch%d%d_co60.root 2ns 8.24
+    //23                                     ch%d%d_co60.root 10ns 9.09
+    //24                                     %sch%d%d_co60.root 14ns 10.12
+    //25                                     %sch%d%d_co60.root 2ns 12.24
     //26                                     ch%d%d_co60.root 12ns 17.32
     //27                                     ch%d%d_co60.root 12ns 19.24
-    //28                                     sch%d%d_co60 15ns 12.9
+
+    //28                                     sch%d%d_co60 15ns 12.09
+
     //29                                     %sco60_%d%d.root 2ns 2.9
+
     //30                                     %sco60_%d%d.root 2ns 3.32
     //31                                     %sco60_%d%d.root 2ns 3.2
 
@@ -297,7 +291,7 @@ void coincCalib(){
             if(coinProton.GetCharge(coincChannel+1) != 0){
                 if(std::abs(coinProton.GetCharge(coincChannel)-coinProton.GetCharge(coincChannel+1)) > 0){
                     h_coincCharge.at(coincChannel)->Fill(coinProton.GetCharge(coincChannel));
-                    h_coincCharge.at(coincChannel+1)->Fill(coinProton.GetCharge(coincChannel));
+                    h_coincCharge.at(coincChannel+1)->Fill(coinProton.GetCharge(coincChannel+1));
                 }
             }
         }

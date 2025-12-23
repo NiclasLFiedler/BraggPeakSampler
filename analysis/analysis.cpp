@@ -102,8 +102,8 @@ void analysis(){
     
     sprintf(in_path, "../data/%s/%s/input/", dataset, filename);
     sprintf(out_path, "../data/%s/%s/output/", dataset, filename);
-    // sprintf(file, "%s%s.root", in_path, filename);
-    sprintf(file, "%s%s.root", in_path, "beamtimebackground");
+    sprintf(file, "%s%s.root", in_path, filename);
+    // sprintf(file, "%s%s.root", in_path, "beamtimebackground");
     cout << "In path: " << file << endl;
     
     TFile *input = new TFile(file, "READ");

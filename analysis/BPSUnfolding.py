@@ -60,6 +60,9 @@ class ChannelCalibration:
         self.b_err = b_err
         self.channelWidth = channelWidth
         
+    def linear_adc_to_energy(self, adc_value):
+        return self.a * adc_value + self.b
+
     def adc_to_energy(self, adc_value):
         linearenergy = self.a * adc_value + self.b
         return 1/(1/linearenergy - self.kB/self.channelWidth)
@@ -89,6 +92,9 @@ class Detector:
             raise ValueError(f"Channel must be between 0 and {self.n_channels-1}")
         self.channels[channel_id] = calibration
         self.sipms[channel_id] = sipm
+
+    def linear_adc_to_energy(self, channel_id, adc_value):
+        return self.channels[channel_id].linear_adc_to_energy(adc_value)
 
     def adc_to_energy(self, channel_id, adc_value):
         return self.channels[channel_id].adc_to_energy(adc_value)
@@ -539,12 +545,11 @@ if __name__ == "__main__":
     for i in range(32):
         q = charge[:, i]
         q_nz = q[q != 0]
-        print(len(q_nz))
-        c, e = np.histogram(q_nz, bins=1024, range=(0, 65536))
+        c, e = np.histogram(q_nz, bins=256, range=(0, 65536))
         hist.append(c)
         edges.append(e)
-        c, e = np.histogram(detector.adc_to_energy(i, q_nz), 
-        bins=1024, range=(0, detector.adc_to_energy(i, 65536)))
+        c, e = np.histogram(detector.linear_adc_to_energy(i, q_nz), 
+        bins=256, range=(0, detector.linear_adc_to_energy(i, 65536)))
         ehist.append(c)
         eedges.append(e)
 
@@ -552,9 +557,10 @@ if __name__ == "__main__":
     
     hist = np.array(hist) 
     ehist = np.array(ehist) 
+    eCenters = []
 
-    fig, axes = plt.subplots(16, 2, figsize=(32, 8))  # 4x8 grid
-    axes = axes.flatten()
+    for edges in eedges:
+        eCenters.append((edges[1:] + edges[:-1]) / 2)
     
     doses = []
 
@@ -585,29 +591,30 @@ if __name__ == "__main__":
         predicted_measured = np.dot(unfolder.R, unfolded_spectrum)
 
         # unfolder.saveUnfoldedComparison(E_true, ehist[ch], unfolded_spectrum, True)
+        print(f"Plotting {ch}")
 
-        axes[ch].plot(E_true, unfolded_spectrum, color='tab:blue', linewidth=1.2, label='Unfolded Spectrum')
-        # axes[ch].step(E_meas, hist[ch], color='tab:orange', linewidth=2, label=f'Measured Spectrum')
+        plt.plot(E_true, unfolded_spectrum, color='tab:blue', linewidth=1.2, label='Unfolded Spectrum')
+        plt.step(eCenters[ch], hist[ch], color='tab:orange', linewidth=2, label=f'Measured Spectrum')
 
         dose=0
         for idx, value in enumerate(E_true):
             dose += value*unfolded_spectrum[idx]
 
-        # doses.append(dose/detector.channels[ch].channelWidth)
+        doses.append(dose/detector.channels[ch].channelWidth)
         # doses.append(np.mean(unfolded_spectrum)/detector.channels[ch].channelWidth)
-        doses.append(np.sum(E_true*unfolded_spectrum)/(detector.channels[ch].channelWidth))
-        # doses.append(np.mean(ehist[ch])/(detector.channels[ch].channelWidth*np.sum(ehist[ch])))
-        axes[ch].set_xlabel('Energy / MeV')
-        axes[ch].set_ylabel('Counts')
-        axes[ch].set_title('Measured vs Unfolded Spectrum')
-        axes[ch].legend()
-        axes[ch].grid(True)
-        
+        # doses.append(np.sum(E_true*unfolded_spectrum)/(detector.channels[ch].channelWidth))
+        print(f"channel {ch} width: {detector.channels[ch].channelWidth}")
+        # doses.append(np.sum(ehist[ch]))
+        plt.xlabel('Energy / MeV')
+        plt.ylabel('Counts')
+        plt.title('Measured vs Unfolded Spectrum')
+        plt.legend()
+        plt.grid(True)
+        plt.savefig(f"{detectorpath}/preoutput/unfoldedSpectrumCH{ch}.svg", format="svg")
+        plt.close()
         # unfolder.savePredictedComparison(E_meas, hist[ch], predicted_measured, True)
 
         # unfolder.saveClosurePlot()
-    plt.show()
-    plt.close()
     
     with open("config.json", "r") as file:
         fullConfig = json.load(file)
