@@ -118,18 +118,17 @@ void Particle::TestCoincLayer(){
 void Particle::TestBuffer(){
     bool emptyChannel = false;
     for(int channel = 0; channel<traces.size(); channel++){
-        if(GetEDep(channel) != 0){
-            if(emptyChannel == false){
-                continue;
-            }
-            else{
-                missingChannel = true;
-            }
-        }
-        else{
+        if(GetEDep(channel) == 0){
             emptyChannel = true;
         }
+        else{
+            if(emptyChannel){
+                missingChannel = true;
+                return;
+            }
+        }
     }
+    return;
 }
 
 // simulation specific
@@ -186,7 +185,7 @@ bool Particle::Coincidence(int layer){
     if(layer <= coincidence_layer){
         layer = coincidence_layer;
     }
-    for(int i = 0; i < layer; i++){
+    for(int i = 0; i <= layer; i++){
         if(GetEDep(i) == 0){
             return false;
         }
@@ -198,7 +197,7 @@ bool Particle::CoincidencePhotons(int layer){
     if(layer <= coincidence_layer){
         layer = coincidence_layer;
     }
-    for(int i = 0; i < layer; i++){
+    for(int i = 0; i <= layer; i++){
         if(NPhotons.at(i) == 0){
             return false;
         }

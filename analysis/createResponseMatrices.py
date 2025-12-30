@@ -17,6 +17,9 @@ import matplotlib
 matplotlib.use('TkAgg')  # or 'Agg' for non-interactive
 import os
 
+from concurrent.futures import ProcessPoolExecutor
+
+
 class SiPM:
     """
     Simple container for SiPM single-photoelectron parameters.
@@ -135,7 +138,7 @@ class ResponseMatrixBuilder:
     """
     
     def __init__(self, detector: Detector, n_measured_bins=16384, n_iterations=10):
-        adcrange = 65536
+        adcrange = 65536/2
         
         self.n_measured_bins = n_measured_bins
         self.n_iterations = n_iterations
@@ -209,7 +212,7 @@ class ResponseMatrixBuilder:
         print("Building response matrix...")
         for j, true_energy in enumerate(self.true_centers[channel]):
             if j % 10 == 0:
-                print(f"  Processing true energy bin {j+1}/{self.n_measured_bins}")
+                print(f"Channel{channel}:  Processing true energy bin {j+1}/{self.n_measured_bins}")
             
             # For each true energy, calculate probability in each measured bin
             # for i in range(self.n_measured_bins):
@@ -462,8 +465,8 @@ if __name__ == "__main__":
                             measuredEnergies[0], measuredEnergies[-1]],
                     norm=LogNorm(vmin=1e-4, vmax=1))
 
-        plt.xlabel('True Photon Count')
-        plt.ylabel('Measured Photon Count')
+        plt.xlabel('Energy / MeV')
+        plt.ylabel('Measured ADC channel')
         plt.title('Detector Response Matrix')
         plt.colorbar(im)
         plt.show()
@@ -593,11 +596,28 @@ if __name__ == "__main__":
         if(show):
             plt.show()
         plt.close()
-        
+    
+    def build_channel_response(channel):
+        R, true_energies, measured_energies = builder.build_response_matrix(
+            custom_drf=sipm_response,
+            channel=channel
+        )
+        # plotResponseMatrix(R, true_energies, measured_energies)
+        np.savez(
+            f"{datapath}responseMatrix_CH{channel}.npz",
+            response_matrix=R,
+            true_energy=true_energies,
+            measured_energy=measured_energies
+        )
+        del R
+        del true_energy
+        del measured_energies
+
+        return channel
+    
     print("Loading measured spectrum...")   
     datapath = "../data/paperBeamtime/detector/"
-    maxMeasured = 4096
-    maxMeasured = 256
+    maxMeasured = 4096*2
 
     saveMatrix = True
 
@@ -639,14 +659,20 @@ if __name__ == "__main__":
     
     # # plt.plot(builder.measured_centers, sipm_response(0.1, builder.measured_centers, channel=0))
     # # plt.show()
-    # plotResponseMatrix(R, E_true, E_meas)    
+    # plotResponseMatrix(R, E_true, E_meas)
 
     print("Building response matrices for all channels...")
-    for channel in range(32):
-        R, true_energies, measured_energies = builder.build_response_matrix(custom_drf=sipm_response, channel=channel)
+    
+    channels = list(range(0, 32))
+    with ProcessPoolExecutor(max_workers=16 ) as executor:
+        for ch in executor.map(build_channel_response, channels):
+            print(f"Finished channel {ch}")
+                
+    
+    # for channel in range(27,32):
+    #     R, true_energies, measured_energies = builder.build_response_matrix(custom_drf=sipm_response, channel=channel)
 
-        # plotResponseMatrix(R, true_energies, measured_energies)    
                
-        np.savez(f"{datapath}responseMatrix_CH{channel}.npz", response_matrix=R, true_energy=true_energies, measured_energy=measured_energies)
+    #     np.savez(f"{datapath}responseMatrix_CH{channel}.npz", response_matrix=R, true_energy=true_energies, measured_energy=measured_energies)
 
 

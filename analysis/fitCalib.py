@@ -2,6 +2,8 @@ import ROOT
 import numpy as np
 from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
+import random
+
 # -------- Known gamma energies (keV) ----------
 E1 = 1.17323
 E2 = 1.33249
@@ -79,15 +81,46 @@ datapath = "../data/paperBeamtime"
 
 if(useCutoff):
     f = ROOT.TFile.Open(f"{datapath}/notarget/output/Histograms.root")
-                                                                                                                            
+
 cutoff = [4000, 3500, 4500, 1640, 3500, 1700, 1410, 1630, 5000, 1200, 1150, 4000, 900, 700, 500, 800, 4000, 4000, 4000, 500, 620, 1200, 0, 500, 600, 600, 5000, 5500, 5000, 5000, 5000, 5000]
+
 
 highgain = [0,1,2,4,8, 29, 30, 31]
 
 highcut = []
 params = []
-cutoffch = [3, 5,6,7,9,10,12,24,25]
-for channel in range(0,32):
+cutoffch = [3, 5,6,7,9,10,12]
+
+channel7 = 0
+
+channels = [7969.63, 6810.33, 8544.35, 8366.75, 8248.32, 8399.27, 7839.18, 8067.3, 9352.22, 8115.49, 7853.99, 3972.46, 4136.24, 3851.16, 4036.96, 4328.33, 3523.18, 3633.97, 4198.85, 3682.06, 4013.73, 4020.97, 3362.79, 3471.02, 4460.77, 4230.29, 5721, 9568.39, 4908.55]
+
+channels_Err = [1176.55, 1032.72, 1230.33, 1199.13, 1169.02, 1202.06, 1155.05, 1157.6, 1213.28, 1140.51, 1130.95, 729.974, 767.702, 695.278, 754.469, 791.3, 691.12, 732.849, 868.613, 730.777, 775.843, 783.083, 730.004, 775.425, 1025.96, 978.059, 1431.56, 2485.46, 2373.64]
+
+# channels = [8260.4, 7005.78, 8775.9, 8635.58, 8498.3, 8627.36, 8096.46, 8361.34, 9589.23, 8386.07, 8059.63, 4085.59, 4268.36, 3952.39, 4142.66, 4433.85, 3616.99, 3750.23, 4325.86, 3819.41, 4151, 4197.05, 3512.9, 3639.87, 4802.1, 4735.61, 7268.79, 9108.95, 4908.55]
+
+# channels_Err = [1211.02, 1046.36, 1244.99, 1228.21, 1197.43, 1190.42, 1150.61, 1155.63, 1207.02, 1145.2, 1135.46, 732.577, 769.438, 705.058, 749.772, 821.845, 701.081, 732.514, 838.599, 738.325, 788.51, 812.071, 787.064, 829.456, 1124.78, 1145.54, 2143.24, 1811.97, 2373.64]
+
+# energies = [5.93944, 6.04039, 6.15737, 6.27501, 6.40478, 6.54775, 6.70606, 6.87805, 7.06705, 7.28057, 7.51988, 5.16491, 5.29576, 5.4461, 5.61065, 5.79852, 6.01081, 6.25395, 6.53684, 6.87087, 7.28225, 7.79209, 8.45617, 9.3807, 10.6148, 13.246, 13.2788, 20.4859, 10.7988]
+
+# energies_Err = [0.450472,0.449976,0.450388,0.446538,0.446791,0.445129,0.445779,0.441615,0.441219,0.444092,0.441296,0.360322,0.36038,0.359645,0.362348,0.36269,0.367195,0.372248,0.378452,0.389481,0.411361,0.454613,0.527966,0.676651,1.54338,2.72723,2.30265,2.6112,5.83477]
+
+energies = [5.71815, 5.82682, 5.92648, 6.02858, 6.1768, 6.31649, 6.47338, 6.64359, 6.81676, 7.02119, 7.25093, 4.96042, 5.08051, 5.23889, 5.37492, 5.54862, 5.73106, 5.94857, 6.19156, 6.47118, 6.81441, 7.22038, 7.71979, 8.36851, 9.27216, 10.6161, 13.0496, 20.6016, 10.7988]
+
+
+energies_Err = [0.444011, 0.436206, 0.434967, 0.433878, 0.428874, 0.430721, 0.43061, 0.426988, 0.418238, 0.428288, 0.435819, 0.346543, 0.349299, 0.351787, 0.34675, 0.345176, 0.348694, 0.346973, 0.341384, 0.331524, 0.339027, 0.336028, 0.345539, 0.366425, 0.384159, 0.468517, 0.704609, 2.72207, 5.83477]
+
+
+channelWidth = 3
+kB = 12.68*0.001
+for idx, value in enumerate(channels):
+    if(idx>10): channelWidth = 2
+    quenched = energies[idx]/(1 + kB*energies[idx]/channelWidth)
+    a_fit = quenched/value
+    print(f"E {energies[idx]}, Quenched {quenched}")
+    params.append([a_fit, 0,0,0])
+    
+for channel in range(29,32):
     # if channel == 21: channel-=1
     f = ROOT.TFile.Open(f"{datapath}/notarget/output/coincHistogram{channel}.root")
     if(channel in cutoffch ):
@@ -168,6 +201,7 @@ for channel in range(0,32):
 
     a_fit, b_fit, A1_fit, sigma1_fit = popt[0], popt[1], popt[2], popt[3]
     a_err, b_err, A1_error, sigma1_error = perr[0], perr[1], perr[2], perr[3]
+    
     print(f"a_fit: {a_fit}")
     params.append([a_fit, a_err, b_fit, b_err])
 
@@ -192,6 +226,13 @@ for channel in range(0,32):
     quenched = 1/(1/energy - kB/channelWidth)
     print(f"BeamPo: {quenched:.2f} MeV")
 
+
+    if channel == 7:
+        channel7 = (1 - b_fit) / a_fit
+    if channel == 8:
+        channel8 = (1 - b_fit) / a_fit
+        print(f"Quotient: {channel8/channel7} ")    
+
     # ---------- Plot ----------
     plt.figure(figsize=(10,6))
     # plt.step(xdata, two_gauss_calib(xdata, *p0), where="mid", label="Fit", color="red", linewidth=2)
@@ -215,5 +256,10 @@ for channel in range(0,32):
         plt.show()
     else:
         plt.close()
+        
 print("\n=== Summary of Calibration Parameters ===")
+
+print("Individual")
+for idx, value in enumerate(params):
+    print(f"ch {idx}: {(1.2-value[2])/value[0]}")
 np.save(f"{datapath}/detector/calibParams.npy", params)

@@ -154,13 +154,14 @@ void coincCalib(){
 
     cout << "Measurement: Getting raw data." << endl;
 
-    double ylim = 65535;
+    // double ylim = 65535;
+    double ylim = 65536/2-1;
     std::vector<TH1D*> h_coincCharge;
     std::vector<TH1D*> h_timediff;
     for (int i = 0; i < nLayers; i++){
         sprintf(histname, "h_coincCharge_%d", i);
         sprintf(histdesc, "h_coincCharge_%d", i);
-        TH1D* h_coincCharge_i = new TH1D(histname, histdesc, 65536/256, 0, ylim);
+        TH1D* h_coincCharge_i = new TH1D(histname, histdesc, 65536/2*1/128, 0, ylim);
         h_coincCharge.push_back(h_coincCharge_i);
     }
 
@@ -172,7 +173,7 @@ void coincCalib(){
     }
 
     bool useCharge = true;
-    bool useCoinc = false;
+    bool useCoinc = true;
     Double_t entries;
 
     TFile *input;
@@ -180,8 +181,8 @@ void coincCalib(){
     TTree *datatree2;
     TFile *input2;
 
-    int coincChannel = 28;
-    bool second = 1;
+    int coincChannel = 24;
+    bool second = 0;
     particles.clear();
     initialEvents.clear();
     postEvents.clear();
@@ -208,23 +209,23 @@ void coincCalib(){
     //19                                     co60ch%d%d.root 40ns 6.84  
     //20                                     co60ch%d%d.root 30ns 7.22 
     //21                                     co60ch%d%d.root 40ns 7.73
-    //22                                     sch%d%d_co60.root 2ns 8.24
+    //22                                     ch%d%d_co60.root 2ns 8.24
     //23                                     ch%d%d_co60.root 10ns 9.09
-    //24                                     %sch%d%d_co60.root 14ns 10.12
-    //25                                     %sch%d%d_co60.root 2ns 12.24
-    //26                                     ch%d%d_co60.root 12ns 17.32
-    //27                                     ch%d%d_co60.root 12ns 19.24
+    //24                                     ch%d%d_co60.root 14ns 10.12
+    //25 ch%d%d_co60_2 50ns 10.91            ch%d%d_co60.root 2ns 12.24
+    //26 sco60ch%d%d.root 4ns 13.41          ch%d%d_co60.root 12ns 17.32
+    //27  sco60ch%d%d.root 4ns 13.95         ch%d%d_co60.root 12ns 19.24
 
-    //28                                     sch%d%d_co60 15ns 12.09
+    //28 sco60ch%d%d.root 4ns 7.77 MeV        sch%d%d_co60 15ns 12.09
 
-    //29                                     %sco60_%d%d.root 2ns 2.9
+    //29 sco60ch%d%d.root 4ns               %sco60_%d%d.root 2ns 2.9
 
     //30                                     %sco60_%d%d.root 2ns 3.32
     //31                                     %sco60_%d%d.root 2ns 3.2
 
-    // sprintf(file, "%sch%d%d_co60.root", in_path, coincChannel, coincChannel+1);
-    sprintf(file, "%sco60_%d%d.root", in_path, coincChannel, coincChannel+1);
-    // sprintf(file, "%sco60ch%d%d.root", in_path, coincChannel, coincChannel+1);
+    // sprintf(file, "%sch%d%d_co60_2.root", in_path, coincChannel, coincChannel+1);
+    // sprintf(file, "%sco60_%d%d.root", in_path, coincChannel, coincChannel+1);
+    sprintf(file, "%sco60ch%d%d.root", in_path, coincChannel, coincChannel+1);
     // sprintf(file, "%sbeamtimebackground.root", in_path); 
     cout << "In path: " << file << endl;
     input = new TFile(file, "READ");
@@ -248,7 +249,7 @@ void coincCalib(){
     for (double e = 0; e<entries; e++){
         trace_props.Clear();
         datatree->GetEntry(e);
-        if(charge < 0) charge += 65536;
+        if(charge < 0) charge = 0; //charge += 65536;
         if (board == 1) {
             channel += 16;
             timestamp_ps += 32*1000;

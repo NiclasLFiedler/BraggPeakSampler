@@ -18,7 +18,7 @@ Detector::Detector(DetectorProperties* detectorProperties)
     else{
         binningEdep[0] = 65536/64;
         binningEdep[1] = 0;
-        binningEdep[2] = 65535;
+        binningEdep[2] = 65536/2-1;
     }
     int binningPhotons[3] = {200, 0, 50};
     int binningEntry[3] = {200, -static_cast<int>(detectorProperties->GetLayerSizeX())/2, static_cast<int>(detectorProperties->GetLayerSizeX())/2};

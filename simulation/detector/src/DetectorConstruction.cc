@@ -600,7 +600,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   logicalDetector = new G4LogicalVolume(solidDetector, detMaterial, "logicalDetector");
   logicalDetector->SetUserLimits(userLimits);
   
-  G4Box* solidAluFoil = new G4Box("solidAluFoil", detSizeX/2+ThicknessAlu+ThicknessTeflon/2, detSizeY/2+ThicknessAlu/2+ThicknessTeflon/2, detSizeZ/2+ThicknessAlu/2+ThicknessTeflon/2);
+  G4Box* solidAluFoil = new G4Box("solidAluFoil", detSizeX/2+ThicknessAlu/2 +ThicknessTeflon/2, detSizeY/2+ThicknessAlu/2+ThicknessTeflon/2, detSizeZ/2+ThicknessAlu/2+ThicknessTeflon/2);
   G4Box* solidTeflonFoil = new G4Box("solidTeflonFoil", detSizeX/2+ThicknessTeflon/2, detSizeY/2+ThicknessTeflon/2, detSizeZ/2+ThicknessTeflon/2);
   
   logicalAluFoil = new G4LogicalVolume(solidAluFoil , aluminumFoil, "logicalAluFoil");

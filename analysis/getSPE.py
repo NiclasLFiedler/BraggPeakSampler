@@ -8,6 +8,7 @@ def gaussian(x, A, mu, sigma):
     return A * np.exp(-(x - mu)**2 / (2 * sigma**2))
 
 show = False
+datapath = "../data/paperBeamtime"
 file = uproot.open("../data/paperBeamtime/rawData/SPEmeasurment.root")
 tree = file["RawData"]
 charge = tree["Charge"].array(library="np")
@@ -24,7 +25,7 @@ histograms = {}      # store hist arrays
 bin_edges = {}        # store bin edges
 
 for ch in unique_channels:
-    hist, bins = np.histogram(charges_per_channel[ch], bins=16384, range=(0, 65536))
+    hist, bins = np.histogram(charges_per_channel[ch], bins=int(16384/4), range=(0, 65536/2))
     histograms[ch] = hist
     bin_edges[ch] = bins
 
@@ -69,8 +70,8 @@ for selectCH in unique_channels:
 
     for p in first_three:
         # Choose a fitting window around each peak
-        left = max(0, p - 25)
-        right = min(len(bin_centers), p + 25)
+        left = max(0, p - 200)
+        right = min(len(bin_centers), p + 200)
 
         # if (selectCH == 0):
         #     left = max(0, p - 75)
@@ -96,7 +97,8 @@ for selectCH in unique_channels:
         print("")
       
     # Extract μ and σ values
-    if  selectCH == 0:
+    useold = False
+    if  selectCH == 0 and useold:
         mus = np.array([912.633,  1803.96])
         sigmas = np.array([69.3187, 92.3195])
         mus_err = np.array([0.503949, 1.92606])
@@ -113,14 +115,15 @@ for selectCH in unique_channels:
     pxt = 0.2
     print(f"Sigma 1: {sigmas[0]}")
     print(f"Sigma 2: {sigmas[1]}")
+    
     sigma_gain = np.sqrt((sigmas[1:]**2 - sigmas[:-1]**2))
-    sigma_elec = np.sqrt(sigmas[:-1]**2-sigma_gain**2)
-
+    # sigma_elec = np.sqrt(sigmas[:-1]**2-sigma_gain**2)
+    sigma_elec = 0
     print(f"Sigma gain {sigma_gain}")
     print(f"Sigma elec {sigma_elec}")
-    if np.isnan(sigma_elec[0]):
-        print("ERROR: sigma_elec is NaN → stopping.")
-        raise SystemExit
+    # if np.isnan(sigma_elec[0]):
+    #     print("ERROR: sigma_elec is NaN → stopping.")
+    #     raise SystemExit
     gains = mus[1:] - mus[:-1]
     gains_err = np.sqrt(mus_err[1:]**2 + mus_err[:-1]**2)
 
@@ -137,10 +140,18 @@ for selectCH in unique_channels:
     gain_sigmas_err = gain_sigmas_err/16
     sigma_elec = sigma_elec/16
     
+    diff = 1.3700696433939117
+    
+    
+    
     if selectCH == 7:
-        params.append([gains[0], gains_err[0], gain_sigmas[0], gain_sigmas_err[0], sigma_elec[0]])
-        params.append([gains[0]/4, gains_err[0]/4, gain_sigmas[0]/4, gain_sigmas_err[0]/4, sigma_elec[0]/4])    
-    params.append([gains[0], gains_err[0], gain_sigmas[0], gain_sigmas_err[0], sigma_elec[0]])
+        params.append([gains[0], gains_err[0], sigmas[0], gain_sigmas_err[0], 0])
+        params.append([gains[0]/diff, gains_err[0]/diff, sigmas[0]/diff, gain_sigmas_err[0]/diff, 0/diff])    
+    params.append([gains[0], gains_err[0], sigmas[0], gain_sigmas_err[0], 0])
+        
+    #     params.append([gains[0], gains_err[0], gain_sigmas[0], gain_sigmas_err[0], sigma_elec[0]])
+    #     params.append([gains[0]/diff, gains_err[0]/diff, gain_sigmas[0]/diff, gain_sigmas_err[0]/diff, sigma_elec[0]/diff])    
+    # params.append([gains[0], gains_err[0], gain_sigmas[0], gain_sigmas_err[0], sigma_elec[0]])
 
     print("=== SiPM Physical Parameters ===")
     for i in range(len(gains)):
@@ -168,4 +179,10 @@ for selectCH in unique_channels:
         plt.show()
     else:
         plt.close()
-np.save("SPEparams.npy", params)
+        
+print("Mean")
+print(np.mean([value[0] for value in params]))
+        
+for value in params:
+    print(value[0])
+np.save(f"{datapath}/detector/SPEparams.npy", params)

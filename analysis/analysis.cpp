@@ -245,7 +245,7 @@ void analysis(){
         cout << "Measurement: Getting raw data." << endl;
         for (double e = 0; e<entries; e++){
             datatree->GetEntry(e);
-            if(charge < 0) charge += 65536;
+            if(charge < 0) charge = 0; // charge += 65536;
             // printf("Timestamp: %llu ps, Timestamp<static> %f ps, \n", timestamp_ps, static_cast<double>(timestamp_ps));
             if (board == 1) {
                 channel += 16;
@@ -259,7 +259,7 @@ void analysis(){
                 detector->EnergyHist(channel)->Fill(calib->GetQuenchedEnergy(channel, trace_props.charge));
             }
             else{
-                std::cout << "Energy zero or negative!" << " WARNING " << trace_props.charge << std::endl;
+                // std::cout << "Energy zero or negative!" << " WARNING " << trace_props.charge << std::endl;
             }
             if(trace_props.channel == 0){
                 initialEvents.insert({trace_props.time_ps, trace_props});
@@ -376,45 +376,6 @@ void analysis(){
             prevEvent = event; 
         }
         cout << "Data acquisition & Histograms finished" << endl;
-        if(bScintSim){
-            photontree->GetEntry(0);
-            prevEvent = eventPhotons;
-            proton.Clear();
-            int64_t photonEntries = photontree->GetEntries();
-            cout << "Photon Entries " << photonEntries << endl; 
-            for(int64_t e = 0; e<photonEntries; e++){
-		        photontree->GetEntry(e);
-                detector->EntryHist(NDetPhotons)->Fill(EntryPosX);
-                if( EntryPosX > 10){
-                    // std::cout << "EntryPosX: " << EntryPosX << " NDetPhotons: " << NDetPhotons << " Event: " << eventPhotons << std::endl;
-                }
-                // std::cout << "Photon Event: " << eventPhotons << " NDetPhotons: " << NDetPhotons << " EntryPosX: " << EntryPosX << std::endl;
-                detector->ExitHist(NDetPhotons)->Fill(ExitPosX);
-                detector->AngleHist(NDetPhotons)->Fill(phi);
-            }    
-            
-            
-            
-            
-            
-                // if(prevEvent != eventPhotons){
-                    // ScintParticles.push_back(proton);
-                    // proton.Clear();
-                // }
-                // proton.SetNPhotons(NDetPhotons, NPhotons);
-                // prevEvent = event; 
-            // }
-            // for(Particle p : ScintParticles){
-                // for(int ch = 0; ch<nLayers; ch++){
-                    // if(p.GetNPhotons(ch) > 0){
-                        // detector->PhotonHist(ch)->Fill(p.GetNPhotons(ch));
-                        // if(p.CoincidencePhotons(ch)){
-                            // detector->CoincPhotonHist(ch)->Fill(p.GetNPhotons(ch));
-                        // }
-                    // }
-                // }
-            // }
-        }
     }
     cout << "Processing Detector" << endl;
     detector->Process();
@@ -450,12 +411,15 @@ void analysis(){
 
     for(int i = 0; i<nLayers; i++){
         c1->cd(i+1);
-        plotter.Histogram1D(detector->EnergyHist(i), "EDep [MeV]", "Counts");
-        detector->CoincEnergyHist(i)->SetLineColor(kRed+1);
-        detector->CoincEnergyHist(i)->Draw("HIST SAME");
+        // plotter.Histogram1D(detector->EnergyHist(i), "EDep [MeV]", "Counts");
+        // detector->CoincEnergyHist(i)->SetLineColor(kRed+1);
+        // detector->CoincEnergyHist(i)->Draw("HIST SAME");
+
+        plotter.Histogram1D(detector->CoincEnergyHist(i), "EDep [MeV]", "Counts");
+
         // detector->StoppedEnergyHist(i)->SetLineColor(kOrange+1);
         // detector->StoppedEnergyHist(i)->Draw("HIST SAME");
-        plotter.Legend(detector->EnergyHist(i));
+        plotter.Legend(detector->CoincEnergyHist(i));
 
         cout << setw(10) << i << setw(2) << "|" << setw(15) << detector->EnergyHist(i)->GetEntries() << setw(2) << "|" << setw(25) << detector->CoincEnergyHist(i)->GetEntries() << setw(2) << "|" << setw(18) <<  detector->StoppedEnergyHist(i)->GetEntries() << endl;
     }
@@ -467,6 +431,9 @@ void analysis(){
     cout << "Number of lower coincidence particles: " << coinc_layer_counter << endl;
     c1->cd(nLayers+1);    
 
+    for(int i = 0; i<nLayers; i++){
+        std::cout << "Channel " << i << " Mean " <<  detector->CoincEnergyHist(i)->GetMean() << " Error " << detector->CoincEnergyHist(i)->GetStdDev() << std::endl;
+    }
     sprintf(histdesc, "Norm. energy depth dose distribution %s", target_data[fileSelect]);
     plotter.GraphError(detector->MeansGraph(), "Depth [cm]", "Norm. Energy Dose [MeV]", histdesc);
     plotter.Legend(detector->MeansGraph());
