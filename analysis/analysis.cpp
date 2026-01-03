@@ -11,6 +11,7 @@
 #include "include/Calibration.h"
 #include "include/DetectorProperties.h"
 #include "nlohmann/json.hpp"
+#include <fstream>
 
 using json = nlohmann::json;
 
@@ -498,56 +499,24 @@ void analysis(){
         hfile->Close();
     }
     //store hist means for bortfield fit
-    sprintf(file, "%s%sMeans.root", out_path, in_data[fileSelect]);
+    sprintf(file, "%s%sMeans.csv", out_path, in_data[fileSelect]);
     std::cout << "Outpath Means file: " << file << std::endl;
-    hfile = new TFile(file, "RECREATE");
-    
-    TTree *meantree = new TTree("meantree", "Tree storing histogram means");
     
     Double_t layer;
     Double_t layererr;
     Double_t mean;
     Double_t error;
     
-    meantree->Branch("x", &layer);
-    meantree->Branch("x_sigma", &layererr);
-    meantree->Branch("mean", &mean);
-    meantree->Branch("error", &error);
 
-    for (int ch = 0; ch < nLayers; ++ch) {
+    std::ofstream fileStream(file);
+    for (int ch = 0; ch < 32; ++ch) {
+        
         layer = detector->crystals.at(ch).pos.depth;
         layererr = detector->crystals.at(ch).pos.stddev;
         mean = detector->crystals.at(ch).dose.dose;
         error = detector->crystals.at(ch).dose.stddev;
-        meantree->Fill();        
-    }
-    meantree->Write(); 
-
-    if(bPhotons){
-        TCanvas* c3 = new TCanvas("c3", title, 10, 10, 1900, 1000);
-        c3->SetFillColor(0);
-	    c3->SetGrid();
-	    c3->SetBorderMode(0);
-	    c3->SetBorderSize(2);
-	    c3->SetFrameBorderMode(0);
-        c3->Divide(coloums, rows);
         
-        for(int i = 0; i<nLayers; i++){
-            c3->cd(i+1);
-            plotter.Histogram1D(detector->PhotonHist(i), "# Photons", "Counts");
-            detector->CoincPhotonHist(i)->SetLineColor(kRed+1);
-            detector->CoincPhotonHist(i)->Draw("HIST SAME");
-        }
+        fileStream << layer << "," << layererr << "," << mean << "," << error << "\n";
     }
-
-    hfile->Close();
-    
-    // Char_t heteroPath[200];
-    // sprintf(heteroPath, "../data/modulation/output/%ium_%immMeans.root", pmod, heteroThickness);
-    // std::cout << "Out Path: " << heteroPath << std::endl;
-    // TFile* heteroFile = new TFile(heteroPath, "RECREATE");
-    // detector->TotalEnergyHist()->Write();
-    // heteroFile->Close();
-    
-    // c2->Close();   
+    fileStream.close();
 }
