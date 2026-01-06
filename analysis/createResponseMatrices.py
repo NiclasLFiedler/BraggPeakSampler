@@ -1,3 +1,4 @@
+import time
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy import stats
@@ -11,6 +12,7 @@ from scipy.signal import find_peaks
 from scipy.optimize import curve_fit
 import matplotlib.gridspec as gridspec
 from matplotlib.colors import LogNorm
+from matplotlib.colors import SymLogNorm
 import ROOT
 import uproot
 import matplotlib
@@ -55,14 +57,25 @@ class ChannelCalibration:
     Represents the energy calibration of one detector channel using two points.
     """
 
-    def __init__(self, a, b, a_err, b_err, channelWidth):
+    def __init__(self, a, b, a_err, b_err, channelWidth, simVar, simStatVar, ADCVar, ADCStatVar, covAB, quenched, ADCchannel):
         self.kB = 12.68 * 0.001
+        self.kbVariance = abs(self.kB*0.3)**2
         self.a = a
         self.b = b
-        self.a_err1 = a_err
+        self.quenched = quenched
+        self.ADCchannel = ADCchannel
+        self.a_err = a_err
         self.b_err = b_err
         self.channelWidth = channelWidth
+        self.simVar = simVar
+        self.simStatVar = simStatVar
+        self.ADCVar = ADCVar
+        self.ADCStatVar = ADCStatVar
+        self.covAB = covAB
         
+    def linear_adc_to_energy(self, adc_value):
+        return self.a * adc_value + self.b    
+     
     def adc_to_energy(self, adc_value):
         linearenergy = self.a * adc_value + self.b
         return 1/(1/linearenergy - self.kB/self.channelWidth)
@@ -471,6 +484,19 @@ if __name__ == "__main__":
         plt.colorbar(im)
         plt.show()
     
+    def plotCovMatrix(cov, measuredEnergies):
+        im = plt.imshow(cov, aspect='auto', origin='lower',
+                    extent=[measuredEnergies[0], measuredEnergies[-1],
+                            measuredEnergies[0], measuredEnergies[-1]],
+                    norm=SymLogNorm(linthresh=1e-6,vmin=cov.min(), vmax=cov.max()),
+                    cmap="coolwarm")
+
+        plt.xlabel('ADC channel')
+        plt.ylabel('ADC channel')
+        plt.title('Detector Energy Covariance Matrix')
+        plt.colorbar(im)
+        plt.show()
+    
     def sipm_response(energy, measured_centers, channel, n_max=2000):
         """
         Calculate SiPM response function for a given energy deposition
@@ -597,47 +623,123 @@ if __name__ == "__main__":
             plt.show()
         plt.close()
     
+    def build_covMatrix(channel, adc):
+        calib = builder.detector.channels[channel]
+        cov = np.zeros((len(adc), len(adc)))
+        
+        muADC = calib.ADCchannel
+        muE = calib.quenched
+        varSim = calib.simVar
+        varStatSim = calib.simStatVar
+        varADC = calib.ADCVar
+        varStatADC = calib.ADCStatVar
+        deltaX = calib.channelWidth
+        kb = calib.kB
+        kbVar = calib.kbVariance
+        
+        vara = calib.a_err**2
+        varb = calib.b_err**2
+        covab = calib.covAB
+
+        for i in range(len(adc)):
+            for j in range(len(adc)):
+                E_i = calib.linear_adc_to_energy(adc[i])
+                E_j = calib.linear_adc_to_energy(adc[j])
+                
+                if(channel<29):
+                    term1 = (1/muADC)**2 * adc[i]*adc[j] * varSim
+                    
+                    term1b = (muE/muADC**2)**2 * adc[i]*adc[j] * varADC
+                        
+                    term2 = (1/muADC)**2 * adc[i]*adc[j] * varStatSim if i == j else 0
+
+                    term2b = (muE/muADC**2)**2 * adc[i]*adc[j] * varStatADC if i == j else 0
+
+                    term1E = deltaX**2/((kb*E_i-deltaX)*(kb*E_j-deltaX))*(term1+term1b)
+
+                    term2E = deltaX**2/((kb*E_i-deltaX)*(kb*E_j-deltaX))*(term2+term2b) if i == j else 0
+                        
+                    termkB = deltaX*E_i*E_j/((kb*E_i-deltaX)*(kb*E_j-deltaX))*kbVar**2
+                        
+                    cov[i][j] = term1E + term2E + termkB
+                else:
+                    term1 = adc[i]*adc[j] * vara + varb + (adc[i]+adc[j])*covab
+                    termE = deltaX**2/((kb*E_i-deltaX)*(kb*E_j-deltaX))*term1
+                    termkB = deltaX*E_i*E_j/((kb*E_i-deltaX)*(kb*E_j-deltaX))*kbVar**2
+                    
+                    cov[i][j] = termE + termkB
+        
+        return cov
+        
     def build_channel_response(channel):
         R, true_energies, measured_energies = builder.build_response_matrix(
             custom_drf=sipm_response,
             channel=channel
         )
-        # plotResponseMatrix(R, true_energies, measured_energies)
+        cov = build_covMatrix(channel, measured_energies)
+        plotCovMatrix(cov, measured_energies)
         np.savez(
             f"{datapath}responseMatrix_CH{channel}.npz",
             response_matrix=R,
+            Energy_covariance_matrix=cov,
             true_energy=true_energies,
             measured_energy=measured_energies
         )
         del R
-        del true_energy
+        del cov
+        del true_energies
         del measured_energies
-
         return channel
     
     print("Loading measured spectrum...")   
     datapath = "../data/paperBeamtime/detector/"
-    maxMeasured = 4096*2
+    maxMeasured = 2048
 
     saveMatrix = True
 
     detector = Detector()
     speParams = np.load(f"{datapath}/SPEparams.npy")
-    calibParams = np.load(f"{datapath}/calibParams.npy")
+    calibParamsFront = np.load(f"{datapath}/calibParamsFront.npy")
+    calibParamsEnd = np.load(f"{datapath}/calibParamsEnd.npy")
     channelWidth = 3
     
     for crystal in range(32):
         if crystal > 10:
             channelWidth = 2
-            
-        calib = ChannelCalibration(
-            a = calibParams[crystal][0],
-            b = calibParams[crystal][2],
-            a_err = calibParams[crystal][1],
-            b_err = calibParams[crystal][3],
+        
+        if crystal < 29:
+            calib = ChannelCalibration(
+            a = calibParamsFront[crystal][0],
+            b = 0,
+            a_err = 0,
+            b_err = 0,
+            ADCchannel=calibParamsFront[crystal][1],
+            quenched=calibParamsFront[crystal][2],
+            simVar=calibParamsFront[crystal][3],
+            simStatVar=calibParamsFront[crystal][4],
+            ADCVar=calibParamsFront[crystal][5],
+            ADCStatVar=calibParamsFront[crystal][6],
+            covAB=0, 
             channelWidth=channelWidth
         )
 
+        else:
+            calib = ChannelCalibration(
+            a = calibParamsEnd[crystal-29][0],
+            b = calibParamsEnd[crystal-29][2],
+            a_err = calibParamsEnd[crystal-29][1],
+            b_err = calibParamsEnd[crystal-29][3],
+            covAB=calibParamsEnd[crystal-29][4],
+            ADCchannel=0,
+            quenched=0,
+            simVar=0,
+            simStatVar=0,
+            ADCVar=0,
+            ADCStatVar=0,
+            channelWidth=channelWidth
+        )
+
+        
         sipm = SiPM(
             gain = speParams[crystal][0],
             gain_err = speParams[crystal][1],
@@ -662,6 +764,12 @@ if __name__ == "__main__":
     # plotResponseMatrix(R, E_true, E_meas)
 
     print("Building response matrices for all channels...")
+    
+    for ch in range(27,32):
+        print(f"Building cov matrix for channel {ch}...")
+        adc = builder.measured_centers
+        cov = build_covMatrix(ch, adc)
+        plotCovMatrix(cov, adc)
     
     channels = list(range(0, 32))
     with ProcessPoolExecutor(max_workers=16 ) as executor:

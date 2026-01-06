@@ -15,7 +15,18 @@ import matplotlib
 matplotlib.use('TkAgg')  # or 'Agg' for non-interactive
 import os
 import json
+import time
 ROOT.gSystem.Load("libRooUnfold")
+
+def EnergyUncertainty(ch):
+    if ch >28:
+        sigma_a = 0
+        sigma_b = 0
+        
+    else:
+        sigma_muadc = 0
+        sigma_muE = 0
+    return 0
 
 def numpy_to_th1(name, title, values, edges):
     values = np.ascontiguousarray(values, dtype=np.float64)
@@ -94,13 +105,21 @@ class ChannelCalibration:
     Represents the energy calibration of one detector channel using two points.
     """
 
-    def __init__(self, a, b, a_err, b_err, channelWidth):
+    def __init__(self, a, b, a_err, b_err, channelWidth, simVar, simStatVar, ADCVar, ADCStatVar, covAB, quenched, ADCchannel):
         self.kB = 12.68 * 0.001
+        self.kbVariance = abs(self.kB*0.3)**2
         self.a = a
         self.b = b
-        self.a_err1 = a_err
+        self.quenched = quenched
+        self.ADCchannel = ADCchannel
+        self.a_err = a_err
         self.b_err = b_err
         self.channelWidth = channelWidth
+        self.simVar = simVar
+        self.simStatVar = simStatVar
+        self.ADCVar = ADCVar
+        self.ADCStatVar = ADCStatVar
+        self.covAB = covAB
         
     def linear_adc_to_energy(self, adc_value):
         return self.a * adc_value + self.b
@@ -575,18 +594,43 @@ if __name__ == "__main__":
     
     detector = Detector()
     speParams = np.load(f"{detectorpath}/SPEparams.npy")
-    calibParams = np.load(f"{detectorpath}/calibParams.npy")
+    calibParamsFront = np.load(f"{detectorpath}/calibParamsFront.npy")
+    calibParamsEnd = np.load(f"{detectorpath}/calibParamsEnd.npy")
     channelWidth = 3
     
     for crystal in range(32):
         if crystal > 10:
             channelWidth = 2
             
-        calib = ChannelCalibration(
-            a = calibParams[crystal][0],
-            b = calibParams[crystal][2],
-            a_err = calibParams[crystal][1],
-            b_err = calibParams[crystal][3],
+        if crystal < 29:
+            calib = ChannelCalibration(
+            a = calibParamsFront[crystal][0],
+            b = 0,
+            a_err = 0,
+            b_err = 0,
+            ADCchannel=calibParamsFront[crystal][1],
+            quenched=calibParamsFront[crystal][2],
+            simVar=calibParamsFront[crystal][3],
+            simStatVar=calibParamsFront[crystal][4],
+            ADCVar=calibParamsFront[crystal][5],
+            ADCStatVar=calibParamsFront[crystal][6],
+            covAB=0, 
+            channelWidth=channelWidth
+        )
+
+        else:
+            calib = ChannelCalibration(
+            a = calibParamsEnd[crystal-29][0],
+            b = calibParamsEnd[crystal-29][2],
+            a_err = calibParamsEnd[crystal-29][1],
+            b_err = calibParamsEnd[crystal-29][3],
+            covAB=calibParamsEnd[crystal-29][4],
+            ADCchannel=0,
+            quenched=0,
+            simVar=0,
+            simStatVar=0,
+            ADCVar=0,
+            ADCStatVar=0,
             channelWidth=channelWidth
         )
 
@@ -635,12 +679,12 @@ if __name__ == "__main__":
     for i in range(32):
         q = selectedCharge[:, i]
         q_nz = q[q != 0]
-        c, e = np.histogram(q_nz, bins=8192, range=(0, 65536/2))
+        c, e = np.histogram(q_nz, bins=2048, range=(0, 65536/2))
         hist.append(c)
         hist_edges.append(e)
-        # c, e = np.histogram(detector.linear_adc_to_energy(i, q_nz), bins=8192, range=(0, detector.linear_adc_to_energy(i, 65536/2)))
+        # c, e = np.histogram(detector.linear_adc_to_energy(i, q_nz), bins=2048, range=(0, detector.linear_adc_to_energy(i, 65536/2)))
         
-        c, e = np.histogram(detector.adc_to_energy(i, q_nz), bins=8192, range=(0, detector.adc_to_energy(i, 65536/2)))
+        c, e = np.histogram(detector.adc_to_energy(i, q_nz), bins=2048, range=(0, detector.adc_to_energy(i, 65536/2)))
         ehist.append(c)
         eedges.append(e)
     
@@ -656,53 +700,60 @@ if __name__ == "__main__":
     unfoldedDoses = []
     Doses = []
     rebinfactor = 4
-    n_iter = 0  # start here, then study stability
+    n_iter = 5  # start here, then study stability
     
     print("\nPerforming Bayesian unfolding...")
-    for ch in range(32):
+    start = time.perf_counter()
+    for ch in range(21,32):
         data = np.load(f"{detectorpath}/responseMatrix_CH{ch}.npz")
 
-        R_fine  = data["response_matrix"]
+        R  = data["response_matrix"]
+        Ecov = data["Energy_covariance_matrix"]
         E_true = data["true_energy"]
         E_meas = data["measured_energy"]
-        
         initial_prior = np.ones_like(E_true)
+        measured = hist[ch]
+        Emeasured = ehist[ch]
         
-        R = rebin_measured_axis(R_fine, rebinfactor)
-        measured = rebin_hist(hist[ch], rebinfactor)
-        Emeasured = rebin_hist(ehist[ch], rebinfactor)
-        eCenterNew = eCenters[ch][::rebinfactor]
         true_edges = np.array(calcBinEdges(E_true))
+                
+        h_meas  = numpy_to_th1(f"h_meas{ch}", "Measured", measured, hist_edges[ch])
         
+        h_true  = numpy_to_th1(f"h_true{ch}", "Truth", initial_prior, true_edges)
         
-        h_meas  = numpy_to_th1("h_meas", "Measured", measured, hist_edges[ch][::rebinfactor])
-        
-        h_true  = numpy_to_th1("h_true", "Truth", initial_prior, true_edges)
-        
-        
-        h_resp  = numpy_to_th2("h_resp", "Response", R, hist_edges[ch][::rebinfactor], true_edges)
+        h_resp  = numpy_to_th2(f"h_resp{ch}", "Response", R, hist_edges[ch], true_edges)
         response = ROOT.RooUnfoldResponse(h_meas, h_true, h_resp)
         unfold = ROOT.RooUnfoldBayes(response , h_meas, n_iter)
-        cov_matrix = unfold.GetMeasuredCov()
-        print("Geht")
         h_unfold = unfold.Hunfold()
-        cov_matrix = unfold.GetErrorMatrix()
-        h_unfold.Scale(h_meas.Integral() / h_unfold.Integral())
+        print(f"Unfolding complete of channel {ch}.")
+        cov_matrix = unfold.Eunfold()
+        print("Covariance matrix retrieved.")
+        
+        x_meas, y_meas = th1_to_numpy(h_meas)
+        x_true, y_true = th1_to_numpy(h_true)
+        x_unf, y_unf = th1_to_numpy(h_unfold)
+        
+        scale = np.sum(Emeasured) / np.sum(y_unf)
+        if(scale==0):
+            scale=1
+        print(f"Scale: {scale}")
+        h_unfold.Scale(scale)
+        x_unf, y_unf = th1_to_numpy(h_unfold)
         n_bins = h_unfold.GetNbinsX()
         cov = np.zeros((n_bins, n_bins))
 
         for i in range(n_bins):
             for j in range(n_bins):
-                cov[i, j] = cov_matrix.GetBinContent(i+1, j+1)
+                cov[i, j] = cov_matrix[i][j]*scale**2
         bin_errs = np.sqrt(np.diag(cov))  # bin uncertainties
         
-        x_meas, y_meas = th1_to_numpy(h_meas)
-        x_unf, y_unf = th1_to_numpy(h_unfold)
+        end = time.perf_counter()
+        print(f"Time taken: {end - start:.6f} s")
 
         plt.figure(figsize=(10,6))
-        plt.step(eCenterNew, Emeasured, where='mid', label='Measured', color='tab:orange')
+        plt.step(eCenters[ch], Emeasured, where='mid', label='Measured', color='tab:orange')
         plt.plot(x_unf, y_unf, label='Unfolded', color='tab:blue')
-        plt.fill_between(x_unf, y_unf - bin_errs, y_unf + bin_errs, color='tab:blue', alpha=0.3)
+        plt.fill_between(x_unf, y_unf - bin_errs, y_unf + bin_errs, color='tab:red', alpha=0.3)
         plt.xlabel('Energy / MeV')
         plt.ylabel('Counts')
         plt.title(f'Channel {ch} Unfolding')
@@ -710,10 +761,11 @@ if __name__ == "__main__":
         plt.grid(True)
         plt.show()
         
-        h_predicted = unfold.Hmeasured()  # or .Hmeas()
+        h_pred= unfold.Hmeasured()
+        h_predicted = response.ApplyToTruth(h_unfold)# or .Hmeas()
         x_pred, y_pred = th1_to_numpy(h_predicted)
         
-        plt.step(Centers[ch][::rebinfactor], measured, where='mid', label='Measured', color='tab:orange')
+        plt.step(Centers[ch], measured, where='mid', label='Measured', color='tab:orange')
         plt.plot(x_pred, y_pred, '--', label='Predicted Measured')
         plt.xlabel('ADC Counts')
         plt.ylabel('Counts')
@@ -721,31 +773,61 @@ if __name__ == "__main__":
         plt.legend()
         plt.grid(True)
         plt.show()
+        
         conv = 1.60218e-13
 
-        unfoledDose=0
         
         volume = detector.channels[ch].channelWidth*0.1*3*3 # cm^3
         mass = volume*8.28*0.001 #kg
 
+        unfoldedDose=0
         for idx, value in enumerate(x_unf):
             unfoldedDose += value * y_unf[idx]
 
         dose = unfoldedDose / mass * 1e6 * conv  # μGy
 
-        E = np.array(x_unf)  # MeV
-        sigma_dose = np.sqrt(np.sum(E[:, None] * E[None, :] * cov))  # variance
-        sigma_dose *= conv / mass * 1e6  # convert to μGy
+        E = np.array(x_unf)
+        N = np.array(y_unf)  # MeV
+        print(N)
+        doseVariance = np.dot(E, np.dot(cov, E))+np.dot(N, np.dot(Ecov, N))
+        # doseVariance = np.sum(E[:, None] * E[None, :] * cov)+np.sum(N[:, None] * N[None, :] * Ecov)
+        dosePartial = np.dot(N, np.dot(Ecov, N))
+        dosePartial *= conv**2 / mass**2 * 1e12 
+        print(f"Partial dose variance from energy uncertainty: {dosePartial} μGy^2") 
+        doseVariance *= conv**2 / mass**2 * 1e12 
 
+        np.savez(
+            f"{datapath}Unfolded{ch}.npz",
+            covarianceMatrix=cov,
+            EcovarianceMatrix=Ecov,
+            true_energy=[x_true, y_true],
+            measured_energy=[x_meas,y_meas],
+            unfolded=[x_unf, y_unf],
+            predicted_measured=y_pred,
+            dose =[dose, doseVariance]
+        )
+        print(f"Unfolded dose for channel {ch}: {dose:.2f} ± {np.sqrt(doseVariance):.2f} μGy")
         
-        
-        # for i in range(23,32):
-        #     data2 = np.load(f"{detectorpath}/responseMatrix_CH{i}.npz")
+        im = plt.imshow(cov, aspect='auto', origin='lower',
+                    extent=[x_unf[0], x_unf[-1],
+                            x_unf[0], x_unf[-1]],
+                    norm=LogNorm(vmin=1e-4, vmax=1))
 
-        #     R2  = data2["response_matrix"]
-        #     E_true2 = data2["true_energy"]
-        #     E_meas2 = data2["measured_energy"]
-        #     unfolder.plotResponseMatrix(R2, E_true2, E_meas2)
+        plt.xlabel('Bins')
+        plt.ylabel('Bins')
+        plt.title('Covariance Matrix')
+        plt.colorbar(im)
+        plt.show()
+        
+        h_meas.Delete()
+        h_true.Delete()
+        h_resp.Delete()
+        h_unfold.Delete()
+        
+        del response
+        del unfold
+        del Ecov
+
         old = False
         if(old):
             unfolder = BPSUnfolding(R, E_true, E_meas[::rebinfactor], n_iterations=100, channel = ch)

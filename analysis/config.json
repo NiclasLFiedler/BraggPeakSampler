@@ -1,6 +1,6 @@
 {
-  "detectorSelect":0,
-  "targetSelect": 1,
+  "detectorSelect": 0,
+  "targetSelect": 0,
   "detectors": [
     {
       "detectorID": 0,
@@ -27,7 +27,7 @@
       "teflonThickness": 0.5,
       "aluThickness": 0.06,
       "coincidenceTime": 50,
-      "coincidenceLayer": 1,
+      "coincidenceLayer": 28,
       "discardIndex": 50,
       "targetThickness": 60
     },

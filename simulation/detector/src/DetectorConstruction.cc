@@ -541,9 +541,8 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   G4ThreeVector physicalPosition;
   G4STL stl;
   stl.SetVerbosity(1);
-  
-  G4UserLimits* userLimits = new G4UserLimits();
-  // userLimits->SetMaxAllowedStep(0.1*mm);
+  G4UserLimits* userLimits;
+  userLimits = new G4UserLimits();
   
   solidworld = new G4Box("solidworld", worldXY / 2, worldXY / 2, worldZ / 2);
   

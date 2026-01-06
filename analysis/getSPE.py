@@ -43,7 +43,6 @@ for ch in unique_channels:
 #     plt.show()
 
 # exit()
-
 params = []
 
 for selectCH in unique_channels:
@@ -186,3 +185,4 @@ print(np.mean([value[0] for value in params]))
 for value in params:
     print(value[0])
 np.save(f"{datapath}/detector/SPEparams.npy", params)
+

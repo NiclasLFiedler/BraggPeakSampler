@@ -37,12 +37,13 @@ int main(int argc,char** argv)
   // Set mandatory initialization classes
   //
   runManager->SetUserInitialization(new DetectorConstruction());
-  //auto physicsList = new QBBC();
   G4PhysListFactory factory;
   auto physicsList = factory.GetReferencePhysList("QGSP_BIC_EMY");
+  physicsList->ReplacePhysics(new G4EmStandardPhysics_option4());
+  // auto physicsList = factory.GetReferencePhysList("QGSP_BERT");
+  // auto physicsList = new QBBC();
   
 
-  physicsList->ReplacePhysics(new G4EmStandardPhysics_option4());
 
 
   G4StepLimiterPhysics* stepLimitPhys = new G4StepLimiterPhysics();
