@@ -421,11 +421,55 @@ void DetectorConstruction::DefineMaterials()
   PMMA->AddElement(elC, 5);
   PMMA->AddElement(elH, 8);
   PMMA->AddElement(elO, 2);
+  auto printMat = [](G4Material* m)
+  {
+    G4cout << "Material: " << m->GetName() << G4endl;
+    G4cout << "  Density = "
+           << m->GetDensity()/(g/cm3) << " g/cm3" << G4endl;
+
+    G4cout << "  I = "
+           << m->GetIonisation()->GetMeanExcitationEnergy()/eV
+           << " eV" << G4endl;
+
+    G4cout << "  Radlen = "
+           << m->GetRadlen()/cm << " cm" << G4endl;
+
+    G4cout << "  Nuclear L = "
+           << m->GetNuclearInterLength()/cm << " cm" << G4endl;
+
+    const G4ElementVector* els = m->GetElementVector();
+    const G4double* fr = m->GetFractionVector();
+
+    for (size_t i = 0; i < m->GetNumberOfElements(); ++i) {
+        G4cout << "    "
+               << (*els)[i]->GetName()
+               << " : " << fr[i] << G4endl;
+    }
+  };
+
+  auto PbWO4_nist =
+    nistManager->FindOrBuildMaterial("G4_PbWO4");
+  G4cout << "=== NIST PbWO4 ===" << G4endl;
+  printMat(PbWO4_nist);
+  PbWO4_nist->GetIonisation()->SetMeanExcitationEnergy(600.7*eV); 
+
+  auto PbWO4_custom = new G4Material(
+    "PbWO4_custom",
+    PbWO4_nist->GetDensity(),
+    PbWO4_nist
+  );
+  
+  G4cout << "=== NIST Custom PbWO4 ===" << G4endl;
+  printMat(PbWO4_custom);
+  
 
   if(detectorType == "pbwo4"){
     G4cout << "Setting Materialproperties" << G4endl;
-    detMaterial = nistManager->FindOrBuildMaterial("G4_PbWO4");
-    detMaterial->GetIonisation()->SetMeanExcitationEnergy(600.7*eV); 
+
+    // detMaterial = PbWO4_nist;
+    detMaterial = PbWO4_custom;
+    
+
     detMaterial->GetIonisation()->SetBirksConstant(0.008694);
     detMaterial->SetMaterialPropertiesTable(pbwo4MPT);
   }

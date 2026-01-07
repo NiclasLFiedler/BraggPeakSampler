@@ -677,7 +677,7 @@ if __name__ == "__main__":
             channel=channel
         )
         cov = build_covMatrix(channel, measured_energies)
-        plotCovMatrix(cov, measured_energies)
+        # plotCovMatrix(cov, measured_energies)
         np.savez(
             f"{datapath}responseMatrix_CH{channel}.npz",
             response_matrix=R,
@@ -765,11 +765,11 @@ if __name__ == "__main__":
 
     print("Building response matrices for all channels...")
     
-    for ch in range(27,32):
-        print(f"Building cov matrix for channel {ch}...")
-        adc = builder.measured_centers
-        cov = build_covMatrix(ch, adc)
-        plotCovMatrix(cov, adc)
+    # for ch in range(27,32):
+    #     print(f"Building cov matrix for channel {ch}...")
+    #     adc = builder.measured_centers
+    #     cov = build_covMatrix(ch, adc)
+    #     plotCovMatrix(cov, adc)
     
     channels = list(range(0, 32))
     with ProcessPoolExecutor(max_workers=16 ) as executor:
