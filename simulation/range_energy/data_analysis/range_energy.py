@@ -195,7 +195,7 @@ def analyse_range_energy(data : RangeEnergyRelationship, comparison_data: RangeE
 
     # Show the plot
     plt.grid(True)
-    plt.savefig(f"{path}/rangeenergy.pdf", format="pdf", bbox_inches="tight")
+    plt.savefig(f"{path}/rangeenergy.svg", format="svg", bbox_inches="tight")
     #plt.savefig(f"air/rangeenergy.pdf", format="pdf", bbox_inches="tight")
     plt.show()
     

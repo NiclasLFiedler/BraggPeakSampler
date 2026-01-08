@@ -51,6 +51,8 @@ void analysis(){
     int coincidenceTime                 = config["coincidenceTime"];
     int coincidenceLayer                = config["coincidenceLayer"];
     int discard_index                   = config["discardIndex"];
+    int targetThickness                 = config["targetThickness"];
+    
     int pmod                            = allConfigs["pmod"];
     int heteroThickness                 = allConfigs["heteroThickness"];
 
@@ -66,9 +68,12 @@ void analysis(){
     Char_t dataset[200];
     Char_t filename[100];
     sprintf(dataset, "%s", datasets[datasetSelect]);
-    sprintf(filename, "%s", in_data[fileSelect]);
-
-    
+    if(fileSelect == 1){
+        sprintf(filename, "%s%i", in_data[fileSelect], targetThickness);
+    }
+    else{
+        sprintf(filename, "%s", in_data[fileSelect]);
+    }
     Char_t histdesc[100];
     Char_t histname[100];
     Char_t title[100];
@@ -499,7 +504,7 @@ void analysis(){
         hfile->Close();
     }
     //store hist means for bortfield fit
-    sprintf(file, "%s%sMeans.csv", out_path, in_data[fileSelect]);
+    sprintf(file, "%s%sMeans.csv", out_path, filename);
     std::cout << "Outpath Means file: " << file << std::endl;
     
     Double_t layer;

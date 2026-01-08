@@ -658,8 +658,8 @@ if __name__ == "__main__":
         h_predicted = response.ApplyToTruth(h_unfold)# or .Hmeas()
         x_pred, y_pred = th1_to_numpy(h_predicted)
         
-        plt.step(x_meas, y_meas, where='mid', label='Measured', color='tab:orange')
-        plt.plot(x_pred, y_pred, '--', label='Predicted Measured', color='tab:blue')
+        plt.plot(x_pred, y_pred, '--', label='Predicted Measured', color='tab:blue', linewidth=1)
+        plt.step(x_meas, y_meas, where='mid', label='Measured', color='tab:orange', linewidth=1)
         plt.xlabel('Measured ADC Counts')
         plt.ylabel('Counts')
         plt.title(f'Channel {ch}: Measured vs Predicted')
@@ -702,20 +702,6 @@ if __name__ == "__main__":
 
         unfoldedDoseVariance *= conv**2 / mass**2 * 1e6**2 
 
-        np.savez(
-            f"{datapath}/unfold/data/Unfolded{ch}.npz",
-            # covarianceMatrix=cov,
-            # EcovarianceMatrix=Ecov,
-            # counts_variance = Ncov,
-            true_energy=[x_true, y_true],
-            measured_energy=[x_meas,y_meas],
-            unfolded=[x_unf, y_unf],
-            predicted_measured=[x_pred, y_pred],
-            unfoldedDose =[unfoldedDose, unfoldedDoseVariance],
-            dose =[dose, DoseVariance],
-            depth = [depth, deptherr],
-            n_iter_used = n_iter
-        )
         print(f"Unfolded dose for channel {ch}: {unfoldedDose:.2f} ± {np.sqrt(unfoldedDoseVariance):.2f} μGy")
         print(f"Normally calculated dose for channel {ch}: {dose:.2f} ± {np.sqrt(DoseVariance):.2f} μGy")
 
@@ -754,6 +740,21 @@ if __name__ == "__main__":
         plt.colorbar(im)
         plt.savefig(f"{datapath}/unfold/img/ResponseMatrix_CH{ch}.svg")
         plt.close()
+   
+        np.savez(
+            f"{datapath}/unfold/data/Unfolded{ch}.npz",
+            # covarianceMatrix=cov,
+            # EcovarianceMatrix=Ecov,
+            # counts_variance = Ncov,
+            true_energy=[x_true, y_true],
+            measured_energy=[x_meas,y_meas],
+            unfolded=[x_unf, y_unf],
+            predicted_measured=[x_pred, y_pred],
+            unfoldedDose =[unfoldedDose, unfoldedDoseVariance],
+            dose =[dose, DoseVariance],
+            depth = [depth, deptherr],
+            n_iter_used = n_iter
+        )
 
         h_meas.Delete()
         h_true.Delete()
@@ -770,12 +771,32 @@ if __name__ == "__main__":
     
     np.random.seed(42)
     
-    print("BPS Unfolding ")
-    print("=" * 50)
-    
-    print("Loading measured spectrum...")   
+    with open("config.json", "r") as fileT:
+        fullConfig = json.load(fileT)
 
-    datapath = "../data/paperBeamtime/notarget/output"
+    detectorSelect = fullConfig["detectorSelect"]
+    targetSelect = fullConfig["targetSelect"]
+    plotEnable = fullConfig["plotEnable"]
+
+    config = fullConfig["detectors"][detectorSelect]
+
+    datasetSelect = config["datasetSelect"]
+    
+    nLayers = config["nLayers"]
+    
+    targetThickness = config["targetThickness"]
+
+    datasets = ["MIT_05_2024", "simulation", "paperBeamtime"]
+    in_data = ["notarget", "homotarget", "heterotarget"]
+    in_title = ["without a target", "with the homogeneous target", "with the heterogeneous target"]
+
+    dataset = datasets[datasetSelect]
+    print(f"Dataset: {dataset}")
+    filename = in_data[targetSelect]
+    if(targetSelect == 1):
+        filename = f"{filename}{targetThickness}"
+
+    datapath = f"../data/paperBeamtime/{filename}/output"
     detectorpath = "../data/paperBeamtime/detector"
     
     detector = Detector()
@@ -784,6 +805,11 @@ if __name__ == "__main__":
     calibParamsEnd = np.load(f"{detectorpath}/calibParamsEnd.npy")
     channelWidth = 3
     
+    print(f"BPS Unfolding of {filename}")
+    print("=" * 50)
+    
+    print("Loading measured spectrum...")   
+
     for crystal in range(32):
         if crystal > 10:
             channelWidth = 2
@@ -842,7 +868,38 @@ if __name__ == "__main__":
 
     energy = []
     selectedCharge = []
-    energyCutOff = 180
+    idx = 0
+
+    for event in charge:
+        idx += 1
+        energyEvent = []
+        for layer, layerCharge in enumerate(event):
+            if(layerCharge == 0):
+                energyEvent.append(0)
+            else:
+                energyEvent.append(detector.adc_to_energy(layer, layerCharge))
+        energy.append(np.sum(energyEvent))
+    
+    TEnergyCounts, TEnergyEdges = np.histogram(energy, bins=2000)
+    TEnergyCenters = 0.5 * (TEnergyEdges[:-1] + TEnergyEdges[1:])
+    peak_idx = np.argmax(TEnergyCounts)
+    peak_x = TEnergyCenters[peak_idx]
+    fit_mask = TEnergyCenters > peak_x - 30
+    x_fit = TEnergyCenters[fit_mask]
+    y_fit = TEnergyCounts[fit_mask]
+
+    def gauss(x, A, mu, sigma):
+        return A * np.exp(-(x - mu)**2 / (2 * sigma**2))
+
+    p0 = [TEnergyCounts[peak_idx], peak_x, np.std(energy) / 5]
+
+    popt, _ = curve_fit(gauss, x_fit, y_fit, p0=p0)
+
+    energy = []
+    A, mu, sigma = popt
+    FWHM = 2.355 * sigma
+    energyCutOff = mu - (FWHM) / 2
+    print(f"Peak at {mu} MeV: Energycut at {energyCutOff} MeV")
     idx = 0
     for event in charge:
         idx += 1
@@ -855,11 +912,25 @@ if __name__ == "__main__":
         if(np.sum(energyEvent)>energyCutOff):
             selectedCharge.append(event)
             energy.append(np.sum(energyEvent))
-    TEnergyCounts, TEnergyBins = np.histogram(energy, bins=2000)
+    
+    mask = TEnergyCenters >= energyCutOff
+    TCutEnergyCounts = TEnergyCounts[mask]
+    TCutEnergyCenters = TEnergyCenters[mask]
 
-    plt.hist(energy, bins=500)
-    plt.show()
+    x_smooth = np.linspace(TEnergyCenters[0], TEnergyCenters[-1], 1000)
+    y_smooth = gauss(x_smooth, *popt)
 
+    plt.step(TEnergyCenters, TEnergyCounts, where="mid", color='red')
+    plt.step(TCutEnergyCenters, TCutEnergyCounts, where="mid", color='green')
+    plt.plot(x_smooth, y_smooth, label="Gaussian fit")
+    plt.grid()
+    plt.xlabel("Total Deposited Energy / MeV")
+    plt.ylabel("Counts")
+    plt.savefig(f"{datapath}/unfold/img/TotalEnergyDeposition.svg")
+    # plt.show()
+    plt.close()
+
+    # exit()
     selectedCharge = np.array(selectedCharge)
     
     for i in range(0,32):
@@ -883,49 +954,12 @@ if __name__ == "__main__":
     for value in eedges:
         eCenters.append((value[1:] + value[:-1]) / 2)  
 
-    
-    with open("config.json", "r") as file:
-        fullConfig = json.load(file)
-
-    detectorSelect = fullConfig["detectorSelect"]
-    targetSelect = fullConfig["targetSelect"]
-    plotEnable = fullConfig["plotEnable"]
-
-    config = fullConfig["detectors"][detectorSelect]
-
-    datasetSelect = config["datasetSelect"]
-    detectorType = config["detectorType"]
-    beamEnergy = config["beamEnergy"]
-    nLayers = config["nLayers"]
-    crystalSize = config["crystalSize"]
-    gapSizeZ = config["gapSizeZ"]
-    secondaryLayerStatus = config["secondaryLayerStatus"]
-    nSecondaryLayers = config["nSecondaryLayers"]
-    secLayerSizeZ = config["secLayerSizeZ"]
-    absorberStatus = config["absorberStatus"]
-    absorberSize = config["absorberSize"]
-    reversedStatus = config["reversedStatus"]
-    normStatus = config["normStatus"]
-    simulationStatus = config["simulationStatus"]
-    teflonThickness = config["teflonThickness"]
-    aluThickness = config["aluThickness"]
-    coincidenceTime = config["coincidenceTime"]
-    coincidenceLayer = config["coincidenceLayer"]
-    discardIndex = config["discardIndex"]
-
-    datasets = ["MIT_05_2024", "simulation", "paperBeamtime"]
-    in_data = ["notarget", "homotarget", "heterotarget"]
-    in_title = ["without a target", "with the homogeneous target", "with the heterogeneous target"]
-
-    dataset = datasets[datasetSelect]
-    file = in_data[targetSelect]
-
-
-    data = np.loadtxt(f"../data/{dataset}/{file}/output/{file}Means.csv", delimiter=",")
+    print(f"Getting depth information from ../data/{dataset}/{filename}/output/{filename}Means.csv")
+    data = np.loadtxt(f"../data/{dataset}/{filename}/output/{filename}Means.csv", delimiter=",")
     depth, deptherr, mean, error = data.T  # transpose to get separate vectors
     
     depth = depth/10
-    deptherr = deptherr/2
+    deptherr = deptherr/10
     
 
 
@@ -934,7 +968,7 @@ if __name__ == "__main__":
     channels = list(range(0, 32))
     args = [(hist[ch], ehist[ch], hist_edges[ch], eCenters[ch], detector, datapath, detectorpath, depth, deptherr) for ch in channels]
 
-    with ProcessPoolExecutor(max_workers=16) as executor:
+    with ProcessPoolExecutor(max_workers=11) as executor:
         for ch in executor.map(UnfoldChannel,
         channels,
         [hist[ch] for ch in channels],
