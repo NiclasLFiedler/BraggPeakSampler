@@ -523,6 +523,7 @@ if __name__ == "__main__":
         gain = sipm.gain
         sigma_SPE = sipm.gain_width
         sigma_elec = sipm.elec_width
+        PDE = 0.63
         
         underflow_axis = np.arange(-(bin_width)*boundaryInclusion+builder.measured_centers[0], -builder.measured_centers[0], bin_width)
         overflow_axis = np.arange(builder.measured_centers[-1]+builder.measured_centers[0], (bin_width)*boundaryInclusion+builder.measured_centers[-1], bin_width)
@@ -533,10 +534,10 @@ if __name__ == "__main__":
         components = []
 
         for n in range(0, n_max + 1):   
-            cell_prob = 1 - np.exp(-builder.detector.energy_to_adc(channel, energy) /(gain*Ncells))
+            cell_prob = 1 - np.exp(-builder.detector.energy_to_adc(channel, energy)*PDE /(gain*Ncells))
             binomial_prob = binom.pmf(n, Ncells, cell_prob) 
             if binomial_prob > 1e-10:  
-                sigma_n = np.sqrt((np.sqrt(n) * sigma_SPE)**2+sigma_elec**2)
+                sigma_n = (np.sqrt(n) * sigma_SPE)
 
                 if sigma_n < 1e-10:
                     sigma_n = sigma_SPE

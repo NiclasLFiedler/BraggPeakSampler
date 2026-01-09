@@ -302,7 +302,7 @@ quantities  = characterize_z_D_curve(z_spline, spline_func(z_spline))
 R0 = quantities['R80D']
 #if file == "notarget":
 #    R0 = range_energy_relationship(beamEnergy, a_h2o, p_h2o)
-
+print("Expected range from R80D fit: ", range_energy_relationship(221.1, a_h2o, p_h2o))
 sigmaMono = (beta*R0**0.935)
 sigmaE0   = 0.01*beamEnergy
 sigma     = np.sqrt(sigmaMono**2+sigmaE0**2*a_h2o**2*p_h2o**2*beamEnergy**(2*p_h2o-2))
@@ -370,7 +370,7 @@ if(bhetero):
     sigmaMonoTarget = (beta*R0Target**0.935)
     sigmaTarget     = np.sqrt(sigmaMonoTarget**2+sigmaE0**2*a_h2o**2*p_h2o**2*beamEnergy**(2*p_h2o-2))
 
-    convParams = bortfeld_fit(depthTarget, unfoldeddoseTarget, bestfit_params.Phi0, R0, sigma, bestfit_params.epsilon, None)
+    convParams = bortfeld_fit(depthTarget, unfoldeddoseTarget, Phi0Target, R0Target, sigmaTarget, epsilon, None)
 
     print()
     print("Heteogeneous Target")
