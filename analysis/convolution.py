@@ -48,7 +48,7 @@ def gaussian(x, amp, mean, stddev):
 def right_sided_convolution(f, g, z_values):
     def convole(z):
         if(len(z_values)<100):
-            zlin = np.linspace(0,40,400)
+            zlin = np.linspace(0,40,800)
             combined = np.concatenate([zlin, z_values])
             zFull = np.sort(combined)
         else:
@@ -134,9 +134,11 @@ doseTarget = []
 doseErr = []
 doseErrTarget = []
 unfoldedDose = []
-unfoldeddoseTarget = []
+unfoldedDoseTarget = []
 unfoldedDoseErr = []
 unfoldedDoseErrTarget = []
+unfoldedEntries = []
+unfoldedEntriesTarget = []
 
 for ch in range(nLayers):
     dataFile = np.load(f"../data/{dataset}/{file}/output/unfold/data/Unfolded{ch}.npz")
@@ -149,6 +151,17 @@ for ch in range(nLayers):
     Tdose, Tdoseerr = dataFile["dose"]
     dose.append(Tdose)
     doseErr.append(Tdoseerr)
+    unfoldedEntries.append(np.sum(dataFile["unfolded"][1]))
+
+for idx in range(10):
+    depth.append((depth[1]-depth[0])+depth[-1])
+    depthErr.append(0)
+    unfoldedDose.append(0)
+    unfoldedDoseErr.append(0)
+    dose.append(0)
+    doseErr.append(0)
+    unfoldedEntries.append(0)
+
 
 if(bhetero or targetSelect == 1):
     for ch in range(nLayers):
@@ -157,11 +170,24 @@ if(bhetero or targetSelect == 1):
         depthTarget.append(Tdepth)
         depthErrTarget.append(Tdeptherr)
         Tdose, Tdoseerr = dataFile["unfoldedDose"]
-        unfoldeddoseTarget.append(Tdose)
+        unfoldedDoseTarget.append(Tdose)
         unfoldedDoseErrTarget.append(Tdoseerr)
         Tdose, Tdoseerr = dataFile["dose"]
         doseTarget.append(Tdose)
         doseErrTarget.append(Tdoseerr)
+        unfoldedEntriesTarget.append(np.sum(dataFile["unfolded"][1]))
+
+beta = 0.012
+R0 = 30.99
+if(targetSelect == 2):
+    doseConversion = unfoldedEntries[0]/unfoldedEntriesTarget[0]*(1+beta*(R0-targetThickness*0.2))/(1+beta*R0)
+    doseConversion = 0.305
+    print(doseConversion)
+    
+    unfoldedDoseTarget = np.array(unfoldedDoseTarget)
+    unfoldedDoseErrTarget = np.array(unfoldedDoseErrTarget)
+    unfoldedDoseTarget = unfoldedDoseTarget * doseConversion
+    unfoldedDoseErrTarget = unfoldedDoseErrTarget *doseConversion
 
 layersize = 3
 energy_notarget = 0
@@ -182,7 +208,7 @@ if(targetSelect == 2):
 #     depth = np.append(depth, new_x)
 #     depthErr = np.append(depthErr, 0)
 
-#     unfoldeddoseTarget = np.append(unfoldeddoseTarget, 0)
+#     unfoldedDoseTarget = np.append(unfoldedDoseTarget, 0)
 #     unfoldedDoseErrTarget = np.append(unfoldedDoseErrTarget, 0)
 #     new_x = depthTarget[-1] + depthTarget[-1] - depthTarget[-2]
 #     depthTarget = np.append(depthTarget, new_x)
@@ -204,12 +230,12 @@ start_time = time.time()
 z = np.linspace(0, 40, 4001)
 
 ax1.errorbar(depth, unfoldedDose, unfoldedDoseErr, depthErr, fmt='s', markersize=1, capsize=capSize, elinewidth=lineWidth, color='#004600', label="No target data points") 
-ax1.errorbar(depthTarget, unfoldeddoseTarget, unfoldedDoseErrTarget, depthErrTarget, fmt='o', markersize=1, capsize=capSize, elinewidth=lineWidth, color="#cc7000", label="Hetero. data points") #Convolution
+ax1.errorbar(depthTarget, unfoldedDoseTarget, unfoldedDoseErrTarget, depthErrTarget, fmt='o', markersize=1, capsize=capSize, elinewidth=lineWidth, color="#cc7000", label="Hetero. data points") #Convolution
 
 f = interp1d(depth, unfoldedDose, kind='linear', fill_value="extrapolate")
 # f = interp1d(depth, unfoldedDose, kind='cubic', fill_value="extrapolate")
 
-popt, pcov =  curve_fit(lambda x, amp, mean, stddev: right_sided_convolution(f, lambda x2: gaussian(x2, amp, mean, stddev), x), depthTarget, unfoldeddoseTarget, p0 = [2, 6, 0.3], bounds=((0.8, 0, 0), (2.5, 10, 0.5)))
+popt, pcov =  curve_fit(lambda x, amp, mean, stddev: right_sided_convolution(f, lambda x2: gaussian(x2, amp, mean, stddev), x), depthTarget, unfoldedDoseTarget, p0 = [1, 6, 0.3], bounds=((0.999, 0, 0), (1.00001, 10, 0.5)))
 
 stddev = np.sqrt(np.diag(pcov))
     

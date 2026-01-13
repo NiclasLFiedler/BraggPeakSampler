@@ -29,8 +29,50 @@ import uproot
 import matplotlib
 matplotlib.use('TkAgg')  # or 'Agg' for non-interactive
 import os
+ROOT.gSystem.Load("libRooUnfold")
+from concurrent.futures import ProcessPoolExecutor
 
+def numpy_to_th1(name, title, values, edges):
+    values = np.ascontiguousarray(values, dtype=np.float64)
+    edges = np.ascontiguousarray(edges, dtype=np.float64)
 
+    n_bins = len(values)
+
+    h = ROOT.TH1D(name, title, n_bins, edges)
+    for i, v in enumerate(values):
+        h.SetBinContent(i+1, v)
+        h.SetBinError(i+1, np.sqrt(v))  # Poisson errors
+    return h
+
+def numpy_to_th2(name, title, R, xedges, yedges):
+    
+    R = np.ascontiguousarray(R, dtype=np.float64)
+    xedges = np.ascontiguousarray(xedges, dtype=np.float64)
+    yedges = np.ascontiguousarray(yedges, dtype=np.float64)    
+    
+    h = ROOT.TH2D(
+        name, title,
+        len(xedges)-1, xedges,
+        len(yedges)-1, yedges
+    )
+    for ix in range(R.shape[0]):      # measured
+        for iy in range(R.shape[1]):  # true
+            h.SetBinContent(ix+1, iy+1, R[ix, iy])
+    return h
+
+def calcBinEdges(centers):
+    centers = np.array(centers)
+    edges = np.zeros(len(centers) + 1)
+    edges[1:-1] = (centers[1:] + centers[:-1]) / 2
+    edges[0] = centers[0] - (centers[1] - centers[0]) / 2
+    edges[-1] = centers[-1] + (centers[-1] - centers[-2]) / 2
+    return edges
+
+def th1_to_numpy(h):
+    """Return bin centers and bin contents"""
+    bins = np.array([h.GetBinCenter(i+1) for i in range(h.GetNbinsX())])
+    contents = np.array([h.GetBinContent(i+1) for i in range(h.GetNbinsX())])
+    return bins, contents
 
 # %%
 class BayesianUnfoldingWithDRF:
@@ -790,31 +832,34 @@ if __name__ == "__main__":
         plt.close()
     
     def saveUnfoldedComparison(true_energies, measured_spectrum, unfolded_spectrum, output_filename="unfoldedSpectrum.pdf", peaks=None, show=False):
-        plt.step(true_energies, measured_spectrum, color='tab:blue', linewidth=1.2, label='Measured Spectrum')
-        plt.plot(true_energies, unfolded_spectrum, color='tab:orange', linewidth=2, label=f'Unfolded Spectrum')
+        plt.step(true_energies, measured_spectrum, color="#000000", linewidth=1, label='Measured Spectrum')
+        plt.plot(true_energies, unfolded_spectrum, color=targetColorMap[0], linewidth=1.5, label=f'Unfolded Spectrum')
+        linestyles = ["--", ":"]
         if(peaks):
             for idx, x_fit in enumerate(peaks[1]):
                 param = peaks[0][idx]
-                plt.plot(x_fit, gaussian(x_fit, *param[0]), 'k--' , label = fr"Peak at {param[0][1]:.2f} ± {param[1][2]:.2f}")
-        plt.xlabel('Photon Count')
+                plt.plot(x_fit, gaussian(x_fit, *param[0]), targetColorMap[0], linewidth=3,linestyle=linestyles[idx], label = fr"Peak at {param[0][1]:.2f} ± {param[1][2]:.2f}")
+        plt.xlabel('True Photon Count')
         plt.ylabel('Counts')
-        plt.title('Measured vs Unfolded Spectrum')
+        # plt.title('Measured vs Unfolded Spectrum')
         plt.legend()
         plt.grid(True)
-        plt.savefig(output_filename, dpi=300)
+        plt.xlim(0, 350)
+        plt.savefig(output_filename, dpi=300, bbox_inches='tight')
         if(show):
             plt.show()
         plt.close()
     
     def savePredictedComparison(measured_energies, measured_spectrum, predicted_measured, output_filename="predictedMeasuredSpectrum.pdf", show=False):
-        plt.step(measured_energies, measured_spectrum, color='tab:blue', linewidth=1.2, label='Measured Spectrum')
-        plt.plot(measured_energies[10:], predicted_measured[10:], color='tab:orange', linewidth=2, label=f'Predicted from Unfolded')
-        plt.xlabel('Photon Count')
+        plt.step(measured_energies, measured_spectrum, color="#000000", linewidth=1, label='Measured Spectrum')
+        plt.plot(measured_energies[1:], predicted_measured[1:], color=targetColorMap[0], linewidth=1.5, label=f'Predicted from Unfolded')
+        plt.xlabel('Measured Photon Count')
         plt.ylabel('Counts')
-        plt.title('Measured vs Predicted Spectrum')
+        # plt.title('Measured vs Predicted Spectrum')
         plt.legend()
         plt.grid(True)
-        plt.savefig(output_filename, dpi=300)
+        plt.xlim(0, 350)
+        plt.savefig(output_filename, dpi=300, bbox_inches='tight')
         if(show):
             plt.show()
         plt.close()
@@ -827,7 +872,7 @@ if __name__ == "__main__":
     sigma_ped= 0.48595
     PDE = 0.2316
     saveMatrix = False
-    debug = False
+    debug = True
     lateral = False
 
     datapath = "../lightyield/data/2504/flat"
@@ -835,7 +880,7 @@ if __name__ == "__main__":
         datapath = "../lightyield/data/2504/lateral"
     input_files = []
     output_files = []
-    for crystal in range(36):
+    for crystal in range(1):
         output_files.append(f"{datapath}/output/crystal{crystal}")
         if lateral:
             input_files.append(f"{datapath}/bps_pwo_lateral_{crystal}_na22.his.txt")
@@ -905,9 +950,73 @@ if __name__ == "__main__":
     print("\nPerforming Bayesian unfolding...")
 
     initial_prior = np.ones_like(true_energies)
-    unfolded_spectrum = unfolder.unfold(measured_spectrum, prior=measured_spectrum)
-    #unfolded_spectrum = unfolder.unfold_regularized(measured_spectrum, prior=measured_spectrum)
-    predicted_measured = np.dot(unfolder.R, unfolded_spectrum)
+    useold = True
+    unfolded_spectrum = []
+    predicted_measured = []
+    if(useold):
+        unfolded_spectrum = unfolder.unfold(measured_spectrum, prior=initial_prior)
+        #unfolded_spectrum = unfolder.unfold_regularized(measured_spectrum, prior=measured_spectrum)
+        predicted_measured = np.dot(unfolder.R, unfolded_spectrum)
+    else:
+        ch = 0
+        initial_prior = np.ones_like(true_energies)
+        true_edges = np.array(calcBinEdges(true_energies))
+        measuredEdges = np.array(calcBinEdges(measured_energies))
+        
+        h_meas  = numpy_to_th1(f"h_meas{ch}", "Measured", measured_spectrum, measuredEdges)
+
+        h_true  = numpy_to_th1(f"h_true{ch}", "Truth", initial_prior, true_edges)
+        
+        h_resp  = numpy_to_th2(f"h_resp{ch}", "Response", R, measuredEdges, true_edges)
+        response = ROOT.RooUnfoldResponse(h_meas, h_true, h_resp)
+        unfold = ROOT.RooUnfoldBayes(response , h_meas, 10)
+        h_unfold = unfold.Hunfold()
+        print(f"Unfolding complete of channel {ch}.")
+        cov_matrix = unfold.Eunfold()
+        print("Covariance matrix retrieved.")
+        
+        x_meas, y_meas = th1_to_numpy(h_meas)
+        
+        x_true, y_true = th1_to_numpy(h_true)
+        x_unf, y_unf = th1_to_numpy(h_unfold)
+            
+        scale = np.sum(y_meas) / np.sum(y_unf) if np.sum(y_unf) !=0 else 1
+        if(scale==0):
+            scale=1
+        print(f"Scale: {scale}")
+        h_unfold.Scale(scale)
+        x_unf, y_unf = th1_to_numpy(h_unfold)
+        n_bins = h_unfold.GetNbinsX()
+        cov = np.zeros((n_bins, n_bins))
+
+        for i in range(n_bins):
+            for j in range(n_bins):
+                cov[i, j] = cov_matrix[i][j]*scale**2
+        bin_errs = np.sqrt(np.diag(cov))
+
+
+        plt.figure(figsize=(10,6))
+        plt.step(measured_energies, measured_spectrum, where='mid', label='Measured', color='tab:orange', linewidth=1)
+        plt.plot(x_unf, y_unf, label='Unfolded', color='tab:blue', linewidth=1)
+        plt.fill_between(x_unf, y_unf - bin_errs, y_unf + bin_errs, color='tab:red', alpha=0.3)
+        plt.xlabel('Deposited Energy / MeV')
+        plt.ylabel('Counts')
+        plt.title(f'Channel {ch}: Unfolded Spectrum vs Measured Energy Spectrum')
+        plt.legend()
+        plt.grid(True)
+        plt.show()
+
+        h_predicted = response.ApplyToTruth(h_unfold)# or .Hmeas()
+        x_pred, y_pred = th1_to_numpy(h_predicted)
+        
+        plt.plot(x_pred, y_pred, '--', label='Predicted Measured', color='tab:blue', linewidth=1)
+        plt.step(x_meas, y_meas, where='mid', label='Measured', color='tab:orange', linewidth=1)
+        plt.xlabel('Measured ADC Counts')
+        plt.ylabel('Counts')
+        plt.title(f'Channel {ch}: Measured vs Predicted')
+        plt.legend()
+        plt.grid(True)
+        plt.show()
 
     print("Plotting results...")
     if(saveMatrix):
@@ -929,7 +1038,7 @@ if __name__ == "__main__":
     selected_peaks, params, x_fits = findPeaks(unfolded_spectrum, measured_spectrum, true_energies)
 
     R[R < 1e-10] = 1e-10
-    
+    targetColorMap = ["#1f77b4", "#4e79a7", "#76b7b2", "#bab0ac", "#f28e2b", "#e15759", "#9c755f"]
     if (debug):
         fig, axes = plt.subplots(2, 2, figsize=(12, 10))
         im = axes[0, 0].imshow(R, aspect='auto', origin='lower', 
@@ -944,12 +1053,12 @@ if __name__ == "__main__":
         min_index = np.argmin(unfolder.chi2[1:]) + 1 
 
 
-        axes[0, 1].step(true_energies, measured_spectrum, 'b-', linewidth=2, label='Measured Spectrum')
-        axes[0, 1].step(true_energies, unfolded_spectrum, 'g-', linewidth=2, label=f'Unfolded Spectrum')
+        axes[0, 1].step(true_energies, measured_spectrum, color="#000000", linewidth=2, label='Measured Spectrum')
+        axes[0, 1].step(true_energies, unfolded_spectrum, color=targetColorMap[0], linewidth=2, label=f'Unfolded Spectrum')
         # axes[0, 1].plot(true_energies[peaks], unfolded_spectrum[peaks], 'rx', linewidth=2, label=f'Peaks of Unfolded Spectrum')
         for i, param in enumerate(params):
             x_fit = x_fits[i]
-            axes[0, 1].plot(x_fit, gaussian(x_fit, *param[0]), 'r--' , label = fr"Peak at {param[0][1]:.2f} ± {param[1][2]:.2f}")
+            # axes[0, 1].plot(x_fit, gaussian(x_fit, *param[0]), 'r--' , label = fr"Peak at {param[0][1]:.2f} ± {param[1][2]:.2f}")
         axes[0, 1].set_xlabel('Photon Count')
         axes[0, 1].set_ylabel('Counts')
         #axes[0, 1].set_yscale('log')
@@ -957,8 +1066,8 @@ if __name__ == "__main__":
         axes[0, 1].legend()
         axes[0, 1].grid(True, alpha=0.3)
 
-        axes[1, 0].step(measured_energies, measured_spectrum, 'b-', linewidth=2, label='Measured Spectrum')
-        axes[1, 0].step(measured_energies, predicted_measured, 'r-', linewidth=2, label=f'Predicted from Unfolded')
+        axes[1, 0].step(measured_energies, measured_spectrum, color="#000000", linewidth=2, label='Measured Spectrum')
+        axes[1, 0].step(measured_energies[1:], predicted_measured[1:], color=targetColorMap[0], linewidth=2, label=f'Predicted from Unfolded')
         # axes[1, 0].step(measured_energies, np.dot(unfolder.R, unfolder.history[min_index]), 'g-', linewidth=2, label=f'Unfolded Spectrum {min_index+1}')
         axes[1, 0].set_xlabel('Photon Count')
         axes[1, 0].set_ylabel('Counts')
@@ -998,9 +1107,9 @@ if __name__ == "__main__":
         
         #initial_prior = np.ones_like(true_energies)
         ##unfold
-        unfolded_spectrum = unfolder.unfold(measured_spectrum, prior=measured_spectrum)
+        unfolded_spectrum = unfolder.unfold(measured_spectrum, prior=initial_prior)
         predicted_measured = np.dot(unfolder.R, unfolded_spectrum)
-        selected_peaks, params, x_fits = findPeaks(unfolded_spectrum,measured_spectrum, true_energies)
+        selected_peaks, params, x_fits = findPeaks(unfolded_spectrum, measured_spectrum, true_energies)
         lightyields.append([params[0][0], params[0][1]])
         saveUnfoldedComparison(true_energies, measured_spectrum, unfolded_spectrum, output_filename=f"{output_files[crystalidx]}/unfoldedSpectrum.pdf", peaks=[params, x_fits], show=False)
         savePredictedComparison(measured_energies, measured_spectrum, predicted_measured, output_filename=f"{output_files[crystalidx]}/predictedSpectrum.pdf", show=False)

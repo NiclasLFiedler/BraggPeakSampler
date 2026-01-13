@@ -113,17 +113,18 @@ def analyse_range_energy(data : RangeEnergyRelationship, comparison_data: RangeE
     alpha_stddev, p_stddev = std_devs
     
     # Print the fitting parameters with their standard deviations
-    print(f"Pbwo4 Fitted parameters:")
+    print(f"\nPbwo4 Fitted parameters:")
     print(f"alpha = {alpha:.3e} ± {alpha_stddev:.3e}")
-    print(f"p = {p:.3e} ± {p_stddev:.3e}")
-    
+    print(f"p = {p:.3e} ± {p_stddev:.3e}")     
+    print(f"Covariance Matrix:{pcov[0][1]}")
+
     # Generate fitted ranges using the optimized parameters
     fitted_ranges = range_energy_relationship(energies, *popt)
     
     # Plot the original data
-    plt.rcParams.update({'font.size': 24})
+    plt.rcParams.update({'font.size': 26})
     plt.figure(figsize=(20, 15))
-    plt.errorbar(energies, ranges, yerr=data.std_dev, fmt='o', color=colors["PbWO4"][0], capsize=5, label=f'Simulated PbWO4 Data')
+    plt.errorbar(energies, ranges, yerr=data.std_dev, fmt='o', color=colors["PbWO4"][0], capsize=5)#, label=f'Simulated PbWO4 Data')
 
     # Plot the fitted curve
     plt.plot(energies, fitted_ranges, color=colors["PbWO4"][1], linewidth = 3, label=f'PbWO4 Fit: $\\alpha_{{PbWO4}} = {alpha:.3e}$ $\\frac{{mm}}{{MeV^p}}$; $p_{{PbWO4}}$ = {p:.3e}')
@@ -159,17 +160,20 @@ def analyse_range_energy(data : RangeEnergyRelationship, comparison_data: RangeE
         comp_alpha_stddev3, comp_p_stddev3 = comp_std_devs3
         
         
-        print(f"PTFE _Fitted parameters:")
+        print(f"\nPTFE _Fitted parameters:")
         print(f"alpha = {comp_alpha:.3e} ± {comp_alpha_stddev:.3e}")
         print(f"p = {comp_p:.3e} ± {comp_p_stddev:.3e}")
+        print(f"Covariance Matrix:{comp_pcov[0][1]}")
 
-        print(f"H2O_Fitted parameters:")
+        print(f"\nH2O_Fitted parameters:")
         print(f"alpha = {comp_alpha2:.3e} ± {comp_alpha_stddev2:.3e}")
         print(f"p = {comp_p2:.3e} ± {comp_p_stddev2:.3e}")
+        print(f"Covariance Matrix:{comp_pcov2[0][1]}")
 
-        print(f"Alu_Fitted parameters:")
+        print(f"\nAlu_Fitted parameters:")
         print(f"alpha = {comp_alpha3:.3e} ± {comp_alpha_stddev3:.3e}")
         print(f"p = {comp_p3:.3e} ± {comp_p_stddev3:.3e}")
+        print(f"Covariance Matrix:{comp_pcov3[0][1]}\n")
 
 
         # Generate fitted ranges for comparison data
@@ -178,36 +182,39 @@ def analyse_range_energy(data : RangeEnergyRelationship, comparison_data: RangeE
         comp_fitted_ranges3 = range_energy_relationship(comp_energies3, *comp_popt3)
         
         # Plot the comparison data
-        plt.errorbar(comp_energies, comp_ranges, yerr=comparison_data.std_dev, fmt='o', color=colors["PTFE"][0], capsize=5, label='Simulated PTFE Data')
+        plt.errorbar(comp_energies, comp_ranges, yerr=comparison_data.std_dev, fmt='o', color=colors["PTFE"][0], capsize=5)#, label='Simulated PTFE Data')
         plt.plot(comp_energies, comp_fitted_ranges, color=colors["PTFE"][1], linewidth = 3,label=f'PTFE Fit: $\\alpha_{{PTFE}} = {comp_popt[0]:.3e}$ $\\frac{{mm}}{{MeV^p}}$; $p_{{PTFE}}$ = {comp_popt[1]:.3e}')
 
-        plt.errorbar(comp_energies2, comp_ranges2, yerr=comparison_data2.std_dev, fmt='o', color=colors["H2O"][0], capsize=5, label='ICRU H2O Data')
+        plt.errorbar(comp_energies2, comp_ranges2, yerr=comparison_data2.std_dev, fmt='o', color=colors["H2O"][0], capsize=5)#, label='ICRU H2O Data')
         plt.plot(comp_energies2, comp_fitted_ranges2, color=colors["H2O"][1], linewidth = 3,label=f'H2O Fit : $\\alpha_{{H2O}} = {comp_popt2[0]:.3e}$ $\\frac{{mm}}{{MeV^p}}$; $p_{{H2O}}$ = {comp_popt2[1]:.3e}')
 
-        plt.errorbar(comp_energies3, comp_ranges3, yerr=comparison_data3.std_dev, fmt='o', color=colors["Al"][0], capsize=5, label='ICRU Al Data')
+        plt.errorbar(comp_energies3, comp_ranges3, yerr=comparison_data3.std_dev, fmt='o', color=colors["Al"][0], capsize=5)#, label='ICRU Al Data')
         plt.plot(comp_energies3, comp_fitted_ranges3, color=colors["Al"][1], linewidth = 3, label=f'Al Fit : $\\alpha_{{Al}} = {comp_popt3[0]:.3e}$ $\\frac{{mm}}{{MeV^p}}$; $p_{{Al}}$ = {comp_popt3[1]:.3e}')
 
     # Add labels, title, and legend
     plt.xlabel('Energy / MeV')
     plt.ylabel('Range / mm')
-    plt.title(f'Range Energy: ICRU H2O and Al, Simulated PbWO4 and PTFE')
+    # plt.title(f'Range Energy: ICRU H2O and Al, Simulated PbWO4 and PTFE')
     plt.legend()
 
     # Show the plot
     plt.grid(True)
-    plt.savefig(f"{path}/rangeenergy.svg", format="svg", bbox_inches="tight")
-    #plt.savefig(f"air/rangeenergy.pdf", format="pdf", bbox_inches="tight")
+    # plt.savefig(f"{path}/rangeenergy.svg", format="svg", bbox_inches="tight")
+    plt.savefig(f"{path}    /rangeenergy.pdf", format="pdf", bbox_inches="tight")
     plt.show()
-    
+
+
+targetColorMap = ["#000000","#1f77b4", "#4e79a7", "#76b7b2", "#bab0ac", "#f28e2b", "#e15759", "#9c755f"]
+
 path = "pbwo4" #h2o pbwo4 air DSB EJ256
 name = "PbWO4" #H2O PbWO4 AIR DSB EJ-256
 icru_el = 0 # 0=h20, 1=air 
 
 colors = {
-    "PbWO4":    ("#ff7f0e", "#b35a00"),
-    "PTFE":  ("#2ca02c", "#196619"),
-    "H2O":   ("#17becf", "#0b6b7e"),
-    "Al": ("#1f77b4", "#0c3c70"),    # points, fit
+    "PbWO4":    (targetColorMap[0], targetColorMap[0]),
+    "PTFE":  (targetColorMap[1], targetColorMap[1]),
+    "H2O":   (targetColorMap[2], targetColorMap[2]),
+    "Al": (targetColorMap[3], targetColorMap[3]),    # points, fit
 }
 
 def main():

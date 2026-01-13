@@ -159,23 +159,25 @@ def main():
     plt.rcParams.update({'font.size': 28})
     plt.figure(figsize=(18, 15))
     
+    
+    targetColorMap = ["#000000","#1f77b4", "#4e79a7", "#76b7b2", "#bab0ac", "#f28e2b", "#e15759", "#9c755f"]
     if(showall):
         plt.errorbar(range(len(flatLightyield[0])), flatLightyield[0], yerr=flatLightyield[1], fmt='none',linewidth = 3, ecolor='#FFD580',capsize=5, label='Std. dev.')
 
-        plt.errorbar(range(len(lateralLightyield[0])), lateralLightyield[0], yerr=lateralLightyield[2], fmt='o', color = "green", capsize=5, label='Mean ± error')
+        plt.errorbar(range(len(lateralLightyield[0])), lateralLightyield[0], yerr=lateralLightyield[2], fmt='o', color = targetColorMap[1], capsize=5, label='Mean ± error')
         plt.errorbar(range(len(lateralLightyield[0])), lateralLightyield[0], yerr=lateralLightyield[1], fmt='none',linewidth = 3, ecolor='#90EE90',capsize=5,  label='Std. dev.')
 
-        plt.text(-1, first15_flat_mean-3, f'{first15_flat_mean:.2f} \n' f'$\\pm${first15_flat_std:.2f}', color='dodgerblue', fontsize=16, va='bottom', ha='center')
-        plt.text(36, last21_flat_mean-3, f'{last21_flat_mean:.2f}\n' f'$\\pm${last21_flat_std:.2f}', color='dodgerblue', fontsize=16, va='bottom', ha='center')
+        # plt.text(-1, first15_flat_mean-3, f'{first15_flat_mean:.2f} \n' f'$\\pm${first15_flat_std:.2f}', color='dodgerblue', fontsize=16, va='bottom', ha='center')
+        # plt.text(36, last21_flat_mean-3, f'{last21_flat_mean:.2f}\n' f'$\\pm${last21_flat_std:.2f}', color='dodgerblue', fontsize=16, va='bottom', ha='center')
 
-        plt.text(-1, first15_lateral_mean-3, f'{first15_lateral_mean:.2f}\n' f'$\\pm${first15_lateral_std:.2f}', color='crimson', fontsize=16,va='bottom', ha='center')
-        plt.text(36, last21_lateral_mean-3, f'{last21_lateral_mean:.2f}\n' f'$\\pm${last21_lateral_std:.2f}', color='crimson', fontsize=16, va='bottom', ha='center')
+        # plt.text(-1, first15_lateral_mean-3, f'{first15_lateral_mean:.2f}\n' f'$\\pm${first15_lateral_std:.2f}', color='crimson', fontsize=16,va='bottom', ha='center')
+        # plt.text(36, last21_lateral_mean-3, f'{last21_lateral_mean:.2f}\n' f'$\\pm${last21_lateral_std:.2f}', color='crimson', fontsize=16, va='bottom', ha='center')
 
-        plt.plot(range(15), [first15_flat_mean] * 15, color='dodgerblue', linestyle='--')
-        plt.plot(range(15, 36), [last21_flat_mean] * 21, color='dodgerblue', linestyle='--')
+        # plt.plot(range(15), [first15_flat_mean] * 15, color='dodgerblue', linestyle='--')
+        # plt.plot(range(15, 36), [last21_flat_mean] * 21, color='dodgerblue', linestyle='--')
 
-        plt.plot(range(15), [first15_lateral_mean] * 15, color='crimson', linestyle='--') 
-        plt.plot(range(15, 36), [last21_lateral_mean] * 21, color='crimson', linestyle='--')
+        # plt.plot(range(15), [first15_lateral_mean] * 15, color='crimson', linestyle='--') 
+        # plt.plot(range(15, 36), [last21_lateral_mean] * 21, color='crimson', linestyle='--')
         
         plt.xlabel('Crystal index')
         plt.ylabel('Light yield / ph/MeV')
@@ -184,28 +186,28 @@ def main():
         plt.tight_layout()
         plt.show()
     else:
-        plt.errorbar(range(len(thickFlatMean)), thickFlatMean, yerr=thickFlatErr, fmt='o', color = "orange", markersize=8, capsize=8, label='Flat: Mean ± error')
+        plt.errorbar(range(len(thickFlatMean)), thickFlatMean, yerr=thickFlatErr, fmt='o', color = targetColorMap[0], markersize=10, capsize=12, label='Flat: Mean ± Error')
         
-        plt.errorbar(range(len(thickFlatMean)), thickFlatMean, yerr=thickFlatstddev, fmt='none',linewidth = 6, ecolor='#FFD580',capsize=8, label='Flat: Std. dev.')
+        # plt.errorbar(range(len(thickFlatMean)), thickFlatMean, yerr=thickFlatstddev, fmt='none',linewidth = 6, ecolor='#FFD580',capsize=8, label='Flat: Std. dev.')
 
-        plt.errorbar(range(len(thickFlatMean), len(thickFlatMean)+len(thinnFlatMean)), thinnFlatMean, yerr=thinnFlatErr, fmt='o', color = "orange", markersize=8,  capsize=8)
+        plt.errorbar(range(len(thickFlatMean), len(thickFlatMean)+len(thinnFlatMean)), thinnFlatMean, yerr=thinnFlatErr, fmt='o', color = targetColorMap[0], markersize=10,  capsize=12)
         
-        plt.errorbar(range(len(thickFlatMean), len(thickFlatMean)+len(thinnFlatMean)), thinnFlatMean, yerr=thinnFlatstddev, fmt='none',linewidth = 6, ecolor='#FFD580',capsize=8)
+        # plt.errorbar(range(len(thickFlatMean), len(thickFlatMean)+len(thinnFlatMean)), thinnFlatMean, yerr=thinnFlatstddev, fmt='none',linewidth = 6, ecolor='#FFD580',capsize=8)
 
 
-        plt.errorbar(range(len(thicklateralMean)), thicklateralMean, yerr=thicklateralErr, fmt='o', color = "green", markersize=8, capsize=8, label='Vertical: Mean ± error')
+        plt.errorbar(range(len(thicklateralMean)), thicklateralMean, yerr=thicklateralErr, fmt='o', color = targetColorMap[1], markersize=10, capsize=12, label='Vertical: Mean ± Error')
         
-        plt.errorbar(range(len(thicklateralMean)), thicklateralMean, yerr=thicklateralstddev, fmt='none',linewidth = 6, ecolor='#90EE90',capsize=8, label='Vertical: Std. dev.')
+        # plt.errorbar(range(len(thicklateralMean)), thicklateralMean, yerr=thicklateralstddev, fmt='none',linewidth = 6, ecolor='#90EE90',capsize=8, label='Vertical: Std. dev.')
 
-        plt.errorbar(range(len(thicklateralMean), len(thicklateralMean)+len(thinnlateralMean)), thinnlateralMean, yerr=thinnlateralErr, fmt='o', color = "green", markersize=8, capsize=8)
+        plt.errorbar(range(len(thicklateralMean), len(thicklateralMean)+len(thinnlateralMean)), thinnlateralMean, yerr=thinnlateralErr, fmt='o', color = targetColorMap[1], markersize=10, capsize=12)
         
-        plt.errorbar(range(len(thicklateralMean), len(thicklateralMean)+len(thinnlateralMean)), thinnlateralMean, yerr=thinnlateralstddev, fmt='none',linewidth = 6, ecolor='#90EE90',capsize=8)
+        # plt.errorbar(range(len(thicklateralMean), len(thicklateralMean)+len(thinnlateralMean)), thinnlateralMean, yerr=thinnlateralstddev, fmt='none',linewidth = 6, ecolor='#90EE90',capsize=8)
 
-        plt.plot(range(len(thickFlatMean)), [thickflataverage] * len(thickFlatMean), color='dodgerblue', linestyle='--', linewidth=6, label=f'Flat average: 3 mm: {thickflataverage:.2f}' fr'$\pm$' f'{thickflatstd:.2f} & 2 mm: ' f'{thinnflataverage:.2f}' fr'$\pm$' f'{thinnflatstd:.2f}')
-        plt.plot(range(len(thickFlatMean), len(thickFlatMean)+len(thinnFlatMean)), [thinnflataverage] * len(thinnFlatMean), linewidth=6, color='dodgerblue', linestyle='--')
+        # plt.plot(range(len(thickFlatMean)), [thickflataverage] * len(thickFlatMean), color='dodgerblue', linestyle='--', linewidth=6, label=f'Flat average: 3 mm: {thickflataverage:.2f}' fr'$\pm$' f'{thickflatstd:.2f} & 2 mm: ' f'{thinnflataverage:.2f}' fr'$\pm$' f'{thinnflatstd:.2f}')
+        # plt.plot(range(len(thickFlatMean), len(thickFlatMean)+len(thinnFlatMean)), [thinnflataverage] * len(thinnFlatMean), linewidth=6, color='dodgerblue', linestyle='--')
 
-        plt.plot(range(len(thicklateralMean)), [thicklateralaverage] * len(thicklateralMean), color='crimson', linewidth=6,linestyle='--', label=f'Vertical average: 3 mm: {thicklateralaverage:.2f}' fr'$\pm$' f'{thicklateralstd:.2f} & 2 mm: ' f'{thinnlateralaverage:.2f}' fr'$\pm$' f'{thinnlateralstd:.2f}') 
-        plt.plot(range(len(thicklateralMean), len(thicklateralMean)+len(thinnlateralMean)), [thinnlateralaverage] * len(thinnlateralMean), color='crimson', linewidth=6, linestyle='--')
+        # plt.plot(range(len(thicklateralMean)), [thicklateralaverage] * len(thicklateralMean), color='crimson', linewidth=6,linestyle='--', label=f'Vertical average: 3 mm: {thicklateralaverage:.2f}' fr'$\pm$' f'{thicklateralstd:.2f} & 2 mm: ' f'{thinnlateralaverage:.2f}' fr'$\pm$' f'{thinnlateralstd:.2f}') 
+        # plt.plot(range(len(thicklateralMean), len(thicklateralMean)+len(thinnlateralMean)), [thinnlateralaverage] * len(thinnlateralMean), color='crimson', linewidth=6, linestyle='--')
         
         plt.xlabel('Crystal index')
         plt.ylabel('Light yield / ph/MeV')
@@ -213,7 +215,7 @@ def main():
         plt.legend()
         plt.grid(True)
         plt.tight_layout()
-        plt.savefig("lightyield_comparison.pdf", format="pdf", dpi=300)
+        plt.savefig("lightyield_comparison.pdf", format="pdf", dpi=300, bbox_inches='tight')
         plt.show()
 if __name__ == "__main__":
     main()

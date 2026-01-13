@@ -223,8 +223,8 @@ in_title = ["without a target", "with the homogeneous target", "with the heterog
 dataset = datasets[datasetSelect]
 file = in_data[0]
 targetFile = in_data[targetSelect]
-if(targetSelect == 1):
-    targetFile = f"{targetFile}{targetThickness}"
+# if(targetSelect == 1):
+#     targetFile = f"{targetFile}{targetThickness}"
 nosave = False
 
 bhetero = False
@@ -237,16 +237,26 @@ capSize = 3
 
 depth = []
 depthTarget = []
+depthTargetTemp = []
 depthErr = []
 depthErrTarget = []
+depthErrTargetTemp = []
 dose = []
 doseTarget = []
+doseTargetTemp = []
 doseErr = []
 doseErrTarget = []
+doseErrTargetTemp = []
 unfoldedDose = []
-unfoldeddoseTarget = []
+unfoldedDoseTarget = []
+unfoldedDoseTargetTemp = []
 unfoldedDoseErr = []
 unfoldedDoseErrTarget = []
+unfoldedDoseErrTargetTemp = []
+
+unfoldedEntries = []
+unfoldedEntriesTarget = []
+unfoldedEntriesTargetTemp = []
 
 for ch in range(nLayers):
     dataFile = np.load(f"../data/{dataset}/{file}/output/unfold/data/Unfolded{ch}.npz")
@@ -259,31 +269,67 @@ for ch in range(nLayers):
     Tdose, Tdoseerr = dataFile["dose"]
     dose.append(Tdose)
     doseErr.append(Tdoseerr)
+    unfoldedEntries.append(np.sum(dataFile["unfolded"][1]))
 
-if(bhetero or targetSelect == 1):
+if(bhetero):
     for ch in range(nLayers):
         dataFile = np.load(f"../data/{dataset}/{targetFile}/output/unfold/data/Unfolded{ch}.npz")
         Tdepth, Tdeptherr = dataFile["depth"] 
         depthTarget.append(Tdepth)
         depthErrTarget.append(Tdeptherr)
         Tdose, Tdoseerr = dataFile["unfoldedDose"]
-        unfoldeddoseTarget.append(Tdose)
+        unfoldedDoseTarget.append(Tdose)
         unfoldedDoseErrTarget.append(Tdoseerr)
         Tdose, Tdoseerr = dataFile["dose"]
         doseTarget.append(Tdose)
         doseErrTarget.append(Tdoseerr)
+        unfoldedEntriesTarget.append(np.sum(dataFile["unfolded"][1]))
+
+targetThicknesses = [52, 53, 54, 55, 56, 57]
+if(targetSelect == 1):
+    for thickness in targetThicknesses:
+        depthTargetTemp = []
+        depthErrTargetTemp = []
+        unfoldedDoseErrTargetTemp = []
+        unfoldedDoseTargetTemp = []
+        doseTargetTemp = []
+        doseErrTargetTemp = []
+        unfoldedEntriesTargetTemp = []
+        for ch in range(nLayers):
+            dataFile = np.load(f"../data/{dataset}/{targetFile}{thickness}/output/unfold/data/Unfolded{ch}.npz")
+            Tdepth, Tdeptherr = dataFile["depth"] 
+            depthTargetTemp.append(Tdepth)
+            depthErrTargetTemp.append(Tdeptherr)
+            Tdose, Tdoseerr = dataFile["unfoldedDose"]
+            unfoldedDoseTargetTemp.append(Tdose)
+            unfoldedDoseErrTargetTemp.append(Tdoseerr)
+            Tdose, Tdoseerr = dataFile["dose"]
+            doseTargetTemp.append(Tdose)
+            doseErrTargetTemp.append(Tdoseerr)
+            unfoldedEntriesTargetTemp.append(np.sum(dataFile["unfolded"][1]))
+        depthTarget.append(depthTargetTemp)
+        depthErrTarget.append(depthErrTargetTemp)
+        unfoldedDoseTarget.append(unfoldedDoseTargetTemp)
+        unfoldedDoseErrTarget.append(unfoldedDoseErrTargetTemp)
+        doseTarget.append(doseTargetTemp)
+        doseErrTarget.append(doseErrTargetTemp)
+        unfoldedEntriesTarget.append(unfoldedEntriesTargetTemp)
+
+
+if targetSelect == 1:
+    targetFile = f"{targetFile}{52}"
 
 plt.rcParams.update({'font.size': 25})
 fig, ax1 = plt.subplots(figsize=(22, 13))
-ax1.set_title(f'Fitted energy depth dose distribution {in_title[targetSelect]}')
-if(bhetero):
-    print(f'Fitted energy depth dose distribution {in_title[2]}')
-    ax1.set_title(f'LN300 Phantom: Fitted energy depth dose distribution')
-    # ax1.set_title(f'Fitted energy depth dose distribution')
-elif(targetSelect == 1):
-    ax1.set_title(f'{targetThickness} mm PMMA Phantom: Fitted energy depth dose distribution with the homogeneous target')
-else:
-    print(f'Fitted energy depth dose distribution {in_title[targetSelect]}')
+# ax1.set_title(f'Fitted energy depth dose distribution {in_title[targetSelect]}')
+# if(bhetero):
+#     print(f'Fitted energy depth dose distribution {in_title[2]}')
+#     ax1.set_title(f'LN300 Phantom: Fitted energy depth dose distribution')
+#     # ax1.set_title(f'Fitted energy depth dose distribution')
+# elif(targetSelect == 1):
+#     ax1.set_title(f'Fitted energy depth dose distribution with PMMA Phantoms')
+# else:
+#     print(f'Fitted energy depth dose distribution {in_title[targetSelect]}')
     
 start_time = time.time()
 
@@ -302,7 +348,8 @@ quantities  = characterize_z_D_curve(z_spline, spline_func(z_spline))
 R0 = quantities['R80D']
 #if file == "notarget":
 #    R0 = range_energy_relationship(beamEnergy, a_h2o, p_h2o)
-print("Expected range from R80D fit: ", range_energy_relationship(221.1, a_h2o, p_h2o))
+print("Expected range from R80D fit: ", range_energy_relationship(221.6, a_h2o, p_h2o))
+print("Expected range from R80D fit: ", range_energy_relationship(221.6, a_pwo, p_pwo))
 sigmaMono = (beta*R0**0.935)
 sigmaE0   = 0.01*beamEnergy
 sigma     = np.sqrt(sigmaMono**2+sigmaE0**2*a_h2o**2*p_h2o**2*beamEnergy**(2*p_h2o-2))
@@ -328,56 +375,93 @@ for i in range(nbOfFits):
     else:
         params_list.append(params)
         params_list[-1].curve = depth_dose_distribution(z, params.Phi0, params.R0, params.sigma, params.epsilon)
+        
+bestfit_params = bortfeld_fit(depth, unfoldedDose, Phi0, R0, sigma, epsilon, weights)
+if(targetSelect == 2):
+    doseConversion = unfoldedEntries[0]/unfoldedEntriesTarget[0]*(1+beta*(bestfit_params.R0-200*0.029))/(1+beta*bestfit_params.R0)
+    print(doseConversion)
+    
+    unfoldedDoseTarget = np.array(unfoldedDoseTarget)
+    unfoldedDoseErrTarget = np.array(unfoldedDoseErrTarget)
+    unfoldedDoseTarget = unfoldedDoseTarget * doseConversion
+    unfoldedDoseErrTarget = unfoldedDoseErrTarget *doseConversion
+elif(targetSelect == 1):
+    for idx, unfoldedEntriesTargetSingle in enumerate(unfoldedEntriesTarget):
+        doseConversion = unfoldedEntries[0]/unfoldedEntriesTargetSingle[0]*(1+beta*(bestfit_params.R0-targetThickness*0.118))/(1+beta*bestfit_params.R0)
+        print(doseConversion)
+        
+        unfoldedDoseTargetTemp = np.array(unfoldedDoseTarget[idx])
+        unfoldedDoseErrTargetTemp = np.array(unfoldedDoseErrTarget[idx])
+        unfoldedDoseTarget[idx] = unfoldedDoseTargetTemp * doseConversion
+        unfoldedDoseErrTarget[idx] = unfoldedDoseErrTargetTemp *doseConversion
+
+targetColorMap = ["#1f77b4", "#4e79a7", "#76b7b2", "#bab0ac", "#f28e2b", "#e15759", "#9c755f"]
 
 if(bhetero):
-    ax1.errorbar(depth, unfoldedDose, unfoldedDoseErr, depthErr, fmt='s', markersize=1, capsize=capSize, elinewidth=lineWidth, color='#004600', label="No target data points") 
-    ax1.errorbar(depthTarget, unfoldeddoseTarget, unfoldedDoseErrTarget, depthErrTarget, fmt='o', markersize=1, capsize=capSize, elinewidth=lineWidth, color="#cc7000", label="Hetero. data points") #Convolution
+    ax1.errorbar(depth, unfoldedDose, unfoldedDoseErr, depthErr, fmt='s', markersize=1, capsize=capSize, elinewidth=lineWidth, color="#000000")#, label="No target data") 
+    ax1.errorbar(depthTarget, unfoldedDoseTarget, unfoldedDoseErrTarget, depthErrTarget, fmt='o', markersize=1, capsize=capSize, elinewidth=lineWidth, color=targetColorMap[0])#, label="Hetero. data") 
+    
+    # depthTarget =  depthTarget[:8] + depthTarget[9:]
+    # unfoldedDoseTarget =  unfoldedDoseTarget[:8] + unfoldedDoseTarget[9:]
+    # unfoldedDoseErrTarget =  unfoldedDoseErrTarget[:8] + unfoldedDoseErrTarget[9:]
+    # depthErrTarget = depthErrTarget[:8] + depthErrTarget[9:]
+    
 elif(targetSelect == 1):
-    ax1.errorbar(depth, unfoldedDose, unfoldedDoseErr, depthErr, fmt='s', markersize=1, capsize=capSize, elinewidth=lineWidth, color='#004600', label="No target data points") 
-    ax1.errorbar(depthTarget, unfoldeddoseTarget, unfoldedDoseErrTarget, depthErrTarget, fmt='o', markersize=1, capsize=capSize, elinewidth=lineWidth, color="#BB0000", label="Homo. data points")
+    ax1.errorbar(depth, unfoldedDose, unfoldedDoseErr, depthErr, fmt='s', markersize=1, capsize=capSize, elinewidth=lineWidth, color='#000000')#, label="No target data")
+    for idx, thickness in enumerate(targetThicknesses):
+        ax1.errorbar(depthTarget[idx], unfoldedDoseTarget[idx], unfoldedDoseErrTarget[idx], depthErrTarget[idx], fmt='o', markersize=1, capsize=capSize, elinewidth=lineWidth, color=targetColorMap[idx])#, label=f"{thickness} mm PMMA data")
 else:
-    ax1.errorbar(depth, unfoldedDose, unfoldedDoseErr, depthErr, fmt='o', markersize=1, capsize=capSize, elinewidth=lineWidth, color="black", label="No target data points") 
+    ax1.errorbar(depth, unfoldedDose, unfoldedDoseErr, depthErr, fmt='o', markersize=1, capsize=capSize, elinewidth=lineWidth, color="#000000")#, label="No target data") 
 
-bestfit_params = bortfeld_fit(depth, unfoldedDose, Phi0, R0, sigma, epsilon, weights)
+print(type(unfoldedDose))
+print(type(unfoldedDoseTarget))
 
-print(f"Phi0: {bestfit_params.Phi0}")
-print(f"R0: {bestfit_params.R0}")
-print(f"sigma: {bestfit_params.sigma}")
-print(f"epsilon: {bestfit_params.epsilon}")
+depth =  depth[:8] + depth[9:]
+unfoldedDose =  unfoldedDose[:8] + unfoldedDose[9:]
+unfoldedDoseErr =  unfoldedDoseErr[:8] + unfoldedDoseErr[9:]
+depthErr = depthErr[:8] + depthErr[9:]
+
+print(f"Phi0: {bestfit_params.Phi0} \pm {bestfit_params.stddev[0]}")
+print(f"R0: {bestfit_params.R0} \pm {bestfit_params.stddev[1]}")
+print(f"sigma: {bestfit_params.sigma} \pm {bestfit_params.stddev[2]}")
+print(f"epsilon: {bestfit_params.epsilon} \pm {bestfit_params.stddev[3]}")
 
 if(targetSelect > 0):
-    ax1.plot(z, bestfit_params.curve, color="green", linewidth = lineWidth, label=fr"No target fit paramters: " rf"$R_0={bestfit_params.R0:.3f}~cm$, $\sigma={bestfit_params.sigma:.3f}~cm$")
+    ax1.plot(z, bestfit_params.curve, color="black", linewidth = lineWidth, label=fr"No target " rf"$R_0={bestfit_params.R0:.3f}~cm$, $\sigma={bestfit_params.sigma:.3f}~cm$")
 else:
-    ax1.plot(z, bestfit_params.curve, color="orange", linewidth = lineWidth, label=fr"No target fit: $R_0={bestfit_params.R0:.3f}~cm$, $\sigma={bestfit_params.sigma:.3f}~cm$")
+    ax1.plot(z, bestfit_params.curve, color="black", linewidth = lineWidth, label=fr"No target $R_0={bestfit_params.R0:.3f}~cm$, $\sigma={bestfit_params.sigma:.3f}~cm$")
     #ax1.plot(z, depth_dose_distribution_ionization(z, bestfit_params.Phi0, bestfit_params.R0, bestfit_params.sigma, bestfit_params.epsilon), linewidth = 3, color="red")
     #ax1.plot(z, depth_dose_distribution_nonelastic(z, bestfit_params.Phi0, bestfit_params.R0, bestfit_params.sigma, bestfit_params.epsilon), linewidth = 3, color="blue")
 
-    hist = ROOT.TH1D("h_fit", "heteroFit", len(z), z[0], z[-1]);
+    hist = ROOT.TH1D("h_fit", "heteroFit", len(z), z[0], z[-1])
     for i, value in enumerate(bestfit_params.curve):
         hist.SetBinContent(i+1, value)
     
     t=0
     sigmat=0
     pmod=0
+    
+target_fit_curves = []
+target_fit_R0 = []
 
 if(bhetero):
-    spline_func = interp1d(depthTarget, unfoldeddoseTarget, kind='cubic')
+    spline_func = interp1d(depthTarget, unfoldedDoseTarget, kind='cubic')
     z_spline    = np.linspace(min(depthTarget), max(depthTarget), round((max(depthTarget)-min(depthTarget)) / resolution ))
     quantities  = characterize_z_D_curve(z_spline, spline_func(z_spline))
     
     R0Target = quantities['R80D']
-    Phi0Target = max(unfoldeddoseTarget)/20
+    Phi0Target = max(unfoldedDoseTarget)/20
     sigmaMonoTarget = (beta*R0Target**0.935)
     sigmaTarget     = np.sqrt(sigmaMonoTarget**2+sigmaE0**2*a_h2o**2*p_h2o**2*beamEnergy**(2*p_h2o-2))
 
-    convParams = bortfeld_fit(depthTarget, unfoldeddoseTarget, Phi0Target, R0Target, sigmaTarget, epsilon, None)
+    convParams = bortfeld_fit(depthTarget, unfoldedDoseTarget, Phi0Target, R0Target, sigmaTarget, epsilon, None)
 
     print()
     print("Heteogeneous Target")
-    print(f"Phi0: {convParams.Phi0}")
-    print(f"R0: {convParams.R0}")
-    print(f"sigma: {convParams.sigma}")
-    print(f"epsilon: {convParams.epsilon}")
+    print(f"Phi0: {convParams.Phi0} \pm {convParams.stddev[0]}")
+    print(f"R0: {convParams.R0} \pm {convParams.stddev[1]}")
+    print(f"sigma: {convParams.sigma} \pm {convParams.stddev[2]}")
+    print(f"epsilon: {convParams.epsilon} \pm {convParams.stddev[3]}")
 
     params_list = []
     for i in range(nbOfFitsHetero):
@@ -387,7 +471,7 @@ if(bhetero):
         y_with_err = []
         for index, mean in enumerate(depthTarget):
             x_with_err.append(gaussian_with_cutoff(mean, depthErrTarget[index]))
-        for index, mean in enumerate(unfoldeddoseTarget):
+        for index, mean in enumerate(unfoldedDoseTarget):
             y_with_err.append(gaussian_with_cutoff(mean, unfoldedDoseErrTarget[index]))
         #params = bortfeld_fit_hetero(x_with_err, y_with_err, bestfit_params.Phi0, R0, sigma, bestfit_params.epsilon, weights)
         params = bortfeld_fit(x_with_err, y_with_err, Phi0Target, R0Target, sigmaTarget, epsilon, weights)
@@ -407,71 +491,75 @@ if(bhetero):
     t = bestfit_params.R0-convParams.R0
     o_t = np.sqrt(bestfit_params.stddev[1]**2+convParams.stddev[1]**2)
     
-    sigmat = np.sqrt(convParams.sigma**2 - bestfit_params.sigma**2)
+    sigmat = np.sqrt(convParams.sigma**2-bestfit_params.sigma**2)
     
     o_sigmat = np.sqrt(convParams.sigma**2/(convParams.sigma**2-bestfit_params.sigma**2)*convParams.stddev[2]**2+bestfit_params.sigma**2/(convParams.sigma**2-bestfit_params.sigma**2)*bestfit_params.stddev[2]**2)
     pmod = sigmat**2/t*10000
     sigma_pmod = np.sqrt((2*sigmat/t**2*o_sigmat)**2+(sigmat**2/t**2*o_t)**2)*10000
     
-    # ax1.plot(z, convParams.curve, color="orange", linewidth = lineWidth, label=fr"Hetero. target fit paramters: $\frac{{\Phi_0}}{{N_0}}={convParams.Phi0:.3f}~\frac{{1}}{{cm^2}}$," "\n" rf"$R_0={convParams.R0:.3f}~cm$, $\sigma={convParams.sigma:.3f}~cm$, " "\n" fr"$t= {t:.3f}" "\pm" fr"{o_t:.3f}~cm, \sigma={sigmat:.3f} \pm {o_sigmat:.3f}~cm,~P_{{mod}}={pmod:.3f} \pm {sigma_pmod:.3f}$" rf"$~\mu m$")
-    ax1.plot(z, convParams.curve, color="orange", linewidth = lineWidth, label=fr"Hetero. target fit paramters: " rf"$R_0={convParams.R0:.3f}~cm$, $\sigma={convParams.sigma:.3f}~cm$, " "\n" fr"$t= {t:.3f}" "\pm" fr"{o_t:.3f}~cm, \sigma={sigmat:.3f} \pm {o_sigmat:.3f}~cm,~P_{{mod}}={pmod:.3f} \pm {sigma_pmod:.3f}$" rf"$~\mu m$")
+    # ax1.plot(z, convParams.curve, color=targetColorMap[0], linewidth = lineWidth, label=fr"Hetero. target fit paramters: $\frac{{\Phi_0}}{{N_0}}={convParams.Phi0:.3f}~\frac{{1}}{{cm^2}}$," "\n" rf"$R_0={convParams.R0:.3f}~cm$, $\sigma={convParams.sigma:.3f}~cm$, " "\n" fr"$t= {t:.3f}" "\pm" fr"{o_t:.3f}~cm, \sigma={sigmat:.3f} \pm {o_sigmat:.3f}~cm,~P_{{mod}}={pmod:.3f} \pm {sigma_pmod:.3f}$" rf"$~\mu m$")
+    ax1.plot(z, convParams.curve, color=targetColorMap[0], linewidth = lineWidth, label=fr"LN300 " rf"$R_0={convParams.R0:.3f}~cm$, $\sigma={convParams.sigma:.3f}~cm$, " "\n" fr"$t= {t:.3f}" "\pm" fr"{o_t:.3f}~cm, \sigma={sigmat:.3f} \pm {o_sigmat:.3f}~cm,~P_{{mod}}={pmod:.3f} \pm {sigma_pmod:.3f}$" rf"$~\mu m$")
 elif(targetSelect == 1):
-    spline_func = interp1d(depthTarget, unfoldeddoseTarget, kind='cubic')
-    z_spline    = np.linspace(min(depthTarget), max(depthTarget), round((max(depthTarget)-min(depthTarget)) / resolution ))
-    quantities  = characterize_z_D_curve(z_spline, spline_func(z_spline))
-    
-    R0Target = quantities['R80D']
-    Phi0Target = max(unfoldeddoseTarget)/20
-    sigmaMonoTarget = (beta*R0Target**0.935)
-    sigmaTarget     = np.sqrt(sigmaMonoTarget**2+sigmaE0**2*a_h2o**2*p_h2o**2*beamEnergy**(2*p_h2o-2))
+    for idx, thickness  in enumerate(targetThicknesses):
+        spline_func = interp1d(depthTarget[idx], unfoldedDoseTarget[idx], kind='cubic')
+        z_spline    = np.linspace(min(depthTarget[idx]), max(depthTarget[idx]), round((max(depthTarget[idx])-min(depthTarget[idx])) / resolution ))
+        quantities  = characterize_z_D_curve(z_spline, spline_func(z_spline))
 
-    sigmaMono = (beta*R0**0.935)
-    sigma     = np.sqrt(sigmaMono**2+sigmaE0**2*a_h2o**2*p_h2o**2*beamEnergy**(2*p_h2o-2))
+        R0Target = quantities['R80D']
+        Phi0Target = max(unfoldedDoseTarget[idx])/20
+        sigmaMonoTarget = (beta*R0Target**0.935)
+        sigmaTarget     = np.sqrt(sigmaMonoTarget**2+sigmaE0**2*a_h2o**2*p_h2o**2*beamEnergy**(2*p_h2o-2))
 
-    convParams = bortfeld_fit(depthTarget, unfoldeddoseTarget, Phi0Target, R0Target, sigmaTarget, epsilon, None)
+        sigmaMono = (beta*R0**0.935)
+        sigma     = np.sqrt(sigmaMono**2+sigmaE0**2*a_h2o**2*p_h2o**2*beamEnergy**(2*p_h2o-2))
 
-    print("Homogeneous Target")
-    print(f"Phi0: {convParams.Phi0}")
-    print(f"R0: {convParams.R0}")
-    print(f"sigma: {convParams.sigma}")
-    print(f"epsilon: {convParams.epsilon}")
+        convParams = bortfeld_fit(depthTarget[idx], unfoldedDoseTarget[idx], Phi0Target, R0Target, sigmaTarget, epsilon, None)
 
-    params_list = []
-    for i in range(nbOfFitsHetero):
-        if i%100 == 0:
-            print(f"Fit: {i}/{nbOfFitsHetero}")
-        x_with_err = []
-        y_with_err = []
-        for index, mean in enumerate(depthTarget):
-            x_with_err.append(gaussian_with_cutoff(mean, depthErrTarget[index]))
-        for index, mean in enumerate(unfoldeddoseTarget):
-            y_with_err.append(gaussian_with_cutoff(mean, unfoldedDoseErrTarget[index]))
-        #params = bortfeld_fit_hetero(x_with_err, y_with_err, bestfit_params.Phi0, R0, sigma, bestfit_params.epsilon, weights)
-        params = bortfeld_fit(x_with_err, y_with_err, bestfit_params.Phi0, R0, sigma, bestfit_params.epsilon, weights)
+        print(f"{thickness} mm PMMA Target")
+        print(f"Phi0: {convParams.Phi0} \pm {convParams.stddev[0]}")
+        print(f"R0: {convParams.R0} \pm {convParams.stddev[1]}")
+        print(f"sigma: {convParams.sigma} \pm {convParams.stddev[2]}")
+        print(f"epsilon: {convParams.epsilon} \pm {convParams.stddev[3]}")
+        print()
+        params_list = []
+        for i in range(nbOfFitsHetero):
+            if i%100 == 0:
+                print(f"Fit: {i}/{nbOfFitsHetero}")
+            x_with_err = []
+            y_with_err = []
+            for index, mean in enumerate(depthTarget[idx]):
+                x_with_err.append(gaussian_with_cutoff(mean, depthErrTarget[idx][index]))
+            for index, mean in enumerate(unfoldedDoseTarget):
+                y_with_err.append(gaussian_with_cutoff(mean, unfoldedDoseErrTarget[idx][index]))
+            #params = bortfeld_fit_hetero(x_with_err, y_with_err, bestfit_params.Phi0, R0, sigma, bestfit_params.epsilon, weights)
+            params = bortfeld_fit(x_with_err, y_with_err, bestfit_params.Phi0, R0, sigma, bestfit_params.epsilon, weights)
 
-        if(params.Phi0 == 0):
-            continue
-        else:
-            params_list.append(params)
-            params_list[-1].curve = depth_dose_distribution(z, params.Phi0, params.R0, params.sigma, params.epsilon)
+            if(params.Phi0 == 0):
+                continue
+            else:
+                params_list.append(params)
+                params_list[-1].curve = depth_dose_distribution(z, params.Phi0, params.R0, params.sigma, params.epsilon)
 
-    convParams.curve = depth_dose_distribution(z, convParams.Phi0, convParams.R0, convParams.sigma, convParams.epsilon)
-    
-    hist = ROOT.TH1D("h_fit", "homoFit", len(z), z[0], z[-1])
-    for i, value in enumerate(convParams.curve):
-        hist.SetBinContent(i+1, value)
+        convParams.curve = depth_dose_distribution(z, convParams.Phi0, convParams.R0, convParams.sigma, convParams.epsilon)
 
-    t = bestfit_params.R0-convParams.R0
-    o_t = np.sqrt(bestfit_params.stddev[1]**2+convParams.stddev[1]**2)
-    
-    sigmat = np.sqrt(convParams.sigma**2 - bestfit_params.sigma**2)
-    
-    o_sigmat = np.sqrt(convParams.sigma**2/(convParams.sigma**2-bestfit_params.sigma**2)*convParams.stddev[2]**2+bestfit_params.sigma**2/(convParams.sigma**2-bestfit_params.sigma**2)*bestfit_params.stddev[2]**2)
-    pmod = sigmat**2/t*10000
-    sigma_pmod = np.sqrt((2*sigmat/t**2*o_sigmat)**2+(sigmat**2/t**2*o_t)**2)*10000
-    
-    # ax1.plot(z, convParams.curve, color="orange", linewidth = lineWidth, label=fr"Hetero. target fit paramters: $\frac{{\Phi_0}}{{N_0}}={convParams.Phi0:.3f}~\frac{{1}}{{cm^2}}$," "\n" rf"$R_0={convParams.R0:.3f}~cm$, $\sigma={convParams.sigma:.3f}~cm$, " "\n" fr"$t= {t:.3f}" "\pm" fr"{o_t:.3f}~cm, \sigma={sigmat:.3f} \pm {o_sigmat:.3f}~cm,~P_{{mod}}={pmod:.3f} \pm {sigma_pmod:.3f}$" rf"$~\mu m$")
-    ax1.plot(z, convParams.curve, color="red", linewidth = lineWidth, label=fr"Homo. target fit paramters: " rf"$R_0={convParams.R0:.3f}~cm$, $\sigma={convParams.sigma:.3f}~cm$, " "\n" fr"$t= {t:.3f}" "\pm" fr"{o_t:.3f}~cm$")
+        hist = ROOT.TH1D(f"h_fit{thickness}", f"homoFit{thickness}", len(z), z[0], z[-1])
+        for i, value in enumerate(convParams.curve):
+            hist.SetBinContent(i+1, value)
+
+        t = bestfit_params.R0-convParams.R0
+        o_t = np.sqrt(bestfit_params.stddev[1]**2+convParams.stddev[1]**2)
+
+        sigmat = np.sqrt(convParams.sigma**2 - bestfit_params.sigma**2)
+
+        o_sigmat = np.sqrt(convParams.sigma**2/(convParams.sigma**2-bestfit_params.sigma**2)*convParams.stddev[2]**2+bestfit_params.sigma**2/(convParams.sigma**2-bestfit_params.sigma**2)*bestfit_params.stddev[2]**2)
+        pmod = sigmat**2/t*10000
+        sigma_pmod = np.sqrt((2*sigmat/t**2*o_sigmat)**2+(sigmat**2/t**2*o_t)**2)*10000
+
+        # ax1.plot(z, convParams.curve, color="orange", linewidth = lineWidth, label=fr"Hetero. target fit paramters: $\frac{{\Phi_0}}{{N_0}}={convParams.Phi0:.3f}~\frac{{1}}{{cm^2}}$," "\n" rf"$R_0={convParams.R0:.3f}~cm$, $\sigma={convParams.sigma:.3f}~cm$, " "\n" fr"$t= {t:.3f}" "\pm" fr"{o_t:.3f}~cm, \sigma={sigmat:.3f} \pm {o_sigmat:.3f}~cm,~P_{{mod}}={pmod:.3f} \pm {sigma_pmod:.3f}$" rf"$~\mu m$")
+        ax1.plot(z, convParams.curve, color=targetColorMap[idx], linewidth = lineWidth, label=fr"{thickness} mm PMMA " rf"$R_0={convParams.R0:.3f}~cm$, $\sigma={convParams.sigma:.3f}~cm$, " "\n" fr"$t= {t:.3f}" "\pm" fr"{o_t:.3f}~cm$")
+        target_fit_curves.append(convParams.curve)
+        target_fit_R0.append(convParams.R0)
+        
 end_time = time.time()
 
 elapsed_time = end_time - start_time
@@ -479,7 +567,7 @@ print(f"Elapsed time: {elapsed_time} seconds")
 
 ax1.grid(True)
 ax1.set_xlabel('Water Equivalent Depth / cm')
-ax1.set_ylabel('Energy Deposition per thickness  / MeV/mm')
+ax1.set_ylabel('Dose  / μG')
 ax1.legend(loc='upper left',  fancybox=False, edgecolor='black')
 fig.tight_layout()
 
@@ -493,6 +581,88 @@ else:
     plt.savefig(f"../data/{dataset}/{file}/output/pdf/braggfit.svg", format='svg', bbox_inches='tight')
     plt.savefig(f"../data/{dataset}/{file}/output/pdf/braggfit.png", format='png', bbox_inches='tight')
 
+zoom_half_width = 5  # cm (adjust to taste: 1–2 cm is typical)
+zmin_zoom = 24 - 3
+zmax_zoom = 25 + 1
+
+# ============================================================
+# Zoomed-in Bragg peak plot (targetSelect == 1)
+# ============================================================
+
+if targetSelect == 1:
+    plt.rcParams.update({'font.size': 25})
+    fig_zoom, axz = plt.subplots(figsize=(22, 13))
+
+    # axz.set_title("Bragg peak region (zoomed)")
+    axz.set_xlim(zmin_zoom, zmax_zoom)
+
+    # --- No target: FULL error bars ---
+    axz.errorbar(
+        depth,
+        unfoldedDose,
+        unfoldedDoseErr,
+        depthErr,
+        fmt='s',
+        markersize=3,
+        capsize=capSize,
+        elinewidth=lineWidth,
+        color='black',
+    )
+
+    # --- No target fit ---
+    axz.plot(
+        z,
+        bestfit_params.curve,
+        color='black',
+        linewidth=2,
+        label=rf"No target ($R_0={bestfit_params.R0:.3f}$ cm)"
+    )
+
+    # --- Homogeneous targets: data + fits ---
+    for idx, thickness in enumerate(targetThicknesses):
+        # data with error bars
+        axz.errorbar(
+            depthTarget[idx],
+            unfoldedDoseTarget[idx],
+            unfoldedDoseErrTarget[idx],
+            depthErrTarget[idx],
+            fmt='o',
+            markersize=3,
+            capsize=capSize,
+            elinewidth=lineWidth,
+            color=targetColorMap[idx],
+            alpha=0.9
+        )
+
+        # fitted curve
+        axz.plot(
+            z,
+            target_fit_curves[idx],
+            color=targetColorMap[idx],
+            linewidth=2,
+            linestyle='-',
+            label=rf"{thickness} mm PMMA ($R_0={target_fit_R0[idx]:.3f}$ cm)"
+        )
+
+    axz.set_xlabel("Water Equivalent Depth / cm")
+    axz.set_ylabel("Dose / μG")
+
+    axz.grid(True)
+    axz.legend(
+        loc="upper left",
+        fontsize=16,
+        fancybox=False,
+        edgecolor="black"
+    )
+
+    fig_zoom.tight_layout()
+
+    plt.savefig(
+        f"../data/{dataset}/{targetFile}/output/pdf/braggfit_zoom.pdf",
+        format="pdf",
+        bbox_inches="tight"
+    )
+    
 if plotEnable:
     plt.show()
 if nosave: 
@@ -510,7 +680,7 @@ sigmat_branch = np.zeros(1, dtype='float32')
 curve_branch = np.zeros(len(z), dtype='float32')
 
 if(bhetero):
-    fit_file1 = ROOT.TFile(f"../data/{dataset}/{hetero_file}/output/{hetero_file}_fit.root", "RECREATE")
+    fit_file1 = ROOT.TFile(f"../data/{dataset}/{targetFile}/output/{targetFile}_fit.root", "RECREATE")
     vtree = ROOT.TTree("vtree", "Tree holding fit parameters")
     Phi0_branch[0] = convParams.Phi0
     R0_branch[0] = convParams.R0
