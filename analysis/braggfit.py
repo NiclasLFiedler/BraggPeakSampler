@@ -258,11 +258,32 @@ unfoldedEntries = []
 unfoldedEntriesTarget = []
 unfoldedEntriesTargetTemp = []
 
+WETConv = 4.73399
+WETConvTeflon = 0.289088
+WETConvAlu = 0.289088
+t_n = 0
+x = 3
+xTeflon = 0.5
+xAlu = 0.02
+WETDepth = []
+WETDepthErr = []
+for ch in range(nLayers):
+    if ch == 11:
+        x = 2
+    WETDepth.append(t_n+x/20*WETConv+xTeflon/20*WETConvTeflon+xAlu/20*WETConvAlu)
+    t_n += x*WETConv/10+xTeflon/20*WETConvTeflon+xAlu/20*WETConvAlu
+    WETDepthErr.append(x/10*WETConv/np.sqrt(12))
+
+
+
 for ch in range(nLayers):
     dataFile = np.load(f"../data/{dataset}/{file}/output/unfold/data/Unfolded{ch}.npz")
     Tdepth, Tdeptherr = dataFile["depth"] 
     depth.append(Tdepth)
     depthErr.append(Tdeptherr)
+    # depth.append(WETDepth[ch])
+    # depthErr.append(WETDepthErr[ch])
+    
     Tdose, Tdoseerr = dataFile["unfoldedDose"]
     unfoldedDose.append(Tdose)
     unfoldedDoseErr.append(Tdoseerr)
@@ -277,6 +298,9 @@ if(bhetero):
         Tdepth, Tdeptherr = dataFile["depth"] 
         depthTarget.append(Tdepth)
         depthErrTarget.append(Tdeptherr)
+        
+        # depthTarget.append(WETDepth[ch])
+        # depthErrTarget.append(WETDepthErr[ch])
         Tdose, Tdoseerr = dataFile["unfoldedDose"]
         unfoldedDoseTarget.append(Tdose)
         unfoldedDoseErrTarget.append(Tdoseerr)
@@ -300,6 +324,10 @@ if(targetSelect == 1):
             Tdepth, Tdeptherr = dataFile["depth"] 
             depthTargetTemp.append(Tdepth)
             depthErrTargetTemp.append(Tdeptherr)
+            
+            # depthTargetTemp.append(WETDepth[ch])
+            # depthErrTargetTemp.append(WETDepthErr[ch])
+            
             Tdose, Tdoseerr = dataFile["unfoldedDose"]
             unfoldedDoseTargetTemp.append(Tdose)
             unfoldedDoseErrTargetTemp.append(Tdoseerr)

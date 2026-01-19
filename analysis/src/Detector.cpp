@@ -70,6 +70,8 @@ Detector::Detector(DetectorProperties* detectorProperties)
     CalcWETConv();
     std::cout << "WET Conversion Factors: " << std::endl;
     std::cout << "WETConv: " << WETConv << std::endl;
+    std::cout << "WETConvTeflon: " << WETConvTeflon << std::endl;
+    std::cout << "WETConvAlu: " << WETConvAlu << std::endl;
     cout << "Detector Constructed" << endl;
 }
 
