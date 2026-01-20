@@ -1,21 +1,17 @@
 #include "DetectorConstruction.hh"
 #include "DetectorMessenger.hh"
 #include "TrackerSD.hh"
-#include "SiPMSD.hh"
 
 #include "G4Material.hh"
 #include "G4NistManager.hh"
 #include "G4SDManager.hh"
 
 #include "G4Box.hh"
-#include "G4Trap.hh"
 #include "G4Tubs.hh"
 #include "G4LogicalVolume.hh"
 #include "G4PVPlacement.hh"
 #include "G4GlobalMagFieldMessenger.hh"
 #include "G4AutoDelete.hh"
-#include "G4UnionSolid.hh"
-#include "G4SubtractionSolid.hh"
 
 #include "G4GeometryTolerance.hh"
 #include "G4GeometryManager.hh"
@@ -26,15 +22,6 @@
 #include "G4Colour.hh"
 #include "G4RotationMatrix.hh"
 #include "G4SystemOfUnits.hh"
-#include "DetectorParameterisationColour.hh"
-#include "HeteroParametrisation.cc"
-#include "G4RegularNavigation.hh"
-
-#include "Randomize.hh"
-
-#include "G4EmCalculator.hh"
-#include "G4Proton.hh"
-
 //#include "G4LogicalBorderSurface.hh"
 #include "nlohmann/json.hpp"
 #include <filesystem>
@@ -42,11 +29,16 @@
 namespace fs = std::filesystem;
 using json = nlohmann::json;
 
+using namespace B2;
+
+namespace B2a
+{
+
 G4ThreadLocal
 G4GlobalMagFieldMessenger* DetectorConstruction::fMagFieldMessenger = nullptr;
 
 DetectorConstruction::DetectorConstruction()
-{  
+{
     std::ifstream configFile("../../../analysis/config.json");
     if (!configFile) {
         std::cerr << "Error opening config file!" << std::endl;
@@ -92,6 +84,7 @@ DetectorConstruction::DetectorConstruction()
     default:
       G4cout << "Simulation without target" << G4endl;
   }
+
   fMessenger = new DetectorMessenger(this);
 }
 
@@ -106,7 +99,7 @@ DetectorConstruction::~DetectorConstruction()
 
 G4VPhysicalVolume* DetectorConstruction::Construct()
 {
-  G4cout << "Define materials" << G4endl;
+  // Define materials
   DefineMaterials();
 
   // Define volumes
@@ -114,7 +107,6 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
 void DetectorConstruction::DefineMaterials()
 {
   // Material definition
@@ -354,22 +346,10 @@ void DetectorConstruction::DefineMaterials()
 
   Teflon=PTFEmembrane;
 
-  wrappingSurface = new G4OpticalSurface("WrappingSurface");
-  wrappingSurface->SetType(dielectric_metal);
-  wrappingSurface->SetModel(unified);
-  wrappingSurface->SetFinish(polished);
-
-  G4MaterialPropertiesTable* wrappingMPT = new G4MaterialPropertiesTable();
-  std::vector<G4double> photonEnergies = {2.0*eV, 3.5*eV};
-  std::vector<G4double> reflectivity = {0.98, 0.98};
-  wrappingMPT->AddProperty("REFLECTIVITY", photonEnergies, reflectivity);
-
-  wrappingSurface->SetMaterialPropertiesTable(wrappingMPT);
-
   G4MaterialPropertiesTable* pbwo4MPT = new G4MaterialPropertiesTable();
 
   nEntries = 2;
-  photonEnergies = {2.0*eV, 3.5*eV}; // Energy range
+  std::vector<G4double> photonEnergies = {2.0*eV, 3.5*eV}; // Energy range
   std::vector<G4double> refractiveIndex = {2.2, 2.2};  // Constant index
   std::vector<G4double> absorption = {100*cm, 100*cm}; //https://doi.org/10.1016/S0168-9002(98)00321-0
   G4double photonEnergy[nEntries] = { 2.0 * eV, 3.5 * eV };
@@ -398,11 +378,6 @@ void DetectorConstruction::DefineMaterials()
   G4double quantumEnergies[5] = { 1.4*eV, 3.0*eV, 3.54*eV, 4.0*eV, 4.96*eV };
   G4double quantumEfficiencies[5] = { 0.06, 0.63, 0.5, 0.43, 0.06 };  // Example values
   mptSiPMGlass->AddProperty("EFFICIENCY", quantumEnergies, quantumEfficiencies, 5);
-
-  dielectricSurface = new G4OpticalSurface("dielectricSurface");
-  dielectricSurface->SetType(dielectric_dielectric);
-  dielectricSurface->SetModel(unified);
-  dielectricSurface->SetFinish(polished);
 
   SiPMGlassMat->SetMaterialPropertiesTable(mptSiPMGlass);
 
@@ -463,143 +438,88 @@ void DetectorConstruction::DefineMaterials()
   printMat(PbWO4_custom);
   
 
-  if(detectorType == "pbwo4"){
-    G4cout << "Setting Materialproperties" << G4endl;
+  G4cout << "Setting Materialproperties" << G4endl;
 
-    // detMaterial = PbWO4_nist;
-    detMaterial = PbWO4_custom;
+  detMaterial = PbWO4_custom;
     
 
-    detMaterial->GetIonisation()->SetBirksConstant(0.008694);
-    detMaterial->SetMaterialPropertiesTable(pbwo4MPT);
-  }
-  else if(detectorType == "dsb"){
-    detMaterial = DSB_Gd;
-  }
-  else if(detectorType == "ej256"){
-    detMaterial = EJ256;
-  }
-  else if(detectorType == "ej254"){
-    detMaterial = EJ254;
-  }
-  else if(detectorType == "ej212"){
-    detMaterial = EJ212;
-  }
-  else if(detectorType == "ej200"){
-    detMaterial = EJ200;
-  }
-  else if(detectorType == "h2o"){
-    detMaterial = water;
-  }
-  else{
-    detMaterial = nistManager->FindOrBuildMaterial("G4_PbWO4");
-  }
-
-  
-  if(absorberType == "pmma"){
-    absorberMaterial = PMMA;
-  }
-  else if(absorberType == "h2o"){
-    absorberMaterial = water;
-  }
-  else{
-    absorberMaterial = water;
-  }
-
+  detMaterial->GetIonisation()->SetBirksConstant(0.008694);
+  // detMaterial->SetMaterialPropertiesTable(pbwo4MPT);
 
   G4cout << "Mean excitation energy: " << detMaterial->GetIonisation()->GetMeanExcitationEnergy() << G4endl;
   G4cout << "Birks constant: " << detMaterial->GetIonisation()->GetBirksConstant() << G4endl;
 }
 
-void DetectorConstruction::fillDCMcontainer(){
-  DetectorParameterisationColour* param = new DetectorParameterisationColour;
-
-  param->SetVoxelDimensions(voxelXY/2, voxelXY/2, voxelZ/2);
-  
-  param->SetNoVoxels(nbofvoxelsX, nbofvoxelsY, NbOfSlices);
-
-  std::vector<G4Material*> fMaterials = {air, water};
-  param->SetMaterials(fMaterials);
-
-  param->SetMaterialIndices(fMateIDs);
-
-  //logicalVoxel->SetVisAttributes(new G4VisAttributes(G4VisAttributes::GetInvisible()));
-
-  param->BuildContainerSolid(physContainer);
-
-  param->CheckVoxelsFillContainer(solidContainer->GetXHalfLength(),
-                                  solidContainer->GetYHalfLength(),
-                                  solidContainer->GetZHalfLength());
-
-  param->SetSkipEqualMaterials(true);
-  phantom_phys = new G4PVParameterised("phantom", logicalVoxel, logicalContainer, kYAxis, nbofvoxelsX * nbofvoxelsY * NbOfSlices, param);
-
-  phantom_phys->SetRegularStructureId(1);
-}
-
-std::vector<int> DetectorConstruction::readMatrixFromFile(const std::string &filename) {
-    std::vector<std::vector<int>> matrix;
-    std::ifstream infile(filename);
-    std::vector<int> indices; 
-
-    if (!infile.is_open()) {
-        std::cerr << "Error opening file" << G4endl;
-        return indices;
-    }
-
-    std::string line;
-    while (getline(infile, line)) {
-        std::stringstream ss(line);
-        std::string item;
-        std::vector<int> row;
-
-        while (getline(ss, item, ' ')) {
-            row.push_back(stoi(item));
-        }
-
-        matrix.push_back(row);
-    }
-  
-    for (const auto& row : matrix) {
-        for (const auto& value : row) {
-            if (value == -999.0f) {
-                indices.push_back(1);
-            } else if (value == -1000.0f) {
-                indices.push_back(0);
-            } else {
-                indices.push_back(static_cast<int>(value));
-            }
-        }
-    }
-
-    infile.close();
-    return indices;
-}
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
 G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
 {
-  G4double worldXY = 250*cm;
-  G4double worldZ = 250*cm;
-  
+  bool justEnergy = true;
+  G4double worldX = 500*cm;
+  G4double worldZ = 500*cm;
+  G4double worldY = 500*cm;
+
+  G4double WETSizeZ = 2000*mm; //det size in x
+  G4double WETSizeX = 2000*mm; //det size in y
+  G4double WETSizeY = 2000*mm; //det size in z
+
   G4double translation;
   G4ThreeVector physicalPosition;
-  G4STL stl;
-  stl.SetVerbosity(1);
-  G4UserLimits* userLimits;
-  userLimits = new G4UserLimits();
-  
-  solidworld = new G4Box("solidworld", worldXY / 2, worldXY / 2, worldZ / 2);
-  
-  logicalworld = new G4LogicalVolume(solidworld, worldMat, "logicalWorld");
-  
-  physworld = new G4PVPlacement(nullptr, G4ThreeVector(), logicalworld, "physworld", nullptr, false, 0, fCheckOverlaps);  
+  // Definitions of Solids, Logical Volumes, Physical Volumes
 
+  // World
+  //G4UserLimits* userLimits = new G4UserLimits();
+  //userLimits->SetMaxAllowedStep(1*mm);
+  //logicaldetector->SetUserLimits(userLimits);
+  
+  solidworld = new G4Box("solidworld",              // its name
+    worldX / 2, worldY / 2, worldZ / 2);               // its size
+
+  logicalworld = new G4LogicalVolume(solidworld,    // its solid
+    worldMat,                                                 // its material
+    "logicalWorld");                                     // its name
+
+  //  Must place the World Physical volume unrotated at (0,0,0).
+  //
+  physworld = new G4PVPlacement(nullptr,  // no rotation
+    G4ThreeVector(),                         // at (0,0,0)
+    logicalworld,                                 // its logical volume
+    "physworld",                         // its name
+    nullptr,                                 // its mother volume
+    false,                                   // no boolean operations
+    0,                                       // copy number
+    fCheckOverlaps);                         // checking overlaps
+
+  // Target
+
+  solidWET = new G4Box("solidWET",     // its name
+    WETSizeX/2, WETSizeY/2, WETSizeZ/2);             // its size
+  
+  logicalWET = new G4LogicalVolume(solidWET, water, "logicalWET");
+
+  G4UserLimits* userLimits = new G4UserLimits();
+  //userLimits->SetMaxAllowedStep(0.1*mm);
+  logicalWET->SetUserLimits(userLimits);
+
+  physWET = new G4PVPlacement(nullptr,  // no rotation
+    G4ThreeVector(0.,0., WETSizeZ/2+1*um),              // at (x,y,z)
+    // G4ThreeVector(0.,0.,detSizeZ*i),  
+    logicalWET,            // its logical volume
+    "physWET",           // its name
+    logicalworld,               // its mother volume
+    false,                    // no boolean operations
+    0,                        // copy number
+    fCheckOverlaps);          // checking overlaps
+
+  
+  // if(!justEnergy){
+  //   return physworld;
+  // }
   G4double SiPMSizeYZ = 3.7*mm;
   if(SiPMSizeYZ>detSizeZ) SiPMSizeYZ = detSizeZ;
   G4double SiPMSizeX = ThicknessTeflon/2;
   G4Box* solidSiPM = new G4Box("solidSiPM", SiPMSizeX/2, SiPMSizeYZ/2, SiPMSizeYZ/2);
   logicalSiPM = new G4LogicalVolume(solidSiPM, SiPMGlassMat, "logicalSiPM");
-
 
   if(absSizeZ == 0) absSizeZ = 0.1*mm;
   solidAbsorber = new G4Box("solidAbsorber", detSizeX/2, detSizeY/2, absSizeZ/2);
@@ -607,11 +527,20 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   G4cout << "Secondary layer active? "<< secondaryLayerStatus << G4endl;
   G4Box* solidAluFoilAbs = new G4Box("solidAluFoilAbs", detSizeX/2+ThicknessTeflon/2+ThicknessAlu/2, detSizeY/2+ThicknessTeflon/2+ThicknessAlu/2, absSizeZ/2+ThicknessTeflon/2+ThicknessAlu/2);
   G4Box* solidTeflonFoilAbs = new G4Box("solidTeflonFoilAbs", detSizeX/2+ThicknessTeflon/2, detSizeY/2+ThicknessTeflon/2, absSizeZ/2+ThicknessTeflon/2);
+
+  G4double offSet = 63*mm;
+  if(fLayers <= fLayersCut){
+    offSet = offSet + (solidAluFoilAbs->GetZHalfLength()*2+gapSizeZ)*fLayers;
+  }
+  else{
+    offSet = offSet + (solidAluFoilAbs->GetZHalfLength()*2+gapSizeZ)*fLayersCut + ((detSizeZ/2+ThicknessAlu/2+ThicknessTeflon/2)*2+gapSizeZ)*(fLayers-fLayersCut);
+  }
+
+
   if(secondaryLayerStatus){
     logicalAbsorber->SetUserLimits(userLimits);
 
     logicalTeflonFoilAbs = new G4LogicalVolume(solidTeflonFoilAbs, Teflon, "logicalTeflonFoilAbs");
-    G4LogicalSkinSurface* skinTeflonAbs = new G4LogicalSkinSurface("skinTeflonAbs", logicalTeflonFoilAbs, wrappingSurface);
     logicalAluFoilAbs = new G4LogicalVolume(solidAluFoilAbs, aluminumFoil, "logicalAluFoilAbs");
 
     physTeflonFoilAbs = new G4PVPlacement(nullptr, G4ThreeVector(0, 0, 0), logicalTeflonFoilAbs, "physTeflonFoilAbs", logicalAluFoilAbs, false, 0, fCheckOverlaps);
@@ -631,7 +560,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
     for(G4int i=0; i<fLayersCut; i++){
       if(fLayers == i) break;
       translation = (solidAluFoilAbs->GetZHalfLength()*2+gapSizeZ)*(i)+d_IsocentreDetector;
-      physicalPosition = G4ThreeVector(0.,0., -translation);
+      physicalPosition = G4ThreeVector(0.,0., translation-offSet);
       
       physAluFoilAbs = new G4PVPlacement(nullptr, physicalPosition, logicalAluFoilAbs, "physAluFoilAbs", logicalworld, false, i, fCheckOverlaps);
     }
@@ -646,7 +575,6 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   
   logicalAluFoil = new G4LogicalVolume(solidAluFoil , aluminumFoil, "logicalAluFoil");
   logicalTeflonFoil = new G4LogicalVolume(solidTeflonFoil, Teflon, "logicalTeflonFoil");
-  G4LogicalSkinSurface *skinTeflon = new G4LogicalSkinSurface("skinTeflonFoil", logicalTeflonFoil, wrappingSurface);
   
   physTeflonFoil = new G4PVPlacement(nullptr, G4ThreeVector(0, 0, 0), logicalTeflonFoil, "physTeflonFoil", logicalAluFoil, false, 0, fCheckOverlaps);
   
@@ -657,11 +585,11 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   G4double passiveFill = 0;
   for(G4int i=0; i<fLayers-fLayersCut; i++){
     if(absorberStatus) passiveFill = absorberSize+gapSizeZ;
-    
+    G4double offSetChannel = offSet + fLayersCut*(solidAluFoilAbs->GetZHalfLength()*2+gapSizeZ)+ (solidAluFoil->GetZHalfLength()*2+gapSizeZ)*(i);
     translation = (solidAluFoilAbs->GetZHalfLength()*2+gapSizeZ)*fLayersCut + (solidAluFoil->GetZHalfLength()*2+gapSizeZ)*(i)+d_IsocentreDetector+passiveFill;
-    physicalPosition = G4ThreeVector(0.,0., -translation);
+    physicalPosition = G4ThreeVector(0.,0., translation-offSet);
     if(i == 0){
-      physicalPosition = G4ThreeVector(0.,0., -translation+passiveFill);
+      physicalPosition = G4ThreeVector(0.,0., translation-passiveFill-offSet);
     }
     physAluFoil = new G4PVPlacement(nullptr, physicalPosition, logicalAluFoil, "physAluFoil", logicalworld, false, i+fLayersCut, fCheckOverlaps);
   }  
@@ -691,169 +619,8 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   logicalAluFoil->SetVisAttributes(visAluFoil);
   logicalTeflonFoil->SetVisAttributes(visTeflonFoil);
 
-  G4String holder="../constructs/halterung.stl";
-  if(fLayers == 15){
-    solidHolder = stl.Read(holder); // halterungsspacer 6 mm; spacer 2 mm; seitenanfang 15.25 mm & 6.75mm
-    logicalHolder = new G4LogicalVolume(solidHolder, resinMaterial, "logicalHolder");
-    G4cout << "Max Extent " << solidHolder->GetMaxZExtent() << G4endl;
-    translation = d_IsocentreDetector+solidHolder->GetMaxZExtent()/2+16.725*mm+8.475*mm;
-    physHolder = new G4PVPlacement(nullptr, G4ThreeVector(0.,0., -translation), logicalHolder,"physHolder", logicalworld, false, 0, fCheckOverlaps);
-
-    G4VisAttributes* visHolder = new G4VisAttributes(G4Colour(1.0, 1.0, 1.0, 0.6));
-    visHolder->SetVisibility(true);
-    visHolder->SetForceSolid(true); // Ensure the detector is solid
-    logicalHolder->SetVisAttributes(visHolder);
-  }
-  G4double dBeamSpot = 0.1*mm;
-  G4int nx, ny, nz;
-  G4double cubeSizeX, cubeSizeY, cubeSizeZ;
-
-  if (ftarget == 2){ //heterogenous
-    bool test = false;
-    if(test){
-      std::string path = "../constructs/dicom_conv/" + std::to_string(pmod) + "mu_" + std::to_string(heteroThickness) + "mm";
-      int file_count = 0;
-
-      try {
-          for (const auto& entry : fs::directory_iterator(path)) {
-              if (fs::is_regular_file(entry.status())) {
-                  ++file_count;
-              }
-          }
-          std::cout << "Number of files: " << file_count << std::endl;
-      } catch (const fs::filesystem_error& e) {
-          std::cerr << "Filesystem error: " << e.what() << std::endl;
-      }
-
-      voxelXY = 0.5*mm;
-      NbOfSlices = file_count;
-      voxelZ = heteroThickness/static_cast<double>(NbOfSlices);
-
-      //voxelZ = static_cast<double>(pmod)/static_cast<double>(0.75)*0.001;
-      //NbOfSlices = static_cast<int>(std::round(heteroThickness/voxelZ));
-
-      std::cout << "pmod: " << pmod << std::endl;
-      std::cout << "heteroThickness: " << heteroThickness << std::endl;
-      std::cout << "voxelZ: " << voxelZ << std::endl;
-      std::cout << "NbOfSlices: " << NbOfSlices << " count "<< file_count<< std::endl;
-
-
-      nbofvoxelsX = 100;
-      nbofvoxelsY = 100;
-      solidContainer = new G4Box("solidContainer", voxelXY*nbofvoxelsX/2, voxelXY*nbofvoxelsY/2, voxelZ*NbOfSlices/2);
-
-      logicalContainer = new G4LogicalVolume(solidContainer, worldMat, "logicalContainer",0,0,0);
-      fMateIDs = new size_t[nbofvoxelsX*nbofvoxelsY*NbOfSlices];
-
-      solidVoxel = new G4Box("solidVoxel", voxelXY/2, voxelXY/2, voxelZ/2);
-      logicalVoxel = new G4LogicalVolume(solidVoxel, lungTissue, "logicalVoxel", 0, 0, 0);
-
-      physContainer = new G4PVPlacement(nullptr, G4ThreeVector(0.,0.,voxelZ*NbOfSlices/2+dBeamSpot/2), logicalContainer,"physContainer", logicalworld, false, 0, fCheckOverlaps);     
-      // new G4PVPlacement(nullptr, G4ThreeVector(voxelXY*nbofvoxelsX,0.,voxelZ*NbOfSlices/2+dBeamSpot/2), logicalContainer,"physContainer1", logicalworld, false, 1, fCheckOverlaps);
-      // new G4PVPlacement(nullptr, G4ThreeVector(-voxelXY*nbofvoxelsX,0.,voxelZ*NbOfSlices/2+dBeamSpot/2), logicalContainer,"physContainer2", logicalworld, false, 2, fCheckOverlaps);
-      // new G4PVPlacement(nullptr, G4ThreeVector(0.,voxelXY*nbofvoxelsY,voxelZ*NbOfSlices/2+dBeamSpot/2), logicalContainer,"physContainer3", logicalworld, false, 3, fCheckOverlaps);
-      // new G4PVPlacement(nullptr, G4ThreeVector(0.,-voxelXY*nbofvoxelsY,voxelZ*NbOfSlices/2+dBeamSpot/2), logicalContainer,"physContainer4", logicalworld, false, 4, fCheckOverlaps);
-      // new G4PVPlacement(nullptr, G4ThreeVector(voxelXY*nbofvoxelsX,voxelXY*nbofvoxelsY,voxelZ*NbOfSlices/2+dBeamSpot/2), logicalContainer,"physContainer5", logicalworld, false, 5, fCheckOverlaps);
-      // new G4PVPlacement(nullptr, G4ThreeVector(-voxelXY*nbofvoxelsX,voxelXY*nbofvoxelsY,voxelZ*NbOfSlices/2+dBeamSpot/2), logicalContainer,"physContainer6", logicalworld, false, 6, fCheckOverlaps);
-      // new G4PVPlacement(nullptr, G4ThreeVector(voxelXY*nbofvoxelsX,-voxelXY*nbofvoxelsY,voxelZ*NbOfSlices/2+dBeamSpot/2), logicalContainer,"physContainer7", logicalworld, false, 7, fCheckOverlaps);
-      // new G4PVPlacement(nullptr, G4ThreeVector(-voxelXY*nbofvoxelsX,-voxelXY*nbofvoxelsY,voxelZ*NbOfSlices/2+dBeamSpot/2), logicalContainer,"physContainer8", logicalworld, false, 8, fCheckOverlaps);
-
-      for(int i = 0; i < NbOfSlices; i++){
-        //std::vector<int> indices = readMatrixFromFile("../constructs/dicom_conv/DICOM_Waterphantom" + std::to_string(i+1) + ".txt");  
-        std::vector<int> indices = readMatrixFromFile("../constructs/dicom_conv/" + std::to_string(100) + "mu_" + std::to_string(200) + "mm" + "/DICOM_Waterphantom" + std::to_string(i+1) + ".txt");
-        for(int j=0; j<nbofvoxelsX*nbofvoxelsY; j++){                                  
-          fMateIDs[i*nbofvoxelsX*nbofvoxelsY+j] = indices.at(j);
-        }      
-      }
-      fillDCMcontainer();
-    }
-    else{
-      auto waterVisAttr = new G4VisAttributes(G4Colour(0.0, 0.0, 1.0)); // Blue
-      waterVisAttr->SetVisibility(true);
-      waterVisAttr->SetForceSolid(true);
-    
-      auto airVisAttr = new G4VisAttributes(G4Colour(0.5, 0.5, 0.5)); // Gray
-      airVisAttr->SetVisibility(true);
-      airVisAttr->SetForceSolid(true);
-
-      cubeSizeX = 0.5 * mm, cubeSizeY = 0.5 * mm;
-      //cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7900)*0.001;
-  
-      cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7355)*0.001;
-      
-      nx = 100;
-      ny = nx;
-      nz = static_cast<int>(std::round(heteroThickness/cubeSizeZ));
-      G4double tickness_real = nz * cubeSizeZ;
-      G4double pmod_real = static_cast<double>(0.7355)*1000*tickness_real/nz;
-      std::cout << "pmod_real: " << pmod_real << std::endl;
-      std::cout << "tickness_real: " << tickness_real << std::endl;
-      auto voxelSolid = new G4Box("Voxel", cubeSizeX/2, cubeSizeY/2, cubeSizeZ/2);
-
-      std::cout << "pmod: " << pmod << std::endl;
-      std::cout << "heteroThickness: " << heteroThickness << std::endl;
-      std::cout << "voxelZ: " << cubeSizeZ << std::endl;
-      std::cout << "NbOfSlices: " << nz << G4endl;
-
-      auto voxelContainerSolid = new G4Box("VoxelContainer", (nx*cubeSizeX)/2, (ny*cubeSizeY)/2, (nz*cubeSizeZ)/2);
-      auto voxelContainerLV = new G4LogicalVolume(voxelContainerSolid, air, "VoxelContainerLV");
-      new G4PVPlacement(nullptr, G4ThreeVector(0,0,(cubeSizeZ*nz)/2+5*mm), voxelContainerLV, "VoxelContainer", logicalworld, false, 0);
-
-      auto* parameterisation = new HeteroParameterisation(nx, ny, nz,
-        cubeSizeX, cubeSizeY, cubeSizeZ,
-        lungTissue, air,
-        waterVisAttr, airVisAttr);
-    
-      int nVoxels = nx * ny * nz;
-
-      auto voxelLogic = new G4LogicalVolume(voxelSolid, air, "Voxel");
-      voxelLogic->SetVisAttributes(airVisAttr);
-
-      new G4PVParameterised(
-        "Voxel", voxelLogic, voxelContainerLV, kUndefined, nVoxels, parameterisation
-      );
-    }
-  }
-  // if(ftarget == 2 || ftarget == 0){ //homogeneous
-  //   solidHomo =  new G4Box("solidHomo", 300/2, 300/2, 20/2);
-  //   logicalHomo = new G4LogicalVolume(solidHomo, absorberMaterial, "logicalHomo");    
-  //   physHomo = new G4PVPlacement(nullptr, G4ThreeVector(0.,0., 20/2*mm+cubeSizeZ*nz+8*mm), logicalHomo,"physHomo", logicalworld, false, 0, fCheckOverlaps);
-
-  //   G4VisAttributes* visHomo = new G4VisAttributes(G4Colour(0.0, 1.0, 1.0, 0.5)); // Red for the detector
-  //   visHomo->SetVisibility(true);
-  //   visHomo->SetForceSolid(true); // Ensure the detector is solid
-  //   logicalHomo->SetVisAttributes(visHomo);
-  // } 
-  if(ftarget == 1){ //homogeneous
-    solidHomo =  new G4Box("solidHomo", detSizeX/2, detSizeY/2, targetThickness/2);
-    logicalHomo = new G4LogicalVolume(solidHomo, absorberMaterial, "logicalHomo");    
-    physHomo = new G4PVPlacement(nullptr, G4ThreeVector(0.,0., heteroThickness/2+dBeamSpot/2), logicalHomo,"physHomo", logicalworld, false, 0, fCheckOverlaps);
-
-    G4VisAttributes* visHomo = new G4VisAttributes(G4Colour(0.0, 1.0, 1.0, 0.5)); // Red for the detector
-    visHomo->SetVisibility(true);
-    visHomo->SetForceSolid(true); // Ensure the detector is solid
-    logicalHomo->SetVisAttributes(visHomo);
-  }
-
-  if(absorberStatus == 1){
-    solidPassiveAbsorber =  new G4Box("solidPassiveAbsorber", detSizeX/2, detSizeY/2, absorberSize/2);
-    logicalPassiveAbsorber = new G4LogicalVolume(solidPassiveAbsorber, absorberMaterial, "logicalPassiveAbsorber");
-    physPassiveAbsorber = new G4PVPlacement(nullptr, G4ThreeVector(0.,0., -d_IsocentreDetector-absorberSize/2-detSizeZ/2-gapSizeZ), logicalPassiveAbsorber,"physPassiveAbsorber", logicalworld, false, 0, fCheckOverlaps);
-  }
-  solidNozzle = new G4EllipticalTube("solidNozzle", FWHMNozzleX/2, FWHMNozzleY/2, dBeamSpot/2);
-  logicalNozzle = new G4LogicalVolume(solidNozzle, worldMat, "logicalNozzle");
-  logicalNozzle->SetVisAttributes(G4Color::Red());
-  //logicalNozzle->SetVisAttributes(new G4VisAttributes(G4VisAttributes::GetInvisible()));
-  
-  solidIsocentre = new G4EllipticalTube("solidIsocentre", FWHMIsocentreX/2, FWHMIsocentreY/2, dBeamSpot/2);
-  logicalIsocentre = new G4LogicalVolume(solidIsocentre, worldMat, "logicalIsocentre");
-  logicalIsocentre->SetVisAttributes(G4Color::Red());
-  //logicalIsocentre->SetVisAttributes(new G4VisAttributes(G4VisAttributes::GetInvisible()));
-
-  physNozzle = new G4PVPlacement(nullptr, G4ThreeVector(x_off, y_off, d_NozzleIsocentre), logicalNozzle,"physNozzle", logicalworld, false, 0, fCheckOverlaps);
-  physIsocentre = new G4PVPlacement(nullptr, G4ThreeVector(x_off, y_off, 0.), logicalIsocentre,"physIsocentre", logicalworld, false, 0, fCheckOverlaps);
-
-  // logicalworld->SetVisAttributes(new G4VisAttributes(G4VisAttributes::GetInvisible()));
+  //Always return the physical world
+  //logicalworld->SetVisAttributes(G4VisAttributes);
   return physworld;
 }
 
@@ -861,15 +628,24 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
 
 void DetectorConstruction::ConstructSDandField()
 {
-  std::string trackerDetectorSDname = "/TrackerDetectorSD";
-  auto aTrackerSD = new TrackerSD(trackerDetectorSDname, "TrackerHitsCollection", fLayers);
-  auto aSiPMSD = new SiPMSD("/SiPMSD", "TrackerHitsCollectionSiPM", fLayers);
-  G4SDManager::GetSDMpointer()->AddNewDetector(aTrackerSD);
-  G4SDManager::GetSDMpointer()->AddNewDetector(aSiPMSD);
+  // Sensitive detectors
 
-  SetSensitiveDetector("logicalDetector", aTrackerSD, true);
-  SetSensitiveDetector("logicalAbsorber", aTrackerSD, true);
-  SetSensitiveDetector("logicalSiPM", aSiPMSD, true);
+  G4String trackerDetectorSDname = "/TrackerDetectorSD";
+  auto aTrackerSD = new TrackerSD(trackerDetectorSDname, "TrackerHitsCollection");
+  G4SDManager::GetSDMpointer()->AddNewDetector(aTrackerSD);
+  // Setting aTrackerSD to all logical volumes with the same name
+  // of "Chamber_LV".
+  SetSensitiveDetector("logicalWET", aTrackerSD, true);
+
+  // Create global magnetic field messenger.
+  // Uniform magnetic field is then created automatically if
+  // the field value is not zero.
+  G4ThreeVector fieldValue = G4ThreeVector();
+  fMagFieldMessenger = new G4GlobalMagFieldMessenger(fieldValue);
+  fMagFieldMessenger->SetVerboseLevel(1);
+
+  // Register the field messenger for deleting
+  G4AutoDelete::Register(fMagFieldMessenger);
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
@@ -877,4 +653,8 @@ void DetectorConstruction::ConstructSDandField()
 void DetectorConstruction::SetCheckOverlaps(G4bool checkOverlaps)
 {
   fCheckOverlaps = checkOverlaps;
+}
+
+//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+
 }

@@ -1,0 +1,133 @@
+#ifndef B2aDetectorConstruction_h
+#define B2aDetectorConstruction_h 1
+
+#include "globals.hh"
+#include "G4VUserDetectorConstruction.hh"
+#include "G4Box.hh"
+#include "G4Tubs.hh"
+#include "G4EllipticalTube.hh"
+#include "G4TessellatedSolid.hh"
+#include "tls.hh"
+#include "G4OpticalSurface.hh"
+#include "G4LogicalSkinSurface.hh"
+#include "G4STL.hh"
+
+class G4VPhysicalVolume;
+class G4LogicalVolume;
+class G4Material;
+class G4UserLimits;
+class G4GlobalMagFieldMessenger;
+
+namespace B2a
+{
+
+class DetectorMessenger;
+
+/// Detector construction class to define materials, geometry
+/// and global uniform magnetic field.
+
+class DetectorConstruction : public G4VUserDetectorConstruction
+{
+  public:
+    DetectorConstruction();
+    ~DetectorConstruction() override;
+
+  public:
+    G4VPhysicalVolume* Construct() override;
+    void ConstructSDandField() override;
+
+    // Set methods
+    void SetCheckOverlaps(G4bool );
+    
+    G4bool fuse_cone = true;
+    G4String fbeam_particle = "proton"; //proton or c12
+    void SetBeamShape(G4bool use_cone) { G4cout << "Use Cone: " << use_cone << G4endl; fuse_cone = use_cone; };
+    void SetBeamParticle(G4String beam_particle) { G4cout << "Particle Name: " << beam_particle << G4endl; fbeam_particle = beam_particle; };
+
+  private:
+    // methods
+    void DefineMaterials();
+    G4VPhysicalVolume* DefineVolumes();
+      //G4double 
+    G4double voxelXY;
+    G4double voxelZ;
+    std::string detectorType;
+    std::string absorberType;
+    double ThicknessTeflon;
+    double ThicknessAlu;
+    G4int NbOfSlices; //781 max
+    G4int nbofvoxelsX;
+    G4int nbofvoxelsY;
+    G4int fLayers = 0;
+    G4int ftarget = 0;
+    G4bool secondaryLayerStatus = false;
+    G4bool absorberStatus = false;
+    G4int fLayersCut = 0;
+    G4bool useAbsorber = false;
+    G4double detSizeZ = 0;
+    G4double absSizeZ = 0;
+    G4double detSizeX = 0;
+    G4double detSizeY = 0;
+    G4double gapSizeZ = 0;
+    G4double absorberSize = 0;
+    G4double targetThickness = 0;
+    G4int heteroThickness = 0;
+    G4int pmod = 0;
+
+    G4double FWHMNozzleX = 8.1*mm; //4.2
+    G4double FWHMNozzleY = 8.1*mm; //4.2
+    G4double FWHMIsocentreX = 8.1*mm;
+    G4double FWHMIsocentreY = 8.1*mm;
+    
+    G4double d_NozzleIsocentre = 104*cm;
+    G4double d_IsocentreDetector = 6*cm;
+    G4double x_off = 0;//-12.5*mm;
+    G4double y_off = 0;//-12.5*mm;
+
+    // static data members
+    static G4ThreadLocal G4GlobalMagFieldMessenger*  fMagFieldMessenger;
+                                         // magnetic field messenger
+    // data members
+    G4int fNbOfDetectors = 0;
+    G4Material *detMaterial = nullptr;
+    G4Material *worldMat = nullptr;
+    G4Material *urethandimethacrylat = nullptr;
+    G4Material *methacrylatmonomere = nullptr;
+    G4Material *phosphinoxid = nullptr;
+    G4Material* Teflon = nullptr;
+    G4Material* Alu = nullptr;
+    G4Material *resinMaterial = nullptr;
+    G4Material *lungTissue = nullptr;
+    G4Material *homoMaterial = nullptr;
+    G4Material *PTFEmembrane = nullptr;
+
+    G4TessellatedSolid *solidHolder, *solidLung;  
+    G4Box *solidWET, *solidworld, *solidHomo;
+    G4EllipticalTube *solidNozzleFWHM, *solidFilmFWHM;
+    G4LogicalVolume *logicalWET, *logicalworld, *logicalHolder, *logicalNozzleFWHM, *logicalFilmFWHM, *logicalHomo, *logicalLung;
+    G4VPhysicalVolume *physWET, *physworld, *physHolder, *physNozzleFWHM, *physFilmFWHM, *physHomo, *physLung;
+
+    G4Material *absorberMaterial = nullptr;
+
+    G4Material *air = nullptr;
+    G4Material *water = nullptr;
+    G4Material *aluminumFoil = nullptr;
+    G4Material *penMaterial = nullptr;
+    G4Material *SiPMGlassMat = nullptr;
+    G4Material *SiPMSiliconMat = nullptr;
+    G4Material* PMMA = nullptr;
+    
+    G4Box *solidDetector, *solidAbsorber, *solidVoxel, *solidContainer, *solidAluFoil, *solidAluFoilAbs, *solidTeflonFoil, *solidTeflonFoilAbs, *solidPassiveAbsorber;
+    G4LogicalVolume *logicalDetector, *logicalAbsorber, *logicalNozzle, *logicalIsocentre, *logicalVoxel, *logicalContainer,*logicalAluFoil,*logicalAluFoilAbs, *logicalTeflonFoil,*logicalTeflonFoilAbs, *logicalSiPM, *logicalPassiveAbsorber;
+    G4VPhysicalVolume *physDetector, *physAbsorber, *physNozzle, *physIsocentre, *physContainer, *physAluFoil, *physAluFoilAbs, *physTeflonFoil, *physTeflonFoilAbs, *physSiPM, *physSiPMAbs, *physLGAlu, *physPassiveAbsorber;
+
+    G4OpticalSurface *mirrorSurface;
+
+    DetectorMessenger* fMessenger = nullptr; // messenger
+
+    G4bool fCheckOverlaps = true; // option to activate checking of volumes overlaps
+};
+
+}
+
+#endif

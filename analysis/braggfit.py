@@ -602,12 +602,12 @@ fig.tight_layout()
 if(targetSelect > 0):
     plt.savefig(f"../data/{dataset}/{targetFile}/output/pdf/braggfit.pdf", format='pdf', bbox_inches='tight')
     plt.savefig(f"../data/{dataset}/{targetFile}/output/pdf/braggfit.svg", format='svg', bbox_inches='tight')
-    plt.savefig(f"../data/{dataset}/{targetFile}/output/pdf/braggfit.png", format='png', bbox_inches='tight')
+    plt.savefig(f"../data/{dataset}/{targetFile}/output/pdf/braggfit.png", format='png', bbox_inches='tight', dpi=500)
 else:    
     print(f"Save to PDF: ../data/{dataset}/{file}/output/pdf/braggfit.pdf")
     plt.savefig(f"../data/{dataset}/{file}/output/pdf/braggfit.pdf", format='pdf', bbox_inches='tight')
     plt.savefig(f"../data/{dataset}/{file}/output/pdf/braggfit.svg", format='svg', bbox_inches='tight')
-    plt.savefig(f"../data/{dataset}/{file}/output/pdf/braggfit.png", format='png', bbox_inches='tight')
+    plt.savefig(f"../data/{dataset}/{file}/output/pdf/braggfit.png", format='pmg', bbox_inches='tight', dpi=500)
 
 zoom_half_width = 5  # cm (adjust to taste: 1–2 cm is typical)
 zmin_zoom = 24 - 3
