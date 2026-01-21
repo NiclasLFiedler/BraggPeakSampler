@@ -274,15 +274,24 @@ for ch in range(nLayers):
     t_n += x*WETConv/10+xTeflon/20*WETConvTeflon+xAlu/20*WETConvAlu
     WETDepthErr.append(x/10*WETConv/np.sqrt(12))
 
+WETDepth = [7.155416420506668, 21.455056176722735, 35.73121953386203, 50.00837171548292, 64.28558352543337, 78.54541699109387, 92.7836041434076, 107.00308108188163, 121.21292882757369, 135.4157474876818, 149.61160933141255, 161.48639261416054, 171.05138584768923, 180.61204957657964, 190.15178624767393, 199.66085509299435, 209.1565117771304, 218.64418551465582, 228.12356365600664, 237.59409600831475, 247.03996135329004, 256.4575830284209, 265.84166488741903, 275.19102039365407, 284.4969697433472, 293.7399813658173, 302.7956853321799, 311.9429171602238, 321.67214994835393, 331.6915553001954, 341.61841079794243, 351.4893609799391]
 
+WET = [14.310832841013337, 28.599279512432133, 42.86315955529193, 57.15358387567392, 71.41758317519282, 85.67325080699493, 99.89395747982027, 114.11220468394299, 128.3136529712044, 142.51784200415926, 156.70537665866584, 166.26740856965526, 175.83536312572323, 185.38873602743604, 194.9148364679118, 204.4068737180769, 213.90614983618389, 223.38222119312775, 232.86490611888553, 242.32328589774397, 251.7566368088361, 261.1585292480057, 270.5248005268324, 279.8572402604758, 289.1366992262187, 298.3432635054159, 307.24810715894387, 316.6377271615037, 326.7065727352042, 336.67653786518656, 346.5602837306983, 356.41843822917986]
+
+for ch in range(nLayers):
+    WETDepth[ch] = WETDepth[ch]/10 
+    if ch == 0:
+        WETDepthErr.append((WET[ch])/(np.sqrt(12)*10))
+    else:
+        WETDepthErr.append((WET[ch]-WET[ch-1])/(np.sqrt(12)*10))
 
 for ch in range(nLayers):
     dataFile = np.load(f"../data/{dataset}/{file}/output/unfold/data/Unfolded{ch}.npz")
-    Tdepth, Tdeptherr = dataFile["depth"] 
-    depth.append(Tdepth)
-    depthErr.append(Tdeptherr)
-    # depth.append(WETDepth[ch])
-    # depthErr.append(WETDepthErr[ch])
+    # Tdepth, Tdeptherr = dataFile["depth"] 
+    # depth.append(Tdepth)
+    # depthErr.append(Tdeptherr)
+    depth.append(WETDepth[ch])
+    depthErr.append(WETDepthErr[ch])
     
     Tdose, Tdoseerr = dataFile["unfoldedDose"]
     unfoldedDose.append(Tdose)
@@ -295,12 +304,12 @@ for ch in range(nLayers):
 if(bhetero):
     for ch in range(nLayers):
         dataFile = np.load(f"../data/{dataset}/{targetFile}/output/unfold/data/Unfolded{ch}.npz")
-        Tdepth, Tdeptherr = dataFile["depth"] 
-        depthTarget.append(Tdepth)
-        depthErrTarget.append(Tdeptherr)
+        # Tdepth, Tdeptherr = dataFile["depth"] 
+        # depthTarget.append(Tdepth)
+        # depthErrTarget.append(Tdeptherr)
         
-        # depthTarget.append(WETDepth[ch])
-        # depthErrTarget.append(WETDepthErr[ch])
+        depthTarget.append(WETDepth[ch])
+        depthErrTarget.append(WETDepthErr[ch])
         Tdose, Tdoseerr = dataFile["unfoldedDose"]
         unfoldedDoseTarget.append(Tdose)
         unfoldedDoseErrTarget.append(Tdoseerr)
@@ -321,12 +330,12 @@ if(targetSelect == 1):
         unfoldedEntriesTargetTemp = []
         for ch in range(nLayers):
             dataFile = np.load(f"../data/{dataset}/{targetFile}{thickness}/output/unfold/data/Unfolded{ch}.npz")
-            Tdepth, Tdeptherr = dataFile["depth"] 
-            depthTargetTemp.append(Tdepth)
-            depthErrTargetTemp.append(Tdeptherr)
+            # Tdepth, Tdeptherr = dataFile["depth"] 
+            # depthTargetTemp.append(Tdepth)
+            # depthErrTargetTemp.append(Tdeptherr)
             
-            # depthTargetTemp.append(WETDepth[ch])
-            # depthErrTargetTemp.append(WETDepthErr[ch])
+            depthTargetTemp.append(WETDepth[ch])
+            depthErrTargetTemp.append(WETDepthErr[ch])
             
             Tdose, Tdoseerr = dataFile["unfoldedDose"]
             unfoldedDoseTargetTemp.append(Tdose)
@@ -376,8 +385,8 @@ quantities  = characterize_z_D_curve(z_spline, spline_func(z_spline))
 R0 = quantities['R80D']
 #if file == "notarget":
 #    R0 = range_energy_relationship(beamEnergy, a_h2o, p_h2o)
+print("Expected range from R80D fit: ", range_energy_relationship(225, a_h2o, p_h2o))
 print("Expected range from R80D fit: ", range_energy_relationship(221.6, a_h2o, p_h2o))
-print("Expected range from R80D fit: ", range_energy_relationship(221.6, a_pwo, p_pwo))
 sigmaMono = (beta*R0**0.935)
 sigmaE0   = 0.01*beamEnergy
 sigma     = np.sqrt(sigmaMono**2+sigmaE0**2*a_h2o**2*p_h2o**2*beamEnergy**(2*p_h2o-2))
@@ -602,12 +611,12 @@ fig.tight_layout()
 if(targetSelect > 0):
     plt.savefig(f"../data/{dataset}/{targetFile}/output/pdf/braggfit.pdf", format='pdf', bbox_inches='tight')
     plt.savefig(f"../data/{dataset}/{targetFile}/output/pdf/braggfit.svg", format='svg', bbox_inches='tight')
-    plt.savefig(f"../data/{dataset}/{targetFile}/output/pdf/braggfit.png", format='png', bbox_inches='tight', dpi=500)
+    plt.savefig(f"../data/{dataset}/{targetFile}/output/pdf/braggfit.jpg", format='jpg', bbox_inches='tight', dpi=600)
 else:    
     print(f"Save to PDF: ../data/{dataset}/{file}/output/pdf/braggfit.pdf")
     plt.savefig(f"../data/{dataset}/{file}/output/pdf/braggfit.pdf", format='pdf', bbox_inches='tight')
     plt.savefig(f"../data/{dataset}/{file}/output/pdf/braggfit.svg", format='svg', bbox_inches='tight')
-    plt.savefig(f"../data/{dataset}/{file}/output/pdf/braggfit.png", format='pmg', bbox_inches='tight', dpi=500)
+    plt.savefig(f"../data/{dataset}/{file}/output/pdf/braggfit.png", format='png', bbox_inches='tight', dpi=600)
 
 zoom_half_width = 5  # cm (adjust to taste: 1–2 cm is typical)
 zmin_zoom = 24 - 3

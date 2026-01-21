@@ -106,19 +106,9 @@ void PrimaryGeneratorAction::SetBeamEnergy(G4double energy) {
 void PrimaryGeneratorAction::GeneratePrimaries(G4Event* anEvent)
 {
   
-  if(fLayers > 29){
-    fParticleGun->SetParticleEnergy(250*MeV); 
-  }
-  else if (fLayers > 27){
-    fParticleGun->SetParticleEnergy(240*MeV); 
-  }
-  else if (fLayers > 25){
-    fParticleGun->SetParticleEnergy(230*MeV); 
-  }
-  else{
-    fParticleGun->SetParticleEnergy(fBeamEnergy);
-  }
-  G4double offSet = 63*mm;
+  fParticleGun->SetParticleEnergy(fBeamEnergy);
+  
+  G4double offSet = 65*mm;
   offSet = 0*mm;
   if(fLayers <= fLayersCut){
     offSet = offSet + ((absSizeZ/2+ThicknessTeflon/2+ThicknessAlu/2)*2+gapSizeZ)*fLayers;
@@ -127,7 +117,7 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event* anEvent)
     offSet = offSet + ((absSizeZ/2+ThicknessTeflon/2+ThicknessAlu/2)*2+gapSizeZ)*fLayersCut + ((detSizeZ/2+ThicknessAlu/2+ThicknessTeflon/2)*2+gapSizeZ)*(fLayers-fLayersCut);
   }
 
-  beamPos = G4ThreeVector(0,0,-offSet-6*mm);
+  beamPos = G4ThreeVector(0,0,-offSet-2*mm);
   fParticleGun->SetParticleMomentumDirection(G4ThreeVector(0, 0, 1.));
   
   // Apply beam position and direction

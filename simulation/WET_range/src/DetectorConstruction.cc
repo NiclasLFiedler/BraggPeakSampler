@@ -528,7 +528,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   G4Box* solidAluFoilAbs = new G4Box("solidAluFoilAbs", detSizeX/2+ThicknessTeflon/2+ThicknessAlu/2, detSizeY/2+ThicknessTeflon/2+ThicknessAlu/2, absSizeZ/2+ThicknessTeflon/2+ThicknessAlu/2);
   G4Box* solidTeflonFoilAbs = new G4Box("solidTeflonFoilAbs", detSizeX/2+ThicknessTeflon/2, detSizeY/2+ThicknessTeflon/2, absSizeZ/2+ThicknessTeflon/2);
 
-  G4double offSet = 63*mm;
+  G4double offSet = 59*mm;
   if(fLayers <= fLayersCut){
     offSet = offSet + (solidAluFoilAbs->GetZHalfLength()*2+gapSizeZ)*fLayers;
   }

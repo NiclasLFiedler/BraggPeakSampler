@@ -57,14 +57,15 @@ def get_range_energy(energy, path, enable_output=False, enable_plot=False):
     # Create histogram data manually
     bin_contents, bin_edges = np.histogram(values, bins=n_bins, range=(min_value, max_value))
     bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
-    
+    bin_contents[0] = 0
     # Find the peak value
-    max_bin = np.argmax(bin_contents)
-    peak_value = bin_centers[max_bin]
+    max_bin = np.argmax(bin_contents[10:])
+    peak_value = bin_centers[max_bin+10]
 
     initial_sigma_guess = np.std(values)
     # Fit a Gaussian to the histogram data
-    initial_guess = [peak_value, initial_sigma_guess, np.max(bin_contents)]
+    initial_guess = [peak_value, initial_sigma_guess, np.max(bin_contents[10:])]
+    print(initial_guess)
     popt, pcov = curve_fit(gaussian, bin_centers, bin_contents, p0=initial_guess, maxfev=1000000)
     
     # Extract fit parameters and their standard deviations
@@ -98,22 +99,41 @@ def get_range_energy(energy, path, enable_output=False, enable_plot=False):
     
     return (energy, mean, abs(sigma))
 
-def GetWET(data : RangeEnergyRelationship, water_data: RangeEnergyRelationship = None):
+def GetWET(data, water_data):
     WET = []
     
-    for idx in range(1,26):
-        waterRange = water_data[0][0]
-        WET.appen(waterRange-data[idx][0])
-    for idx in range(26,28):
-        waterRange = water_data[1][0]
-        WET.appen(waterRange-data[idx][0])
-    for idx in range(28,30):
-        waterRange = water_data[2][0]
-        WET.appen(waterRange-data[idx][0])
-    for idx in range(30,33):        
-        waterRange = water_data[3][0]
-        WET.appen(waterRange-data[idx][0])
-
+    print(f"WaterRange {water_data[0]}")
+    print()
+    for idx in range(0,27):
+        waterRange = water_data[0][1]
+        print(f"{data[idx][1]}")
+        WET.append(waterRange-data[idx][1])
+    print()
+    for idx in range(27,28):
+        waterRange = water_data[1][1]
+        print(f"{data[idx][1]}")
+        WET.append(waterRange-data[idx][1])
+    print()
+    for idx in range(28,29):
+        waterRange = water_data[2][1]
+        print(f"{data[idx][1]}")
+        WET.append(waterRange-data[idx][1])
+    print()
+    for idx in range(29,30):
+        waterRange = water_data[3][1]
+        print(f"{data[idx][1]}")
+        WET.append(waterRange-data[idx][1])
+    print()
+    for idx in range(30,31):
+        waterRange = water_data[4][1]
+        print(f"{data[idx][1]}")
+        WET.append(waterRange-data[idx][1])
+    print()
+    for idx in range(31,32):
+        waterRange = water_data[5][1]
+        print(f"{data[idx][1]}")
+        WET.append(waterRange-data[idx][1])
+        
     WETDepth = []
     for idx, value in enumerate(WET):
         if (idx == 0):
@@ -122,7 +142,67 @@ def GetWET(data : RangeEnergyRelationship, water_data: RangeEnergyRelationship =
             WETDepth.append((WET[idx-1]+WET[idx])/2) 
 
     print("Water equivalent thicknesses")
-    print(WET)
+    for idx, value in enumerate(WET):
+        if idx > 0:
+            print(f"CH: {idx+1}; WET: {WET[idx]-WET[idx-1]}")
+        else:
+            print(f"CH: {idx+1}; WET: {WET[idx]}")
+    
+    print(f"{WET}")
+    print("Water equivalent Depth")
+    print(WETDepth)
+
+
+def GetWETtarget(data, water_data):
+    WET = []
+    
+    print(f"WaterRange {water_data[0]}")
+    print()
+    for idx in range(0,27):
+        waterRange = water_data[0][1]
+        print(f"{data[idx][1]}")
+        WET.append(waterRange-data[idx][1])
+    print()
+    for idx in range(21,22):
+        waterRange = water_data[1][1]
+        print(f"{data[idx][1]}")
+        WET.append(waterRange-data[idx][1])
+    print()
+    for idx in range(22,23):
+        waterRange = water_data[2][1]
+        print(f"{data[idx][1]}")
+        WET.append(waterRange-data[idx][1])
+    print()
+    for idx in range(23,24):
+        waterRange = water_data[3][1]
+        print(f"{data[idx][1]}")
+        WET.append(waterRange-data[idx][1])
+    print()
+    for idx in range(24,25):
+        waterRange = water_data[4][1]
+        print(f"{data[idx][1]}")
+        WET.append(waterRange-data[idx][1])
+    print()
+    for idx in range(25,26):
+        waterRange = water_data[5][1]
+        print(f"{data[idx][1]}")
+        WET.append(waterRange-data[idx][1])
+        
+    WETDepth = []
+    for idx, value in enumerate(WET):
+        if (idx == 0):
+            WETDepth.append(WET[idx]/2)
+        else:
+            WETDepth.append((WET[idx-1]+WET[idx])/2) 
+
+    print("Water equivalent thicknesses")
+    for idx, value in enumerate(WET):
+        if idx > 0:
+            print(f"CH: {idx+1}; WET: {WET[idx]-WET[idx-1]}")
+        else:
+            print(f"CH: {idx+1}; WET: {WET[idx]}")
+    
+    print(f"{WET}")
     print("Water equivalent Depth")
     print(WETDepth)
 
@@ -141,20 +221,27 @@ colors = {
 }
 
 def main():
-    data = RangeEnergyRelationship()
-    dataWater = RangeEnergyRelationship() 
+    data = []
+    dataWater = []
 
     layers = range(1,33)
-    energies = [221, 230, 240, 250]
+    energies = [221, 225, 230, 235, 240, 245]
 
-    
-    for index, value in enumerate(energies):        
-        dataWater.add_data(*get_range_energy(value, "h2o", enable_output=True, enable_plot=True))
+    energies = [180, 185, 190, 195, 200, 245]
+
+
 
     for index, value in enumerate(layers):
-        data.add_data(*get_range_energy(value, "pbwo4", enable_output=True, enable_plot=True))
-
-    GetWET(data, dataWater)
+        if index == 18:
+            data.append(get_range_energy(value, "pbwo4target", enable_output=True, enable_plot=True))
+        else:
+            data.append(get_range_energy(value, "pbwo4target", enable_output=True, enable_plot=False))
+            
+    for index, value in enumerate(energies):        
+        dataWater.append(get_range_energy(value, "h2otarget", enable_output=True, enable_plot=False))
+        
+    # GetWET(data, dataWater)
+    GetWETtarget(data, dataWater)
 
 if __name__ == "__main__":
     main()
