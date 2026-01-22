@@ -267,16 +267,22 @@ xTeflon = 0.5
 xAlu = 0.02
 WETDepth = []
 WETDepthErr = []
-for ch in range(nLayers):
-    if ch == 11:
-        x = 2
-    WETDepth.append(t_n+x/20*WETConv+xTeflon/20*WETConvTeflon+xAlu/20*WETConvAlu)
-    t_n += x*WETConv/10+xTeflon/20*WETConvTeflon+xAlu/20*WETConvAlu
-    WETDepthErr.append(x/10*WETConv/np.sqrt(12))
+WETDepthErrTarget = []
+# for ch in range(nLayers):
+#     if ch == 11:
+#         x = 2
+#     WETDepth.append(t_n+x/20*WETConv+xTeflon/20*WETConvTeflon+xAlu/20*WETConvAlu)
+#     t_n += x*WETConv/10+xTeflon/20*WETConvTeflon+xAlu/20*WETConvAlu
+#     WETDepthErr.append(x/10*WETConv/np.sqrt(12))
 
 WETDepth = [7.155416420506668, 21.455056176722735, 35.73121953386203, 50.00837171548292, 64.28558352543337, 78.54541699109387, 92.7836041434076, 107.00308108188163, 121.21292882757369, 135.4157474876818, 149.61160933141255, 161.48639261416054, 171.05138584768923, 180.61204957657964, 190.15178624767393, 199.66085509299435, 209.1565117771304, 218.64418551465582, 228.12356365600664, 237.59409600831475, 247.03996135329004, 256.4575830284209, 265.84166488741903, 275.19102039365407, 284.4969697433472, 293.7399813658173, 302.7956853321799, 311.9429171602238, 321.67214994835393, 331.6915553001954, 341.61841079794243, 351.4893609799391]
 
 WET = [14.310832841013337, 28.599279512432133, 42.86315955529193, 57.15358387567392, 71.41758317519282, 85.67325080699493, 99.89395747982027, 114.11220468394299, 128.3136529712044, 142.51784200415926, 156.70537665866584, 166.26740856965526, 175.83536312572323, 185.38873602743604, 194.9148364679118, 204.4068737180769, 213.90614983618389, 223.38222119312775, 232.86490611888553, 242.32328589774397, 251.7566368088361, 261.1585292480057, 270.5248005268324, 279.8572402604758, 289.1366992262187, 298.3432635054159, 307.24810715894387, 316.6377271615037, 326.7065727352042, 336.67653786518656, 346.5602837306983, 356.41843822917986]
+
+WETTarget = [np.float64(14.260531500089058), np.float64(28.46471731352301), np.float64(42.664750730649416), np.float64(56.832721552397004), np.float64(70.98226539002906), np.float64(85.16940527757126), np.float64(99.34093980739712), np.float64(113.53812826046382), np.float64(127.66679859692594), np.float64(141.80430163730276), np.float64(155.90094177435978), np.float64(165.3564491136862), np.float64(174.8355735832181), np.float64(184.268456238946), np.float64(193.67271340024672), np.float64(203.06511871147984), np.float64(212.39759846374548), np.float64(221.7005628885991), np.float64(230.94648960872445), np.float64(240.1028519371951), np.float64(249.05982850300109), np.float64(258.59018765964584), np.float64(268.5356069368744), np.float64(278.4626318829971), np.float64(288.3119606056622), np.float64(298.17920282074414), np.float64(308.0464450358261), np.float64(317.913687250908), np.float64(327.78092946598997), np.float64(337.6481716810719), np.float64(347.51541389615386), np.float64(357.3826561112358)]
+
+WETDepthTarget = [np.float64(7.130265750044529), np.float64(21.362624406806034), np.float64(35.56473402208621), np.float64(49.74873614152321), np.float64(63.90749347121303), np.float64(78.07583533380016), np.float64(92.25517254248419), np.float64(106.43953403393047), np.float64(120.60246342869488), np.float64(134.73555011711434), np.float64(148.85262170583127), np.float64(160.62869544402298), np.float64(170.09601134845215), np.float64(179.55201491108204), np.float64(188.97058481959635), np.float64(198.36891605586328), np.float64(207.73135858761265), np.float64(217.0490806761723), np.float64(226.32352624866178), np.float64(235.52467077295978), np.float64(244.5813402200981), np.float64(253.82500808132346), np.float64(263.5628972982601), np.float64(273.4991194099357), np.float64(283.3872962443296), np.float64(293.24558171320314), np.float64(303.11282392828514), np.float64(312.980066143367), np.float64(322.847308358449), np.float64(332.7145505735309), np.float64(342.5817927886129), np.float64(352.4490350036948)]
+
 
 for ch in range(nLayers):
     WETDepth[ch] = WETDepth[ch]/10 
@@ -284,6 +290,13 @@ for ch in range(nLayers):
         WETDepthErr.append((WET[ch])/(np.sqrt(12)*10))
     else:
         WETDepthErr.append((WET[ch]-WET[ch-1])/(np.sqrt(12)*10))
+
+for ch in range(nLayers):
+    WETDepthTarget[ch] = WETDepthTarget[ch]/10 
+    if ch == 0:
+        WETDepthErrTarget.append((WETTarget[ch])/(np.sqrt(12)*10))
+    else:
+        WETDepthErrTarget.append((WETTarget[ch]-WETTarget[ch-1])/(np.sqrt(12)*10))
 
 for ch in range(nLayers):
     dataFile = np.load(f"../data/{dataset}/{file}/output/unfold/data/Unfolded{ch}.npz")
@@ -304,12 +317,13 @@ for ch in range(nLayers):
 if(bhetero):
     for ch in range(nLayers):
         dataFile = np.load(f"../data/{dataset}/{targetFile}/output/unfold/data/Unfolded{ch}.npz")
+
         # Tdepth, Tdeptherr = dataFile["depth"] 
         # depthTarget.append(Tdepth)
         # depthErrTarget.append(Tdeptherr)
         
-        depthTarget.append(WETDepth[ch])
-        depthErrTarget.append(WETDepthErr[ch])
+        depthTarget.append(WETDepthTarget[ch])
+        depthErrTarget.append(WETDepthErrTarget[ch])
         Tdose, Tdoseerr = dataFile["unfoldedDose"]
         unfoldedDoseTarget.append(Tdose)
         unfoldedDoseErrTarget.append(Tdoseerr)
@@ -330,12 +344,13 @@ if(targetSelect == 1):
         unfoldedEntriesTargetTemp = []
         for ch in range(nLayers):
             dataFile = np.load(f"../data/{dataset}/{targetFile}{thickness}/output/unfold/data/Unfolded{ch}.npz")
+
             # Tdepth, Tdeptherr = dataFile["depth"] 
             # depthTargetTemp.append(Tdepth)
             # depthErrTargetTemp.append(Tdeptherr)
             
-            depthTargetTemp.append(WETDepth[ch])
-            depthErrTargetTemp.append(WETDepthErr[ch])
+            depthTargetTemp.append(WETDepthTarget[ch])
+            depthErrTargetTemp.append(WETDepthErrTarget[ch])
             
             Tdose, Tdoseerr = dataFile["unfoldedDose"]
             unfoldedDoseTargetTemp.append(Tdose)
@@ -356,8 +371,8 @@ if(targetSelect == 1):
 if targetSelect == 1:
     targetFile = f"{targetFile}{52}"
 
-plt.rcParams.update({'font.size': 25})
-fig, ax1 = plt.subplots(figsize=(22, 13))
+plt.rcParams.update({'font.size': 28})
+fig, ax1 = plt.subplots(figsize=(16, 12))
 # ax1.set_title(f'Fitted energy depth dose distribution {in_title[targetSelect]}')
 # if(bhetero):
 #     print(f'Fitted energy depth dose distribution {in_title[2]}')
@@ -418,19 +433,26 @@ if(targetSelect == 2):
     doseConversion = unfoldedEntries[0]/unfoldedEntriesTarget[0]*(1+beta*(bestfit_params.R0-200*0.029))/(1+beta*bestfit_params.R0)
     print(doseConversion)
     
-    unfoldedDoseTarget = np.array(unfoldedDoseTarget)
-    unfoldedDoseErrTarget = np.array(unfoldedDoseErrTarget)
-    unfoldedDoseTarget = unfoldedDoseTarget * doseConversion
-    unfoldedDoseErrTarget = unfoldedDoseErrTarget *doseConversion
+    # unfoldedDoseTarget = np.array(unfoldedDoseTarget)
+    # unfoldedDoseErrTarget = np.array(unfoldedDoseErrTarget)
+    for idx, value in enumerate(unfoldedDoseTarget):
+        unfoldedDoseTarget[idx] = unfoldedDoseTarget[idx] * doseConversion
+        unfoldedDoseErrTarget[idx] = unfoldedDoseErrTarget[idx] *doseConversion
+
+    # unfoldedDoseTarget = unfoldedDoseTarget * doseConversion
+    # unfoldedDoseErrTarget = unfoldedDoseErrTarget *doseConversion
 elif(targetSelect == 1):
     for idx, unfoldedEntriesTargetSingle in enumerate(unfoldedEntriesTarget):
         doseConversion = unfoldedEntries[0]/unfoldedEntriesTargetSingle[0]*(1+beta*(bestfit_params.R0-targetThickness*0.118))/(1+beta*bestfit_params.R0)
         print(doseConversion)
         
-        unfoldedDoseTargetTemp = np.array(unfoldedDoseTarget[idx])
-        unfoldedDoseErrTargetTemp = np.array(unfoldedDoseErrTarget[idx])
-        unfoldedDoseTarget[idx] = unfoldedDoseTargetTemp * doseConversion
-        unfoldedDoseErrTarget[idx] = unfoldedDoseErrTargetTemp *doseConversion
+        # unfoldedDoseTargetTemp = np.array(unfoldedDoseTarget[idx])
+        # unfoldedDoseErrTargetTemp = np.array(unfoldedDoseErrTarget[idx])
+        for index, value in enumerate(unfoldedDoseTarget[idx]):
+            unfoldedDoseTarget[idx][index] = unfoldedDoseTarget[idx][index] * doseConversion
+            unfoldedDoseErrTarget[idx][index] = unfoldedDoseErrTarget[idx][index]*doseConversion
+        # unfoldedDoseTarget[idx] = unfoldedDoseTargetTemp * doseConversion
+        # unfoldedDoseErrTarget[idx] = unfoldedDoseErrTargetTemp *doseConversion
 
 targetColorMap = ["#1f77b4", "#4e79a7", "#76b7b2", "#bab0ac", "#f28e2b", "#e15759", "#9c755f"]
 
@@ -438,15 +460,20 @@ if(bhetero):
     ax1.errorbar(depth, unfoldedDose, unfoldedDoseErr, depthErr, fmt='s', markersize=1, capsize=capSize, elinewidth=lineWidth, color="#000000")#, label="No target data") 
     ax1.errorbar(depthTarget, unfoldedDoseTarget, unfoldedDoseErrTarget, depthErrTarget, fmt='o', markersize=1, capsize=capSize, elinewidth=lineWidth, color=targetColorMap[0])#, label="Hetero. data") 
     
-    # depthTarget =  depthTarget[:8] + depthTarget[9:]
-    # unfoldedDoseTarget =  unfoldedDoseTarget[:8] + unfoldedDoseTarget[9:]
-    # unfoldedDoseErrTarget =  unfoldedDoseErrTarget[:8] + unfoldedDoseErrTarget[9:]
-    # depthErrTarget = depthErrTarget[:8] + depthErrTarget[9:]
+    depthTarget =  depthTarget[:8] + depthTarget[9:]
+    unfoldedDoseTarget =  unfoldedDoseTarget[:8] + unfoldedDoseTarget[9:]
+    unfoldedDoseErrTarget =  unfoldedDoseErrTarget[:8] + unfoldedDoseErrTarget[9:]
+    depthErrTarget = depthErrTarget[:8] + depthErrTarget[9:]
     
 elif(targetSelect == 1):
     ax1.errorbar(depth, unfoldedDose, unfoldedDoseErr, depthErr, fmt='s', markersize=1, capsize=capSize, elinewidth=lineWidth, color='#000000')#, label="No target data")
     for idx, thickness in enumerate(targetThicknesses):
         ax1.errorbar(depthTarget[idx], unfoldedDoseTarget[idx], unfoldedDoseErrTarget[idx], depthErrTarget[idx], fmt='o', markersize=1, capsize=capSize, elinewidth=lineWidth, color=targetColorMap[idx])#, label=f"{thickness} mm PMMA data")
+
+        depthTarget[idx] =  depthTarget[idx][:8] + depthTarget[idx][9:]
+        unfoldedDoseTarget[idx] =  unfoldedDoseTarget[idx][:8] + unfoldedDoseTarget[idx][9:]
+        unfoldedDoseErrTarget[idx] =  unfoldedDoseErrTarget[idx][:8] + unfoldedDoseErrTarget[idx][9:]
+        depthErrTarget[idx] = depthErrTarget[idx][:8] + depthErrTarget[idx][9:]
 else:
     ax1.errorbar(depth, unfoldedDose, unfoldedDoseErr, depthErr, fmt='o', markersize=1, capsize=capSize, elinewidth=lineWidth, color="#000000")#, label="No target data") 
 
@@ -464,9 +491,9 @@ print(f"sigma: {bestfit_params.sigma} \pm {bestfit_params.stddev[2]}")
 print(f"epsilon: {bestfit_params.epsilon} \pm {bestfit_params.stddev[3]}")
 
 if(targetSelect > 0):
-    ax1.plot(z, bestfit_params.curve, color="black", linewidth = lineWidth, label=fr"No target " rf"$R_0={bestfit_params.R0:.3f}~cm$, $\sigma={bestfit_params.sigma:.3f}~cm$")
+    ax1.plot(z, bestfit_params.curve, color="black", linewidth = lineWidth, label=fr"No target")# rf"$R_0={bestfit_params.R0:.3f}~cm$, $\sigma={bestfit_params.sigma:.3f}~cm$")
 else:
-    ax1.plot(z, bestfit_params.curve, color="black", linewidth = lineWidth, label=fr"No target $R_0={bestfit_params.R0:.3f}~cm$, $\sigma={bestfit_params.sigma:.3f}~cm$")
+    ax1.plot(z, bestfit_params.curve, color="black", linewidth = lineWidth, label=fr"No target")# $R_0={bestfit_params.R0:.3f}~cm$, $\sigma={bestfit_params.sigma:.3f}~cm$")
     #ax1.plot(z, depth_dose_distribution_ionization(z, bestfit_params.Phi0, bestfit_params.R0, bestfit_params.sigma, bestfit_params.epsilon), linewidth = 3, color="red")
     #ax1.plot(z, depth_dose_distribution_nonelastic(z, bestfit_params.Phi0, bestfit_params.R0, bestfit_params.sigma, bestfit_params.epsilon), linewidth = 3, color="blue")
 
@@ -480,6 +507,8 @@ else:
     
 target_fit_curves = []
 target_fit_R0 = []
+target_fit = []
+pmma_thick = []
 
 if(bhetero):
     spline_func = interp1d(depthTarget, unfoldedDoseTarget, kind='cubic')
@@ -585,17 +614,18 @@ elif(targetSelect == 1):
 
         t = bestfit_params.R0-convParams.R0
         o_t = np.sqrt(bestfit_params.stddev[1]**2+convParams.stddev[1]**2)
+        pmma_thick.append([t, o_t])
+        # sigmat = np.sqrt(convParams.sigma**2 - bestfit_params.sigma**2)
 
-        sigmat = np.sqrt(convParams.sigma**2 - bestfit_params.sigma**2)
-
-        o_sigmat = np.sqrt(convParams.sigma**2/(convParams.sigma**2-bestfit_params.sigma**2)*convParams.stddev[2]**2+bestfit_params.sigma**2/(convParams.sigma**2-bestfit_params.sigma**2)*bestfit_params.stddev[2]**2)
-        pmod = sigmat**2/t*10000
-        sigma_pmod = np.sqrt((2*sigmat/t**2*o_sigmat)**2+(sigmat**2/t**2*o_t)**2)*10000
+        # o_sigmat = np.sqrt(convParams.sigma**2/(convParams.sigma**2-bestfit_params.sigma**2)*convParams.stddev[2]**2+bestfit_params.sigma**2/(convParams.sigma**2-bestfit_params.sigma**2)*bestfit_params.stddev[2]**2)
+        # pmod = sigmat**2/t*10000
+        # sigma_pmod = np.sqrt((2*sigmat/t**2*o_sigmat)**2+(sigmat**2/t**2*o_t)**2)*10000
 
         # ax1.plot(z, convParams.curve, color="orange", linewidth = lineWidth, label=fr"Hetero. target fit paramters: $\frac{{\Phi_0}}{{N_0}}={convParams.Phi0:.3f}~\frac{{1}}{{cm^2}}$," "\n" rf"$R_0={convParams.R0:.3f}~cm$, $\sigma={convParams.sigma:.3f}~cm$, " "\n" fr"$t= {t:.3f}" "\pm" fr"{o_t:.3f}~cm, \sigma={sigmat:.3f} \pm {o_sigmat:.3f}~cm,~P_{{mod}}={pmod:.3f} \pm {sigma_pmod:.3f}$" rf"$~\mu m$")
-        ax1.plot(z, convParams.curve, color=targetColorMap[idx], linewidth = lineWidth, label=fr"{thickness} mm PMMA " rf"$R_0={convParams.R0:.3f}~cm$, $\sigma={convParams.sigma:.3f}~cm$, " "\n" fr"$t= {t:.3f}" "\pm" fr"{o_t:.3f}~cm$")
+        ax1.plot(z, convParams.curve, color=targetColorMap[idx], linewidth = lineWidth, label=fr"{thickness} mm PMMA")# " rf"$R_0={convParams.R0:.3f}~cm$, $\sigma={convParams.sigma:.3f}~cm$, " "\n" fr"$t= {t:.3f}" "\pm" fr"{o_t:.3f}~cm$")
         target_fit_curves.append(convParams.curve)
         target_fit_R0.append(convParams.R0)
+        target_fit.append(convParams)
         
 end_time = time.time()
 
@@ -627,8 +657,8 @@ zmax_zoom = 25 + 1
 # ============================================================
 
 if targetSelect == 1:
-    plt.rcParams.update({'font.size': 25})
-    fig_zoom, axz = plt.subplots(figsize=(22, 13))
+    plt.rcParams.update({'font.size': 28})
+    fig_zoom, axz = plt.subplots(figsize=(16, 12))
 
     # axz.set_title("Bragg peak region (zoomed)")
     axz.set_xlim(zmin_zoom, zmax_zoom)
@@ -652,12 +682,18 @@ if targetSelect == 1:
         bestfit_params.curve,
         color='black',
         linewidth=2,
-        label=rf"No target ($R_0={bestfit_params.R0:.3f}$ cm)"
+        label=rf"No target"# ($R_0={bestfit_params.R0:.3f}$ cm)"
     )
+
+    print(f"${bestfit_params.R0:.3f} \\pm {bestfit_params.stddev[1]:.3f}$ & ${bestfit_params.sigma:.3f} \\pm {bestfit_params.stddev[2]:.3f}$")
 
     # --- Homogeneous targets: data + fits ---
     for idx, thickness in enumerate(targetThicknesses):
         # data with error bars
+        pmma_thick
+        print(f"${target_fit[idx].R0:.3f} \\pm {target_fit[idx].stddev[1]:.3f}$ & ${target_fit[idx].sigma:.3f} \\pm {target_fit[idx].stddev[2]:.3f}$ & ${pmma_thick[idx][0]:.3f} \\pm {pmma_thick[idx][1]:.3f}$")
+
+        
         axz.errorbar(
             depthTarget[idx],
             unfoldedDoseTarget[idx],
@@ -678,7 +714,7 @@ if targetSelect == 1:
             color=targetColorMap[idx],
             linewidth=2,
             linestyle='-',
-            label=rf"{thickness} mm PMMA ($R_0={target_fit_R0[idx]:.3f}$ cm)"
+            label=rf"{thickness} mm PMMA"# ($R_0={target_fit_R0[idx]:.3f}$ cm)"
         )
 
     axz.set_xlabel("Water Equivalent Depth / cm")
@@ -687,7 +723,6 @@ if targetSelect == 1:
     axz.grid(True)
     axz.legend(
         loc="upper left",
-        fontsize=16,
         fancybox=False,
         edgecolor="black"
     )

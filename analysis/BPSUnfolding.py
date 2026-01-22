@@ -13,7 +13,7 @@ from matplotlib.colors import SymLogNorm
 import ROOT
 import uproot
 import matplotlib
-matplotlib.use('Agg')  # or 'Agg' for non-interactive
+# matplotlib.use('Agg')  # or 'Agg' for non-interactive
 import os
 import json
 import time
@@ -861,7 +861,7 @@ if __name__ == "__main__":
         idx += 1
         energyEvent = []
         for layer, layerCharge in enumerate(event):
-            if(layerCharge == 0):
+            if(layerCharge == 0 or layer == 8):
                 energyEvent.append(0)
             else:
                 energyEvent.append(detector.adc_to_energy(layer, layerCharge))
@@ -933,10 +933,10 @@ if __name__ == "__main__":
     plt.ylabel("Counts")
     plt.tight_layout()
     plt.savefig(f"{datapath}/unfold/img/TotalEnergyDeposition.pdf", format="pdf", bbox_inches="tight")
-    # plt.show()
+    plt.show()
     plt.close()
 
-    # exit()
+    exit()
     selectedCharge = np.array(selectedCharge)
     
     for i in range(0,32):

@@ -819,6 +819,8 @@ if __name__ == "__main__":
         plt.close()
     
     def saveClosurePlot(unfolder, output_filename="chi2_convergence.pdf", show=False):
+        plt.rcParams.update({'font.size': 28})
+        plt.figure(figsize=(16,12))
         plt.plot(range(len(unfolder.chi2))[1:], unfolder.chi2[1:], 'bo-')
         plt.xlabel('Iteration')
         plt.ylabel('Chi-squared/N_DOF')
@@ -832,13 +834,15 @@ if __name__ == "__main__":
         plt.close()
     
     def saveUnfoldedComparison(true_energies, measured_spectrum, unfolded_spectrum, output_filename="unfoldedSpectrum.pdf", peaks=None, show=False):
-        plt.step(true_energies, measured_spectrum, color="#000000", linewidth=1, label='Measured Spectrum')
-        plt.plot(true_energies, unfolded_spectrum, color=targetColorMap[0], linewidth=1.5, label=f'Unfolded Spectrum')
+        plt.rcParams.update({'font.size': 28})
+        plt.figure(figsize=(16,12))
+        plt.step(true_energies, measured_spectrum, color="#000000", linewidth=2, label='Measured Spectrum')
+        plt.plot(true_energies, unfolded_spectrum, color=targetColorMap[0], linewidth=3, label=f'Unfolded Spectrum')
         linestyles = ["--", ":"]
         if(peaks):
             for idx, x_fit in enumerate(peaks[1]):
                 param = peaks[0][idx]
-                plt.plot(x_fit, gaussian(x_fit, *param[0]), targetColorMap[0], linewidth=3,linestyle=linestyles[idx], label = fr"Peak at {param[0][1]:.2f} ± {param[1][2]:.2f}")
+                plt.plot(x_fit, gaussian(x_fit, *param[0]), targetColorMap[0], linewidth=6,linestyle=linestyles[idx], label = fr"Peak at {param[0][1]:.2f} ± {param[1][2]:.2f}")
         plt.xlabel('True Photon Count')
         plt.ylabel('Counts')
         # plt.title('Measured vs Unfolded Spectrum')
@@ -851,8 +855,10 @@ if __name__ == "__main__":
         plt.close()
     
     def savePredictedComparison(measured_energies, measured_spectrum, predicted_measured, output_filename="predictedMeasuredSpectrum.pdf", show=False):
-        plt.step(measured_energies, measured_spectrum, color="#000000", linewidth=1, label='Measured Spectrum')
-        plt.plot(measured_energies[1:], predicted_measured[1:], color=targetColorMap[0], linewidth=1.5, label=f'Predicted from Unfolded')
+        plt.rcParams.update({'font.size': 28})
+        plt.figure(figsize=(16,12))
+        plt.step(measured_energies, measured_spectrum, color="#000000", linewidth=2, label='Measured Spectrum')
+        plt.plot(measured_energies[1:], predicted_measured[1:], color=targetColorMap[0], linewidth=3, label=f'Predicted from Unfolded')
         plt.xlabel('Measured Photon Count')
         plt.ylabel('Counts')
         # plt.title('Measured vs Predicted Spectrum')
@@ -1108,6 +1114,7 @@ if __name__ == "__main__":
         #initial_prior = np.ones_like(true_energies)
         ##unfold
         unfolded_spectrum = unfolder.unfold(measured_spectrum, prior=initial_prior)
+        print(f"Chi^2: {unfolder.chi2[-1]}")
         predicted_measured = np.dot(unfolder.R, unfolded_spectrum)
         selected_peaks, params, x_fits = findPeaks(unfolded_spectrum, measured_spectrum, true_energies)
         lightyields.append([params[0][0], params[0][1]])
