@@ -12,6 +12,7 @@
 #include "include/DetectorProperties.h"
 #include "nlohmann/json.hpp"
 #include <fstream>
+#include "TRandom3.h"
 
 using json = nlohmann::json;
 
@@ -229,6 +230,7 @@ void analysis(){
     std::multimap<Long64_t, TraceProperties> postEvents;
     bool bsaveTrace = false; 
     Plotter plotter(coincidenceTime);
+    TRandom3 rng(0);
 
     //tests
     TH1D* h_timediff = new TH1D("h_timediff", "h_timediff", 2000, 0, 1000);
@@ -325,6 +327,8 @@ void analysis(){
             particles.push_back(proton);
         }
         for(auto coinProton : particles){
+            if (rng.Integer(20) != 0)
+                continue;  // skip ~19/20 events
             std::fill(Q, Q + 32, 0.0);
             coinProton.Test();
             if(coinProton.missingChannel == true){

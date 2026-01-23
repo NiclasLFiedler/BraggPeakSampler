@@ -299,13 +299,24 @@ for ch in range(nLayers):
         WETDepthErrTarget.append((WETTarget[ch]-WETTarget[ch-1])/(np.sqrt(12)*10))
 
 for ch in range(nLayers):
-    dataFile = np.load(f"../data/{dataset}/{file}/output/unfold/data/Unfolded{ch}.npz")
+    dataFile = np.load(f"../data/{dataset}/{file}/output/Redunfold/data/Unfolded{ch}.npz")
     # Tdepth, Tdeptherr = dataFile["depth"] 
     # depth.append(Tdepth)
     # depthErr.append(Tdeptherr)
     depth.append(WETDepth[ch])
     depthErr.append(WETDepthErr[ch])
     
+    x_pred, y_pred = dataFile["predicted_measured"]
+    x_meas, y_meas = dataFile["measured_energy"]
+    mask = (y_meas > 0) & (y_pred > 0)
+
+    ndof = len(y_meas[mask])  # no fitted params
+    sigma = np.sqrt(y_meas[mask])
+
+    chi2 = np.sum((y_pred[mask] - y_meas[mask])**2 / sigma**2)
+    chi2_red = chi2 / ndof
+
+    print(f"Ch: {ch} Reduced Chi^2: {chi2_red}")
     Tdose, Tdoseerr = dataFile["unfoldedDose"]
     unfoldedDose.append(Tdose)
     unfoldedDoseErr.append(Tdoseerr)
@@ -332,7 +343,7 @@ if(bhetero):
         doseErrTarget.append(Tdoseerr)
         unfoldedEntriesTarget.append(np.sum(dataFile["unfolded"][1]))
 
-targetThicknesses = [52, 53, 54, 55, 56, 57]
+targetThicknesses = [52]#, 53, 54, 55, 56, 57]
 if(targetSelect == 1):
     for thickness in targetThicknesses:
         depthTargetTemp = []
@@ -343,7 +354,7 @@ if(targetSelect == 1):
         doseErrTargetTemp = []
         unfoldedEntriesTargetTemp = []
         for ch in range(nLayers):
-            dataFile = np.load(f"../data/{dataset}/{targetFile}{thickness}/output/unfold/data/Unfolded{ch}.npz")
+            dataFile = np.load(f"../data/{dataset}/{targetFile}{thickness}/output/Redunfold/data/Unfolded{ch}.npz")
 
             # Tdepth, Tdeptherr = dataFile["depth"] 
             # depthTargetTemp.append(Tdepth)
@@ -367,7 +378,7 @@ if(targetSelect == 1):
         doseErrTarget.append(doseErrTargetTemp)
         unfoldedEntriesTarget.append(unfoldedEntriesTargetTemp)
 
-
+# print(unfoldedEntriesTarget[1])
 if targetSelect == 1:
     targetFile = f"{targetFile}{52}"
 
@@ -401,7 +412,7 @@ R0 = quantities['R80D']
 #if file == "notarget":
 #    R0 = range_energy_relationship(beamEnergy, a_h2o, p_h2o)
 print("Expected range from R80D fit: ", range_energy_relationship(225, a_h2o, p_h2o))
-print("Expected range from R80D fit: ", range_energy_relationship(221.6, a_h2o, p_h2o))
+print("Expected range from R80D fit: ", range_energy_relationship(235, a_pwo, p_pwo))
 sigmaMono = (beta*R0**0.935)
 sigmaE0   = 0.01*beamEnergy
 sigma     = np.sqrt(sigmaMono**2+sigmaE0**2*a_h2o**2*p_h2o**2*beamEnergy**(2*p_h2o-2))

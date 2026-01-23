@@ -13,7 +13,7 @@ from matplotlib.colors import SymLogNorm
 import ROOT
 import uproot
 import matplotlib
-# matplotlib.use('Agg')  # or 'Agg' for non-interactive
+matplotlib.use('Agg')  # or 'Agg' for non-interactive
 import os
 import json
 import time
@@ -638,12 +638,31 @@ if __name__ == "__main__":
         # plt.title(f'Channel {ch}: Unfolded Spectrum vs Measured Energy Spectrum')
         plt.legend()
         plt.grid(True)
-        plt.savefig(f"{datapath}/unfold/img/UnfoldedMeasured_CH{ch}.pdf", bbox_inches='tight')
+        plt.savefig(f"{datapath}/Redunfold/img/UnfoldedMeasured_CH{ch}.pdf", bbox_inches='tight')
+        # plt.savefig(f"{datapath}/unfold/img/UnfoldedMeasured_CH{ch}.pdf", bbox_inches='tight')
         plt.close()
         
         h_predicted = response.ApplyToTruth(h_unfold)# or .Hmeas()
         x_pred, y_pred = th1_to_numpy(h_predicted)
         
+        # mask = (y_meas > 0) & (y_pred > 0)
+
+        # y_pred_m = y_pred[mask]
+        # y_meas_m = y_meas[mask]
+        # cov_m = cov[np.ix_(mask, mask)]  # covariance restricted to used bins
+
+        # # delta
+        # delta = y_pred_m - y_meas_m
+
+        # # chi2
+        # chi2 = float(delta.T @ np.linalg.inv(cov_m) @ delta)
+
+        # # ndof (no fit)
+        # ndof = len(y_meas_m)
+
+        # chi2_red = chi2 / ndof
+        # print(f"Reduced Chi^2: {chi2_red}")
+
         plt.step(x_meas, y_meas, where='mid', label='Measured ADC Spectrum', color=targetColorMap[0], linewidth=2)
         plt.plot(x_pred, y_pred, label='Predicted ADC Spectrum from Unfolded', color=targetColorMap[1], linewidth=2)
         plt.xlabel('Measured ADC Counts')
@@ -651,7 +670,8 @@ if __name__ == "__main__":
         # plt.title(f'Channel {ch}: Measured vs Predicted')
         plt.legend()
         plt.grid(True)
-        plt.savefig(f"{datapath}/unfold/img/PredictedMeasured_CH{ch}.pdf", bbox_inches='tight')
+        plt.savefig(f"{datapath}/Redunfold/img/PredictedMeasured_CH{ch}.pdf", bbox_inches='tight')
+        # plt.savefig(f"{datapath}/unfold/img/PredictedMeasured_CH{ch}.pdf", bbox_inches='tight')
         plt.close()
 
         conv = 1.60218e-13
@@ -700,7 +720,8 @@ if __name__ == "__main__":
         plt.ylabel('Energy Deposition / MeV')
         plt.title('Energy Covariance Matrix')
         plt.colorbar(im)
-        plt.savefig(f"{datapath}/unfold/img/EnergyCovariance_CH{ch}.pdf", bbox_inches='tight')
+        # plt.savefig(f"{datapath}/unfold/img/EnergyCovariance_CH{ch}.pdf", bbox_inches='tight')
+        plt.savefig(f"{datapath}/Redunfold/img/EnergyCovariance_CH{ch}.pdf", bbox_inches='tight')
         plt.close()
         
         im = plt.imshow(cov, aspect='auto', origin='lower',
@@ -712,7 +733,8 @@ if __name__ == "__main__":
         plt.ylabel('Measured ADC Count')
         plt.title('Unfold Covariance Matrix')
         plt.colorbar(im)
-        plt.savefig(f"{datapath}/unfold/img/UnfoldCovariance_CH{ch}.pdf", bbox_inches='tight')
+        # plt.savefig(f"{datapath}/unfold/img/UnfoldCovariance_CH{ch}.pdf", bbox_inches='tight')
+        plt.savefig(f"{datapath}/Redunfold/img/UnfoldCovariance_CH{ch}.pdf", bbox_inches='tight')
         plt.close()
         
         im = plt.imshow(R, aspect='auto', origin='lower',
@@ -724,11 +746,13 @@ if __name__ == "__main__":
         plt.ylabel('Measured ADC Count')
         plt.title('Detector Response Matrix')
         plt.colorbar(im)
-        plt.savefig(f"{datapath}/unfold/img/ResponseMatrix_CH{ch}.pdf", bbox_inches='tight')
+        # plt.savefig(f"{datapath}/unfold/img/ResponseMatrix_CH{ch}.pdf", bbox_inches='tight')
+        plt.savefig(f"{datapath}/Redunfold/img/ResponseMatrix_CH{ch}.pdf", bbox_inches='tight')
         plt.close()
     
         np.savez(
-            f"{datapath}/unfold/data/Unfolded{ch}.npz",
+            # f"{datapath}/unfold/data/Unfolded{ch}.npz",
+            f"{datapath}/Redunfold/data/Unfolded{ch}.npz",
             # covarianceMatrix=cov,
             # EcovarianceMatrix=Ecov,
             # counts_variance = Ncov,
@@ -932,11 +956,12 @@ if __name__ == "__main__":
     plt.xlabel("Total Deposited Energy / MeV")
     plt.ylabel("Counts")
     plt.tight_layout()
-    plt.savefig(f"{datapath}/unfold/img/TotalEnergyDeposition.pdf", format="pdf", bbox_inches="tight")
-    plt.show()
+    # plt.savefig(f"{datapath}/unfold/img/TotalEnergyDeposition.pdf", format="pdf", bbox_inches="tight")
+    plt.savefig(f"{datapath}/Redunfold/img/TotalEnergyDeposition.pdf", format="pdf", bbox_inches="tight")
+    # plt.show()
     plt.close()
 
-    exit()
+    # exit()
     selectedCharge = np.array(selectedCharge)
     
     for i in range(0,32):
@@ -971,13 +996,13 @@ if __name__ == "__main__":
 
     print("\nPerforming Bayesian unfolding...")
     
-    channels = list(range(0, 1))
+    channels = list(range(0, 32))
     # UnfoldChannel(0, hist[0], ehist[0], hist_edges[0], eedges[0], detector, datapath, detectorpath, depth[0], deptherr[0])
     # exit()
     args = [(hist[ch], ehist[ch], hist_edges[ch], eedges[ch], detector, datapath, detectorpath, depth, deptherr) for ch in channels]
 
 
-    with ProcessPoolExecutor(max_workers=1) as executor:
+    with ProcessPoolExecutor(max_workers=16) as executor:
         for ch in executor.map(UnfoldChannel,
         channels,
         [hist[ch] for ch in channels],
