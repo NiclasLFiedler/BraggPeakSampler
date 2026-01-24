@@ -343,7 +343,7 @@ if(bhetero):
         doseErrTarget.append(Tdoseerr)
         unfoldedEntriesTarget.append(np.sum(dataFile["unfolded"][1]))
 
-targetThicknesses = [52]#, 53, 54, 55, 56, 57]
+targetThicknesses = [52, 53, 54]#, 55, 56, 57]
 if(targetSelect == 1):
     for thickness in targetThicknesses:
         depthTargetTemp = []
@@ -370,6 +370,9 @@ if(targetSelect == 1):
             doseTargetTemp.append(Tdose)
             doseErrTargetTemp.append(Tdoseerr)
             unfoldedEntriesTargetTemp.append(np.sum(dataFile["unfolded"][1]))
+            if thickness == 54:
+                chi2 = dataFile["reduced_chi2"]
+                print(f"{ch} Chi^2: {chi2}")
         depthTarget.append(depthTargetTemp)
         depthErrTarget.append(depthErrTargetTemp)
         unfoldedDoseTarget.append(unfoldedDoseTargetTemp)

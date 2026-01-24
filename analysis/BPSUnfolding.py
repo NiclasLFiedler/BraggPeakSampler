@@ -645,24 +645,31 @@ if __name__ == "__main__":
         h_predicted = response.ApplyToTruth(h_unfold)# or .Hmeas()
         x_pred, y_pred = th1_to_numpy(h_predicted)
         
-        # mask = (y_meas > 0) & (y_pred > 0)
+        y_meas_err = np.array([h_meas.GetBinError(i+1) for i in range(len(y_meas))])
 
-        # y_pred_m = y_pred[mask]
-        # y_meas_m = y_meas[mask]
-        # cov_m = cov[np.ix_(mask, mask)]  # covariance restricted to used bins
+        # Calculate χ² between measurement and refolded distribution
+        # Using measurement errors in denominator
+        chi2_numerator = 0.0
+        ndof = 0
 
-        # # delta
-        # delta = y_pred_m - y_meas_m
+        for i in range(len(y_meas)):
+            # Skip bins with zero or very small measurement error
+            if y_meas_err[i] > 0 and y_meas[i] > 0:
+                residual = y_meas[i] - y_pred[i]
+                chi2_contribution = (residual ** 2) / (y_meas_err[i] ** 2)
+                chi2_numerator += chi2_contribution
+                ndof += 1
 
-        # # chi2
-        # chi2 = float(delta.T @ np.linalg.inv(cov_m) @ delta)
+        # For Bayesian unfolding, adjust degrees of freedom for regularization
+        # A simple approximation: ndf = number of bins * (1 - 1/n_iter)
+        regularization_factor = 1.0 / n_iter
+        effective_ndof = ndof * (1.0 - regularization_factor)
 
-        # # ndof (no fit)
-        # ndof = len(y_meas_m)
+        # Ensure we don't divide by zero
+        effective_ndof = max(effective_ndof, 1)
 
-        # chi2_red = chi2 / ndof
-        # print(f"Reduced Chi^2: {chi2_red}")
-
+        reduced_chi2 = chi2_numerator / effective_ndof
+        print(f"Reduced Chi2: {reduced_chi2}")
         plt.step(x_meas, y_meas, where='mid', label='Measured ADC Spectrum', color=targetColorMap[0], linewidth=2)
         plt.plot(x_pred, y_pred, label='Predicted ADC Spectrum from Unfolded', color=targetColorMap[1], linewidth=2)
         plt.xlabel('Measured ADC Counts')
@@ -764,7 +771,8 @@ if __name__ == "__main__":
             unfoldedDose =[unfoldedDose, unfoldedDoseVariance],
             dose =[dose, DoseVariance],
             depth = [depth, deptherr],
-            n_iter_used = n_iter
+            n_iter_used = n_iter,
+            reduced_chi2 = reduced_chi2
         )
 
         h_meas.Delete()
