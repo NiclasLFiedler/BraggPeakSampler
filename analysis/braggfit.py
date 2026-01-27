@@ -272,7 +272,7 @@ WETDepthErrTarget = []
 #     if ch == 11:
 #         x = 2
 #     WETDepth.append(t_n+x/20*WETConv+xTeflon/20*WETConvTeflon+xAlu/20*WETConvAlu)
-#     t_n += x*WETConv/10+xTeflon/20*WETConvTeflon+xAlu/20*WETConvAlu
+#     t_n += x*WETConv/10+xTeflon/20*WETConvTeflon+xAlu/20*WETConvAlu0
 #     WETDepthErr.append(x/10*WETConv/np.sqrt(12))
 
 WETDepth = [7.155416420506668, 21.455056176722735, 35.73121953386203, 50.00837171548292, 64.28558352543337, 78.54541699109387, 92.7836041434076, 107.00308108188163, 121.21292882757369, 135.4157474876818, 149.61160933141255, 161.48639261416054, 171.05138584768923, 180.61204957657964, 190.15178624767393, 199.66085509299435, 209.1565117771304, 218.64418551465582, 228.12356365600664, 237.59409600831475, 247.03996135329004, 256.4575830284209, 265.84166488741903, 275.19102039365407, 284.4969697433472, 293.7399813658173, 302.7956853321799, 311.9429171602238, 321.67214994835393, 331.6915553001954, 341.61841079794243, 351.4893609799391]
@@ -282,7 +282,6 @@ WET = [14.310832841013337, 28.599279512432133, 42.86315955529193, 57.15358387567
 WETTarget = [np.float64(14.260531500089058), np.float64(28.46471731352301), np.float64(42.664750730649416), np.float64(56.832721552397004), np.float64(70.98226539002906), np.float64(85.16940527757126), np.float64(99.34093980739712), np.float64(113.53812826046382), np.float64(127.66679859692594), np.float64(141.80430163730276), np.float64(155.90094177435978), np.float64(165.3564491136862), np.float64(174.8355735832181), np.float64(184.268456238946), np.float64(193.67271340024672), np.float64(203.06511871147984), np.float64(212.39759846374548), np.float64(221.7005628885991), np.float64(230.94648960872445), np.float64(240.1028519371951), np.float64(249.05982850300109), np.float64(258.59018765964584), np.float64(268.5356069368744), np.float64(278.4626318829971), np.float64(288.3119606056622), np.float64(298.17920282074414), np.float64(308.0464450358261), np.float64(317.913687250908), np.float64(327.78092946598997), np.float64(337.6481716810719), np.float64(347.51541389615386), np.float64(357.3826561112358)]
 
 WETDepthTarget = [np.float64(7.130265750044529), np.float64(21.362624406806034), np.float64(35.56473402208621), np.float64(49.74873614152321), np.float64(63.90749347121303), np.float64(78.07583533380016), np.float64(92.25517254248419), np.float64(106.43953403393047), np.float64(120.60246342869488), np.float64(134.73555011711434), np.float64(148.85262170583127), np.float64(160.62869544402298), np.float64(170.09601134845215), np.float64(179.55201491108204), np.float64(188.97058481959635), np.float64(198.36891605586328), np.float64(207.73135858761265), np.float64(217.0490806761723), np.float64(226.32352624866178), np.float64(235.52467077295978), np.float64(244.5813402200981), np.float64(253.82500808132346), np.float64(263.5628972982601), np.float64(273.4991194099357), np.float64(283.3872962443296), np.float64(293.24558171320314), np.float64(303.11282392828514), np.float64(312.980066143367), np.float64(322.847308358449), np.float64(332.7145505735309), np.float64(342.5817927886129), np.float64(352.4490350036948)]
-
 
 for ch in range(nLayers):
     WETDepth[ch] = WETDepth[ch]/10 
@@ -299,7 +298,7 @@ for ch in range(nLayers):
         WETDepthErrTarget.append((WETTarget[ch]-WETTarget[ch-1])/(np.sqrt(12)*10))
 
 for ch in range(nLayers):
-    dataFile = np.load(f"../data/{dataset}/{file}/output/Redunfold/data/Unfolded{ch}.npz")
+    dataFile = np.load(f"../data/{dataset}/{file}/output/unfold/data/Unfolded{ch}.npz")
     # Tdepth, Tdeptherr = dataFile["depth"] 
     # depth.append(Tdepth)
     # depthErr.append(Tdeptherr)
@@ -343,7 +342,7 @@ if(bhetero):
         doseErrTarget.append(Tdoseerr)
         unfoldedEntriesTarget.append(np.sum(dataFile["unfolded"][1]))
 
-targetThicknesses = [52, 53, 54]#, 55, 56, 57]
+targetThicknesses = [52, 53, 54, 55, 56, 57]
 if(targetSelect == 1):
     for thickness in targetThicknesses:
         depthTargetTemp = []
@@ -354,7 +353,7 @@ if(targetSelect == 1):
         doseErrTargetTemp = []
         unfoldedEntriesTargetTemp = []
         for ch in range(nLayers):
-            dataFile = np.load(f"../data/{dataset}/{targetFile}{thickness}/output/Redunfold/data/Unfolded{ch}.npz")
+            dataFile = np.load(f"../data/{dataset}/{targetFile}{thickness}/output/unfold/data/Unfolded{ch}.npz")
 
             # Tdepth, Tdeptherr = dataFile["depth"] 
             # depthTargetTemp.append(Tdepth)
@@ -370,9 +369,9 @@ if(targetSelect == 1):
             doseTargetTemp.append(Tdose)
             doseErrTargetTemp.append(Tdoseerr)
             unfoldedEntriesTargetTemp.append(np.sum(dataFile["unfolded"][1]))
-            if thickness == 54:
-                chi2 = dataFile["reduced_chi2"]
-                print(f"{ch} Chi^2: {chi2}")
+            # if thickness == 54:
+                # chi2 = dataFile["reduced_chi2"]
+                # print(f"{ch} Chi^2: {chi2}")
         depthTarget.append(depthTargetTemp)
         depthErrTarget.append(depthErrTargetTemp)
         unfoldedDoseTarget.append(unfoldedDoseTargetTemp)
@@ -385,7 +384,7 @@ if(targetSelect == 1):
 if targetSelect == 1:
     targetFile = f"{targetFile}{52}"
 
-plt.rcParams.update({'font.size': 28})
+plt.rcParams.update({'font.size': 32})
 fig, ax1 = plt.subplots(figsize=(16, 12))
 # ax1.set_title(f'Fitted energy depth dose distribution {in_title[targetSelect]}')
 # if(bhetero):

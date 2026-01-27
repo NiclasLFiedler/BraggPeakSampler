@@ -62,19 +62,19 @@ def mean_and_std_of_mean(values, std_devs):
 def main():        
     showall = False
     energyNa22 = 0.511
-    flatparams = np.load('data/2504/flat/output/fit_params.npy', allow_pickle=True)
-    lateralparams = np.load('data/2504/lateral/output/fit_params.npy', allow_pickle=True)
+    fitflat = np.load('data/2504/flat/output/fit_params.npy', allow_pickle=True)
+    fitlateral = np.load('data/2504/lateral/output/fit_params.npy', allow_pickle=True)
     flatLightyield = []
     lateralLightyield = []
     mean = []
     stdDev = []
     meanErr = []
     stdDevErr = []
-    for popt, perr in flatparams:
-        mean.append(popt[1]/energyNa22)
-        stdDev.append(popt[2]/energyNa22)
-        meanErr.append(perr[1]/energyNa22)
-        stdDevErr.append(perr[2]/energyNa22)
+    for m, sm in fitflat:
+        mean.append(m)
+        stdDev.append(0)
+        meanErr.append(sm)
+        stdDevErr.append(0)
 
     flatLightyield.append(mean)
     flatLightyield.append(stdDev)
@@ -85,11 +85,11 @@ def main():
     stdDev = []
     meanErr = []
     stdDevErr = []
-    for popt, perr in lateralparams:
-        mean.append(popt[1]/energyNa22)
-        stdDev.append(popt[2]/energyNa22)
-        meanErr.append(perr[1]/energyNa22)
-        stdDevErr.append(perr[2]/energyNa22)
+    for m, sm in fitlateral:
+        mean.append(m)
+        stdDev.append(0)
+        meanErr.append(sm)
+        stdDevErr.append(0)
 
     lateralLightyield.append(mean)
     lateralLightyield.append(stdDev)
@@ -156,8 +156,8 @@ def main():
     thicklateralstd = np.std(thicklateralMean, ddof=1)
     thinnlateralstd = np.std(thinnlateralMean, ddof=1)
 
-    plt.rcParams.update({'font.size': 28})
-    plt.figure(figsize=(18, 15))
+    plt.rcParams.update({'font.size': 32})
+    plt.figure(figsize=(16,12))
     
     
     targetColorMap = ["#000000","#1f77b4", "#4e79a7", "#76b7b2", "#bab0ac", "#f28e2b", "#e15759", "#9c755f"]
@@ -186,20 +186,20 @@ def main():
         plt.tight_layout()
         plt.show()
     else:
-        plt.errorbar(range(len(thickFlatMean)), thickFlatMean, yerr=thickFlatErr, fmt='o', color = targetColorMap[0], markersize=10, capsize=12, label='Flat: Mean ± Error')
+        plt.errorbar(range(len(thickFlatMean)), thickFlatMean, yerr=thickFlatErr, fmt='o', color = targetColorMap[0], markersize=10, capsize=15, label='Flat')
         
         # plt.errorbar(range(len(thickFlatMean)), thickFlatMean, yerr=thickFlatstddev, fmt='none',linewidth = 6, ecolor='#FFD580',capsize=8, label='Flat: Std. dev.')
 
-        plt.errorbar(range(len(thickFlatMean), len(thickFlatMean)+len(thinnFlatMean)), thinnFlatMean, yerr=thinnFlatErr, fmt='o', color = targetColorMap[0], markersize=10,  capsize=12)
+        plt.errorbar(range(len(thickFlatMean), len(thickFlatMean)+len(thinnFlatMean)), thinnFlatMean, yerr=thinnFlatErr, fmt='o', color = targetColorMap[0], markersize=10,  capsize=15)
         
         # plt.errorbar(range(len(thickFlatMean), len(thickFlatMean)+len(thinnFlatMean)), thinnFlatMean, yerr=thinnFlatstddev, fmt='none',linewidth = 6, ecolor='#FFD580',capsize=8)
 
 
-        plt.errorbar(range(len(thicklateralMean)), thicklateralMean, yerr=thicklateralErr, fmt='o', color = targetColorMap[1], markersize=10, capsize=12, label='Vertical: Mean ± Error')
+        plt.errorbar(range(len(thicklateralMean)), thicklateralMean, yerr=thicklateralErr, fmt='o', color = targetColorMap[1], markersize=10, capsize=15, label='Vertical')
         
         # plt.errorbar(range(len(thicklateralMean)), thicklateralMean, yerr=thicklateralstddev, fmt='none',linewidth = 6, ecolor='#90EE90',capsize=8, label='Vertical: Std. dev.')
 
-        plt.errorbar(range(len(thicklateralMean), len(thicklateralMean)+len(thinnlateralMean)), thinnlateralMean, yerr=thinnlateralErr, fmt='o', color = targetColorMap[1], markersize=10, capsize=12)
+        plt.errorbar(range(len(thicklateralMean), len(thicklateralMean)+len(thinnlateralMean)), thinnlateralMean, yerr=thinnlateralErr, fmt='o', color = targetColorMap[1], markersize=10, capsize=15)
         
         # plt.errorbar(range(len(thicklateralMean), len(thicklateralMean)+len(thinnlateralMean)), thinnlateralMean, yerr=thinnlateralstddev, fmt='none',linewidth = 6, ecolor='#90EE90',capsize=8)
 
