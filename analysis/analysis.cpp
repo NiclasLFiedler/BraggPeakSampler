@@ -327,8 +327,8 @@ void analysis(){
             particles.push_back(proton);
         }
         for(auto coinProton : particles){
-            if (rng.Integer(20) != 0)
-                continue;  // skip ~19/20 events
+            // if (rng.Integer(20) != 0)
+                // continue;  // skip ~19/20 events
             std::fill(Q, Q + 32, 0.0);
             coinProton.Test();
             if(coinProton.missingChannel == true){

@@ -315,6 +315,9 @@ for ch in range(nLayers):
     chi2 = np.sum((y_pred[mask] - y_meas[mask])**2 / sigma**2)
     chi2_red = chi2 / ndof
 
+    if ch == 0:
+        chi2 = dataFile["reduced_chi2"]
+        print(f"{ch} Chi^2: {chi2}")
     print(f"Ch: {ch} Reduced Chi^2: {chi2_red}")
     Tdose, Tdoseerr = dataFile["unfoldedDose"]
     unfoldedDose.append(Tdose)

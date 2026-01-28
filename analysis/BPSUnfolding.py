@@ -518,7 +518,7 @@ class BPSUnfolding:
     
     def saveUnfoldedComparison(self, true_energies, measured_spectrum, unfolded_spectrum, show=False):
         plt.step(true_energies, measured_spectrum, color=targetColorMap[0], linewidth=2, label='Energy converted Spectrum')
-        plt.plot(true_energies, unfolded_spectrum, color=targetColorMap[1], linewidth=2, label=f'Unfolded Energy Spectrum')
+        plt.plot(true_energies, unfolded_spectrum, color=targetColorMap[1], linewidth=4, label=f'Unfolded Energy Spectrum')
 
         plt.xlabel('Energy / MeV')
         plt.ylabel('Counts')
@@ -531,9 +531,9 @@ class BPSUnfolding:
         plt.close()
     
     def savePredictedComparison(self, measured_energies, measured_spectrum, predicted_measured, show=False):
-        plt.step(measured_energies, measured_spectrum, color=targetColorMap[0], linewidth=2, label='Measured ADC Spectrum')
-        plt.plot(measured_energies, predicted_measured, color=targetColorMap[1], linewidth=2, label=f'Predicted ADC Spectrum from Unfolded')
-        plt.xlabel('ADC Count')
+        plt.step(measured_energies, measured_spectrum, color=targetColorMap[0], linewidth=2, label='Measured Charge Spectrum')
+        plt.plot(measured_energies, predicted_measured, color=targetColorMap[1], linewidth=4, label=f'Predicted Charge Spectrum from Unfolded')
+        plt.xlabel('Charge / ADC Count')
         plt.ylabel('Counts')
         plt.title('Measured vs Predicted Spectrum')
         plt.legend()
@@ -585,7 +585,7 @@ if __name__ == "__main__":
         # print(f"Histogram edges: {hist_edges_ch}")
         # print(f"detectorpath {detectorpath}")
         # print(f"datapath {datapath}")
-        n_iter = 12
+        n_iter = 15
         if(np.sum(hist_ch)<50):
             n_iter = 1
         start = time.perf_counter()
@@ -629,17 +629,18 @@ if __name__ == "__main__":
         end = time.perf_counter()
         print(f"Time taken: {end - start:.6f} s")
 
-        # plt.figure(figsize=(10,6))
-        plt.step(x_Emeas, y_Emeas, where='mid', label='Energy converted Spectrum', color=targetColorMap[0], linewidth=2)
-        plt.plot(x_unf, y_unf, label='Unfolded Energy Spectrum', color=targetColorMap[1], linewidth=2)
+        plt.rcParams.update({'font.size': 32})
+        plt.figure(figsize=(16,12))
+        plt.step(x_Emeas, y_Emeas, where='mid', label='Energy Converted Spectrum', color=targetColorMap[0], linewidth=2)
+        plt.plot(x_unf, y_unf, label='Unfolded Energy Spectrum', color=targetColorMap[1], linewidth=4)
         # plt.fill_between(x_unf, y_unf - bin_errs, y_unf + bin_errs, color='tab:red', alpha=0.5)
         plt.xlabel('Deposited Energy / MeV')
         plt.ylabel('Counts')
         # plt.title(f'Channel {ch}: Unfolded Spectrum vs Measured Energy Spectrum')
         plt.legend()
         plt.grid(True)
-        plt.savefig(f"{datapath}/Redunfold/img/UnfoldedMeasured_CH{ch}.pdf", bbox_inches='tight')
-        # plt.savefig(f"{datapath}/unfold/img/UnfoldedMeasured_CH{ch}.pdf", bbox_inches='tight')
+        # plt.savefig(f"{datapath}/Redunfold/img/UnfoldedMeasured_CH{ch}.pdf", bbox_inches='tight')
+        plt.savefig(f"{datapath}/unfold/img/UnfoldedMeasured_CH{ch}.pdf", bbox_inches='tight')
         plt.close()
         
         h_predicted = response.ApplyToTruth(h_unfold)# or .Hmeas()
@@ -670,15 +671,17 @@ if __name__ == "__main__":
 
         reduced_chi2 = chi2_numerator / effective_ndof
         print(f"Reduced Chi2: {reduced_chi2}")
-        plt.step(x_meas, y_meas, where='mid', label='Measured ADC Spectrum', color=targetColorMap[0], linewidth=2)
-        plt.plot(x_pred, y_pred, label='Predicted ADC Spectrum from Unfolded', color=targetColorMap[1], linewidth=2)
-        plt.xlabel('Measured ADC Counts')
+        plt.rcParams.update({'font.size': 32})
+        plt.figure(figsize=(16,12))
+        plt.step(x_meas, y_meas, where='mid', label='Measured Charge', color=targetColorMap[0], linewidth=2)
+        plt.plot(x_pred, y_pred, label='Predicted Charge from Unfolded', color=targetColorMap[1], linewidth=4)
+        plt.xlabel('Charge / ADC Counts')
         plt.ylabel('Counts')
         # plt.title(f'Channel {ch}: Measured vs Predicted')
         plt.legend()
         plt.grid(True)
-        plt.savefig(f"{datapath}/Redunfold/img/PredictedMeasured_CH{ch}.pdf", bbox_inches='tight')
-        # plt.savefig(f"{datapath}/unfold/img/PredictedMeasured_CH{ch}.pdf", bbox_inches='tight')
+        # plt.savefig(f"{datapath}/Redunfold/img/PredictedMeasured_CH{ch}.pdf", bbox_inches='tight')
+        plt.savefig(f"{datapath}/unfold/img/PredictedMeasured_CH{ch}.pdf", bbox_inches='tight')
         plt.close()
 
         conv = 1.60218e-13
@@ -718,6 +721,8 @@ if __name__ == "__main__":
         print(f"Unfolded dose for channel {ch}: {unfoldedDose:.2f} ± {np.sqrt(unfoldedDoseVariance):.2f} μGy")
         print(f"Normally calculated dose for channel {ch}: {dose:.2f} ± {np.sqrt(DoseVariance):.2f} μGy")
 
+        plt.rcParams.update({'font.size': 32})
+        plt.figure(figsize=(16,12))
         im = plt.imshow(Ecov, aspect='auto', origin='lower',
                     extent=[x_true[0], x_true[-1],
                             x_true[0], x_true[-1]],
@@ -727,39 +732,42 @@ if __name__ == "__main__":
         plt.ylabel('Energy Deposition / MeV')
         plt.title('Energy Covariance Matrix')
         plt.colorbar(im)
-        # plt.savefig(f"{datapath}/unfold/img/EnergyCovariance_CH{ch}.pdf", bbox_inches='tight')
-        plt.savefig(f"{datapath}/Redunfold/img/EnergyCovariance_CH{ch}.pdf", bbox_inches='tight')
+        plt.savefig(f"{datapath}/unfold/img/EnergyCovariance_CH{ch}.pdf", bbox_inches='tight')
+        # plt.savefig(f"{datapath}/Redunfold/img/EnergyCovariance_CH{ch}.pdf", bbox_inches='tight')
         plt.close()
         
+        plt.rcParams.update({'font.size': 32})
+        plt.figure(figsize=(16,12))
         im = plt.imshow(cov, aspect='auto', origin='lower',
                     extent=[x_meas[0], x_meas[-1],
                             x_meas[0], x_meas[-1]],
                     norm=SymLogNorm(linthresh=1e-6,vmin=cov.min(), vmax=cov.max()))
 
-        plt.xlabel('Measured ADC Count')
-        plt.ylabel('Measured ADC Count')
+        plt.xlabel('Charge / ADC Count')
+        plt.ylabel('Charge / ADC Count')
         plt.title('Unfold Covariance Matrix')
         plt.colorbar(im)
-        # plt.savefig(f"{datapath}/unfold/img/UnfoldCovariance_CH{ch}.pdf", bbox_inches='tight')
-        plt.savefig(f"{datapath}/Redunfold/img/UnfoldCovariance_CH{ch}.pdf", bbox_inches='tight')
+        plt.savefig(f"{datapath}/unfold/img/UnfoldCovariance_CH{ch}.pdf", bbox_inches='tight')
+        # plt.savefig(f"{datapath}/Redunfold/img/UnfoldCovariance_CH{ch}.pdf", bbox_inches='tight')
         plt.close()
         
+        plt.rcParams.update({'font.size': 32})
+        plt.figure(figsize=(16,12))
         im = plt.imshow(R, aspect='auto', origin='lower',
             extent=[x_true[0], x_true[-1],
                     x_meas[0], x_meas[-1]],
             norm=SymLogNorm(linthresh=1e-6,vmin=R.min(), vmax=R.max()))
 
         plt.xlabel('Energy Deposition / MeV')
-        plt.ylabel('Measured ADC Count')
-        plt.title('Detector Response Matrix')
+        plt.ylabel('Charge / ADC Count')
         plt.colorbar(im)
-        # plt.savefig(f"{datapath}/unfold/img/ResponseMatrix_CH{ch}.pdf", bbox_inches='tight')
-        plt.savefig(f"{datapath}/Redunfold/img/ResponseMatrix_CH{ch}.pdf", bbox_inches='tight')
+        plt.savefig(f"{datapath}/unfold/img/ResponseMatrix_CH{ch}.pdf", bbox_inches='tight')
+        # plt.savefig(f"{datapath}/Redunfold/img/ResponseMatrix_CH{ch}.pdf", bbox_inches='tight')
         plt.close()
     
         np.savez(
-            # f"{datapath}/unfold/data/Unfolded{ch}.npz",
-            f"{datapath}/Redunfold/data/Unfolded{ch}.npz",
+            f"{datapath}/unfold/data/Unfolded{ch}.npz",
+            # f"{datapath}/Redunfold/data/Unfolded{ch}.npz",
             # covarianceMatrix=cov,
             # EcovarianceMatrix=Ecov,
             # counts_variance = Ncov,
@@ -893,7 +901,7 @@ if __name__ == "__main__":
         idx += 1
         energyEvent = []
         for layer, layerCharge in enumerate(event):
-            if(layerCharge == 0 or layer == 8):
+            if(layerCharge == 0):# or layer == 8):
                 energyEvent.append(0)
             else:
                 energyEvent.append(detector.adc_to_energy(layer, layerCharge))
@@ -957,15 +965,23 @@ if __name__ == "__main__":
     y_smooth = gauss(x_smooth, *popt)
 
     print(f"Peak at {mu} MeV +. {perr[1]}: Energycut at {energyCutOff} MeV")
-    plt.step(TEnergyCenters, TEnergyCounts, where="mid", color="black")
+    plt.rcParams.update({'font.size': 32})
+    plt.figure(figsize=(16,12))
+    plt.step(TEnergyCenters, TEnergyCounts, where="mid", color=targetColorMap[0])
     # plt.step(TCutEnergyCenters, TCutEnergyCounts, where="mid", color='green')
     # plt.plot(x_smooth, y_smooth, label="Gaussian fit")
+    plt.axvline(
+    x=221.6,
+    linestyle="--",
+    linewidth=5,
+    color=targetColorMap[1],
+    label="Nominal energy (221.6 MeV)")
     plt.grid()
     plt.xlabel("Total Deposited Energy / MeV")
     plt.ylabel("Counts")
     plt.tight_layout()
-    # plt.savefig(f"{datapath}/unfold/img/TotalEnergyDeposition.pdf", format="pdf", bbox_inches="tight")
-    plt.savefig(f"{datapath}/Redunfold/img/TotalEnergyDeposition.pdf", format="pdf", bbox_inches="tight")
+    plt.savefig(f"{datapath}/unfold/img/TotalEnergyDeposition.pdf", format="pdf", bbox_inches="tight")
+    # plt.savefig(f"{datapath}/Redunfold/img/TotalEnergyDeposition.pdf", format="pdf", bbox_inches="tight")
     # plt.show()
     plt.close()
 
@@ -1004,13 +1020,13 @@ if __name__ == "__main__":
 
     print("\nPerforming Bayesian unfolding...")
     
-    channels = list(range(0, 32))
+    channels = list(range(0, 1))
     # UnfoldChannel(0, hist[0], ehist[0], hist_edges[0], eedges[0], detector, datapath, detectorpath, depth[0], deptherr[0])
     # exit()
     args = [(hist[ch], ehist[ch], hist_edges[ch], eedges[ch], detector, datapath, detectorpath, depth, deptherr) for ch in channels]
 
 
-    with ProcessPoolExecutor(max_workers=16) as executor:
+    with ProcessPoolExecutor(max_workers=1) as executor:
         for ch in executor.map(UnfoldChannel,
         channels,
         [hist[ch] for ch in channels],
@@ -1050,7 +1066,7 @@ if __name__ == "__main__":
 
             fig, axs = plt.subplots(1, 2, figsize=(20, 10))
 
-            axs[0].plot(E_true, unfolded_spectrum, color=targetColorMap[0], linewidth=2, label='Unfolded Spectrum')
+            axs[0].plot(E_true, unfolded_spectrum, color=targetColorMap[0], linewidth=4, label='Unfolded Spectrum')
             axs[0].step(eCenters[ch], ehist[ch], color=targetColorMap[1], linewidth=2, label=f'Measured Spectrum')
 
             axs[0].set_xlabel('Energy / MeV')
@@ -1060,7 +1076,7 @@ if __name__ == "__main__":
             axs[0].grid(True)
 
             axs[1].step(Centers[ch], measured, color=targetColorMap[0], linewidth=2, label=f'Measured Spectrum')
-            axs[1].plot(Centers[ch], predicted_measured, color=targetColorMap[1], linewidth=2, label='Predicted Spectrum')
+            axs[1].plot(Centers[ch], predicted_measured, color=targetColorMap[1], linewidth=4, label='Predicted Spectrum')
 
             axs[1].set_xlabel('Energy / MeV')
             axs[1].set_ylabel('Counts')
