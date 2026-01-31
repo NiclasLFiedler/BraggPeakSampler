@@ -901,7 +901,7 @@ if __name__ == "__main__":
         idx += 1
         energyEvent = []
         for layer, layerCharge in enumerate(event):
-            if(layerCharge == 0):# or layer == 8):
+            if(layerCharge == 0 or layer == 8):
                 energyEvent.append(0)
             else:
                 energyEvent.append(detector.adc_to_energy(layer, layerCharge))
@@ -964,7 +964,9 @@ if __name__ == "__main__":
     x_smooth = np.linspace(TEnergyCenters[0], TEnergyCenters[-1], 1000)
     y_smooth = gauss(x_smooth, *popt)
 
-    print(f"Peak at {mu} MeV +. {perr[1]}: Energycut at {energyCutOff} MeV")
+    print(f"Peak at {mu+8.1} MeV +. {perr[1]}: Energycut at {energyCutOff} MeV")
+    print(f"Difference: {207.7-(mu+8.1)}")
+    print(f"{221.6*(mu+8.1)/207.7}")
     plt.rcParams.update({'font.size': 32})
     plt.figure(figsize=(16,12))
     plt.step(TEnergyCenters, TEnergyCounts, where="mid", color=targetColorMap[0])
@@ -985,7 +987,7 @@ if __name__ == "__main__":
     # plt.show()
     plt.close()
 
-    # exit()
+    exit()
     selectedCharge = np.array(selectedCharge)
     
     for i in range(0,32):

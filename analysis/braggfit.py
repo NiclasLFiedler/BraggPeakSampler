@@ -650,7 +650,7 @@ print(f"Elapsed time: {elapsed_time} seconds")
 
 ax1.grid(True)
 ax1.set_xlabel('Water Equivalent Depth / cm')
-ax1.set_ylabel('Dose  / μG')
+ax1.set_ylabel('rel. Dose  / μG')
 ax1.legend(loc='upper left',  fancybox=False, edgecolor='black')
 fig.tight_layout()
 
@@ -665,7 +665,7 @@ else:
     plt.savefig(f"../data/{dataset}/{file}/output/pdf/braggfit.png", format='png', bbox_inches='tight', dpi=600)
 
 zoom_half_width = 5  # cm (adjust to taste: 1–2 cm is typical)
-zmin_zoom = 24 - 3
+zmin_zoom = 24 - 4
 zmax_zoom = 25 + 1
 
 # ============================================================
@@ -673,7 +673,7 @@ zmax_zoom = 25 + 1
 # ============================================================
 
 if targetSelect == 1:
-    plt.rcParams.update({'font.size': 28})
+    plt.rcParams.update({'font.size': 32})
     fig_zoom, axz = plt.subplots(figsize=(16, 12))
 
     # axz.set_title("Bragg peak region (zoomed)")
@@ -734,7 +734,7 @@ if targetSelect == 1:
         )
 
     axz.set_xlabel("Water Equivalent Depth / cm")
-    axz.set_ylabel("Dose / μG")
+    axz.set_ylabel("rel. Dose / μG")
 
     axz.grid(True)
     axz.legend(
