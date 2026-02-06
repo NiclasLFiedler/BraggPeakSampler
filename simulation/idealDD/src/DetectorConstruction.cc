@@ -29,7 +29,10 @@
 #include "DetectorParameterisationColour.hh"
 #include "HeteroParametrisation.cc"
 #include "G4RegularNavigation.hh"
-
+#include "G4PSEnergyDeposit.hh"
+#include "G4ScoringManager.hh"
+#include "G4ScoringBox.hh"
+#include "G4MultiFunctionalDetector.hh"
 #include "Randomize.hh"
 
 #include "G4EmCalculator.hh"
@@ -540,35 +543,17 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   // userLimits->SetMaxAllowedStep(0.1*mm);
   
   solidworld = new G4Box("solidworld", worldXY / 2, worldXY / 2, worldZ / 2);
-  
   logicalworld = new G4LogicalVolume(solidworld, worldMat, "logicalWorld");
-  
   physworld = new G4PVPlacement(nullptr, G4ThreeVector(), logicalworld, "physworld", nullptr, false, 0, fCheckOverlaps);  
   
-  // Assume you use mm as the default unit
-  G4double phantomX = 300.0 * mm;
-  G4double phantomY = 300.0 * mm;
-  G4double phantomZ = detSizeZ*fLayers; // Longer than Bragg peak range
 
-
-  G4Box* solidPhantom = new G4Box("Phantom", phantomX/2, phantomY/2, phantomZ/2);
-  G4LogicalVolume* logicPhantom = new G4LogicalVolume(solidPhantom, water, "phantom");
-  new G4PVPlacement(nullptr, G4ThreeVector(0,0,-300*mm), logicPhantom, "Phantom", logicalworld, false, 0);
-
-  G4Box* solidLayer = new G4Box("Layer", phantomX/2, phantomY/2, detSizeZ/2);
-  G4LogicalVolume* logicLayer = new G4LogicalVolume(solidLayer, water, "Layer");
+  G4Box* waterBox = new G4Box("Water", 50*cm, 50*cm, 50*cm);
+  waterLog = new G4LogicalVolume(waterBox, water, "WaterLog");
+  new G4PVPlacement(0, G4ThreeVector(0,0,-50*cm), waterLog, "WaterPhys", logicalworld, false, 0);
   
-  auto PhantomVisAttr = new G4VisAttributes(G4Colour(0.0, 0.0, 1.0)); // Blue
-  PhantomVisAttr->SetVisibility(true);
-  PhantomVisAttr->SetForceSolid(true);
-
-  auto* parameterisationPhantom = new HeteroParameterisation(1, 1, fLayers, 0, 0, detSizeZ, water, water, PhantomVisAttr, PhantomVisAttr);
-
-  new G4PVParameterised(
-    "Layer", logicLayer, logicPhantom, kUndefined, fLayers, parameterisationPhantom
-  );
 
 
+  
   G4double dBeamSpot = 0.1*mm;
   G4int nx, ny, nz;
   G4double cubeSizeX, cubeSizeY, cubeSizeZ;
@@ -659,19 +644,22 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
 void DetectorConstruction::ConstructSDandField()
-{
-  std::string trackerDetectorSDname = "/TrackerDetectorSD";
-  auto aTrackerSD = new TrackerSD(trackerDetectorSDname, "TrackerHitsCollection", fLayers);
-  auto aSiPMSD = new SiPMSD("/SiPMSD", "TrackerHitsCollectionSiPM", fLayers);
-  G4SDManager::GetSDMpointer()->AddNewDetector(aTrackerSD);
-  G4SDManager::GetSDMpointer()->AddNewDetector(aSiPMSD);
-
-  SetSensitiveDetector("Layer", aTrackerSD, true);
-  //SetSensitiveDetector("logicalAbsorber", aTrackerSD, true);
-  aSiPMSD->target = ftarget;
-  if(ftarget == 2){ //heterogenous
-    SetSensitiveDetector("logicalTracker", aSiPMSD, true);
-  }
+{  
+  G4ScoringManager* scoringManager = G4ScoringManager::GetScoringManager();
+  G4ScoringBox* mesh = new G4ScoringBox("waterMesh");
+  
+  G4double meshSize[3] = {50*cm, 50*cm, 50*cm};
+  G4int meshSegNumber[3] = {1, 1, 400};
+  G4double meshCenter[3] = {0,0, -50*cm};
+  
+  mesh->SetSize(meshSize);
+  mesh->SetNumberOfSegments(meshSegNumber);
+  mesh->SetCenterPosition(meshCenter);
+  mesh->SetPrimitiveScorer(new G4PSEnergyDeposit("Edep"));
+  
+  scoringManager->SetVerboseLevel(1); // optional: for debug info
+  scoringManager->RegisterScoringMesh(mesh);
+  
   return;
 }
 

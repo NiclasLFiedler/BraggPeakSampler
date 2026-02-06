@@ -1,6 +1,9 @@
 #include "RunAction.hh"
 #include "G4Run.hh"
 #include "G4RunManager.hh"
+#include "G4ScoringBox.hh"
+#include "G4ScoringManager.hh"
+#include "G4VScoringMesh.hh"
 
 RunAction::RunAction()
 {
@@ -23,9 +26,20 @@ void RunAction::BeginOfRunAction(const G4Run*)
   analysisManager->OpenFile("../data/data.root");
 }
 
-void RunAction::EndOfRunAction(const G4Run* )
+
+void RunAction::EndOfRunAction(const G4Run*)
 {
-  G4RootAnalysisManager* analysisManager = G4RootAnalysisManager::Instance();
-	analysisManager->SetFileName("../data/data.root");
-  analysisManager->CloseFile();
+    auto sm = G4ScoringManager::GetScoringManager();
+    auto mesh = sm->GetMesh(0);
+    auto scoreMap = mesh->GetScoreMap();
+    auto hitsMap = (scoreMap)["Edep"];
+
+  hitsMap->PrintAllHits();
+// for(const auto& it : *(hitsMap->GetMap()))
+// {
+    // G4int bin = it.first;
+    // it->PrintAllHits();
+// }
+
+    sm->DumpAllQuantitiesToFile("waterMesh", "BraggPeak.txt");
 }

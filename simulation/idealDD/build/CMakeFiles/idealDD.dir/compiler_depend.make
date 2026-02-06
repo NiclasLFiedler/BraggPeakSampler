@@ -2028,6 +2028,7 @@ CMakeFiles/idealDD.dir/src/DetectorConstruction.cc.o: /home/niclas/BraggPeakSamp
   /usr/local/include/Geant4/G4MaterialPropertyVector.hh \
   /usr/local/include/Geant4/G4MaterialTable.hh \
   /usr/local/include/Geant4/G4MscStepLimitType.hh \
+  /usr/local/include/Geant4/G4MultiFunctionalDetector.hh \
   /usr/local/include/Geant4/G4NavigationHistory.hh \
   /usr/local/include/Geant4/G4NavigationHistory.icc \
   /usr/local/include/Geant4/G4NavigationHistoryPool.hh \
@@ -2043,6 +2044,7 @@ CMakeFiles/idealDD.dir/src/DetectorConstruction.cc.o: /home/niclas/BraggPeakSamp
   /usr/local/include/Geant4/G4OpticalSurface.hh \
   /usr/local/include/Geant4/G4OrderedTable.hh \
   /usr/local/include/Geant4/G4PDefManager.hh \
+  /usr/local/include/Geant4/G4PSEnergyDeposit.hh \
   /usr/local/include/Geant4/G4PVParameterised.hh \
   /usr/local/include/Geant4/G4PVPlacement.hh \
   /usr/local/include/Geant4/G4PVReplica.hh \
@@ -2072,8 +2074,11 @@ CMakeFiles/idealDD.dir/src/DetectorConstruction.cc.o: /home/niclas/BraggPeakSamp
   /usr/local/include/Geant4/G4SDManager.hh \
   /usr/local/include/Geant4/G4SDStructure.hh \
   /usr/local/include/Geant4/G4SandiaTable.hh \
+  /usr/local/include/Geant4/G4ScoringBox.hh \
+  /usr/local/include/Geant4/G4ScoringManager.hh \
   /usr/local/include/Geant4/G4SensitiveVolumeList.hh \
   /usr/local/include/Geant4/G4SmartVoxelStat.hh \
+  /usr/local/include/Geant4/G4StatDouble.hh \
   /usr/local/include/Geant4/G4Step.hh \
   /usr/local/include/Geant4/G4Step.icc \
   /usr/local/include/Geant4/G4StepPoint.hh \
@@ -2087,6 +2092,7 @@ CMakeFiles/idealDD.dir/src/DetectorConstruction.cc.o: /home/niclas/BraggPeakSamp
   /usr/local/include/Geant4/G4SurfaceProperty.hh \
   /usr/local/include/Geant4/G4SystemOfUnits.hh \
   /usr/local/include/Geant4/G4THitsCollection.hh \
+  /usr/local/include/Geant4/G4THitsMap.hh \
   /usr/local/include/Geant4/G4TessellatedSolid.hh \
   /usr/local/include/Geant4/G4ThreadLocalSingleton.hh \
   /usr/local/include/Geant4/G4Threading.hh \
@@ -2124,8 +2130,12 @@ CMakeFiles/idealDD.dir/src/DetectorConstruction.cc.o: /home/niclas/BraggPeakSamp
   /usr/local/include/Geant4/G4VPVParameterisation.hh \
   /usr/local/include/Geant4/G4VPhysicalVolume.hh \
   /usr/local/include/Geant4/G4VPhysicalVolume.icc \
+  /usr/local/include/Geant4/G4VPrimitivePlotter.hh \
+  /usr/local/include/Geant4/G4VPrimitiveScorer.hh \
   /usr/local/include/Geant4/G4VReadOutGeometry.hh \
   /usr/local/include/Geant4/G4VSDFilter.hh \
+  /usr/local/include/Geant4/G4VScoreWriter.hh \
+  /usr/local/include/Geant4/G4VScoringMesh.hh \
   /usr/local/include/Geant4/G4VSensitiveDetector.hh \
   /usr/local/include/Geant4/G4VSolid.hh \
   /usr/local/include/Geant4/G4VSolid.icc \
@@ -2976,6 +2986,7 @@ CMakeFiles/idealDD.dir/src/EventAction.cc.o: /home/niclas/BraggPeakSampler/simul
   /home/niclas/BraggPeakSampler/simulation/idealDD/include/SiPMSD.hh \
   /home/niclas/BraggPeakSampler/simulation/idealDD/include/TrackerHit.hh \
   /home/niclas/BraggPeakSampler/simulation/idealDD/include/TrackerSD.hh \
+  /home/niclas/BraggPeakSampler/simulation/idealDD/src/HeteroParametrisation.cc \
   /usr/include/alloca.h \
   /usr/include/asm-generic/errno-base.h \
   /usr/include/asm-generic/errno.h \
@@ -3006,6 +3017,7 @@ CMakeFiles/idealDD.dir/src/EventAction.cc.o: /home/niclas/BraggPeakSampler/simul
   /usr/include/c++/13/bits/cpp_type_traits.h \
   /usr/include/c++/13/bits/cxxabi_forced.h \
   /usr/include/c++/13/bits/cxxabi_init_exception.h \
+  /usr/include/c++/13/bits/enable_special_members.h \
   /usr/include/c++/13/bits/erase_if.h \
   /usr/include/c++/13/bits/exception.h \
   /usr/include/c++/13/bits/exception_defines.h \
@@ -3014,6 +3026,8 @@ CMakeFiles/idealDD.dir/src/EventAction.cc.o: /home/niclas/BraggPeakSampler/simul
   /usr/include/c++/13/bits/functexcept.h \
   /usr/include/c++/13/bits/functional_hash.h \
   /usr/include/c++/13/bits/hash_bytes.h \
+  /usr/include/c++/13/bits/hashtable.h \
+  /usr/include/c++/13/bits/hashtable_policy.h \
   /usr/include/c++/13/bits/invoke.h \
   /usr/include/c++/13/bits/ios_base.h \
   /usr/include/c++/13/bits/istream.tcc \
@@ -3078,6 +3092,7 @@ CMakeFiles/idealDD.dir/src/EventAction.cc.o: /home/niclas/BraggPeakSampler/simul
   /usr/include/c++/13/bits/uniform_int_dist.h \
   /usr/include/c++/13/bits/unique_lock.h \
   /usr/include/c++/13/bits/unique_ptr.h \
+  /usr/include/c++/13/bits/unordered_map.h \
   /usr/include/c++/13/bits/uses_allocator.h \
   /usr/include/c++/13/bits/uses_allocator_args.h \
   /usr/include/c++/13/bits/utility.h \
@@ -3154,6 +3169,7 @@ CMakeFiles/idealDD.dir/src/EventAction.cc.o: /home/niclas/BraggPeakSampler/simul
   /usr/include/c++/13/tuple \
   /usr/include/c++/13/type_traits \
   /usr/include/c++/13/typeinfo \
+  /usr/include/c++/13/unordered_map \
   /usr/include/c++/13/utility \
   /usr/include/c++/13/vector \
   /usr/include/ctype.h \
@@ -3370,6 +3386,8 @@ CMakeFiles/idealDD.dir/src/EventAction.cc.o: /home/niclas/BraggPeakSampler/simul
   /usr/local/include/Geant4/G4BlockingList.icc \
   /usr/local/include/Geant4/G4ClassificationOfNewTrack.hh \
   /usr/local/include/Geant4/G4CollectionNameVector.hh \
+  /usr/local/include/Geant4/G4Color.hh \
+  /usr/local/include/Geant4/G4Colour.hh \
   /usr/local/include/Geant4/G4DCofThisEvent.hh \
   /usr/local/include/Geant4/G4DataVector.hh \
   /usr/local/include/Geant4/G4DataVector.icc \
@@ -3407,6 +3425,7 @@ CMakeFiles/idealDD.dir/src/EventAction.cc.o: /home/niclas/BraggPeakSampler/simul
   /usr/local/include/Geant4/G4MaterialPropertiesTable.hh \
   /usr/local/include/Geant4/G4MaterialPropertyVector.hh \
   /usr/local/include/Geant4/G4MaterialTable.hh \
+  /usr/local/include/Geant4/G4MultiFunctionalDetector.hh \
   /usr/local/include/Geant4/G4NavigationHistory.hh \
   /usr/local/include/Geant4/G4NavigationHistory.icc \
   /usr/local/include/Geant4/G4NavigationHistoryPool.hh \
@@ -3424,6 +3443,7 @@ CMakeFiles/idealDD.dir/src/EventAction.cc.o: /home/niclas/BraggPeakSampler/simul
   /usr/local/include/Geant4/G4NtupleBookingManager.icc \
   /usr/local/include/Geant4/G4OrderedTable.hh \
   /usr/local/include/Geant4/G4PDefManager.hh \
+  /usr/local/include/Geant4/G4PSEnergyDeposit.hh \
   /usr/local/include/Geant4/G4ParameterisedNavigation.hh \
   /usr/local/include/Geant4/G4ParameterisedNavigation.icc \
   /usr/local/include/Geant4/G4ParticleChange.hh \
@@ -3466,6 +3486,8 @@ CMakeFiles/idealDD.dir/src/EventAction.cc.o: /home/niclas/BraggPeakSampler/simul
   /usr/local/include/Geant4/G4SDManager.hh \
   /usr/local/include/Geant4/G4SDStructure.hh \
   /usr/local/include/Geant4/G4SandiaTable.hh \
+  /usr/local/include/Geant4/G4ScoringBox.hh \
+  /usr/local/include/Geant4/G4ScoringManager.hh \
   /usr/local/include/Geant4/G4SensitiveVolumeList.hh \
   /usr/local/include/Geant4/G4SmartTrackStack.hh \
   /usr/local/include/Geant4/G4SmartVoxelHeader.hh \
@@ -3476,6 +3498,7 @@ CMakeFiles/idealDD.dir/src/EventAction.cc.o: /home/niclas/BraggPeakSampler/simul
   /usr/local/include/Geant4/G4SmartVoxelProxy.icc \
   /usr/local/include/Geant4/G4StackManager.hh \
   /usr/local/include/Geant4/G4StackedTrack.hh \
+  /usr/local/include/Geant4/G4StatDouble.hh \
   /usr/local/include/Geant4/G4Step.hh \
   /usr/local/include/Geant4/G4Step.icc \
   /usr/local/include/Geant4/G4StepPoint.hh \
@@ -3495,6 +3518,7 @@ CMakeFiles/idealDD.dir/src/EventAction.cc.o: /home/niclas/BraggPeakSampler/simul
   /usr/local/include/Geant4/G4TH2ToolsManager.hh \
   /usr/local/include/Geant4/G4TH3ToolsManager.hh \
   /usr/local/include/Geant4/G4THitsCollection.hh \
+  /usr/local/include/Geant4/G4THitsMap.hh \
   /usr/local/include/Geant4/G4THnManager.hh \
   /usr/local/include/Geant4/G4THnManager.icc \
   /usr/local/include/Geant4/G4THnMessenger.hh \
@@ -3549,9 +3573,13 @@ CMakeFiles/idealDD.dir/src/EventAction.cc.o: /home/niclas/BraggPeakSampler/simul
   /usr/local/include/Geant4/G4VParticleChange.icc \
   /usr/local/include/Geant4/G4VPhysicalVolume.hh \
   /usr/local/include/Geant4/G4VPhysicalVolume.icc \
+  /usr/local/include/Geant4/G4VPrimitivePlotter.hh \
+  /usr/local/include/Geant4/G4VPrimitiveScorer.hh \
   /usr/local/include/Geant4/G4VProcess.hh \
   /usr/local/include/Geant4/G4VReadOutGeometry.hh \
   /usr/local/include/Geant4/G4VSDFilter.hh \
+  /usr/local/include/Geant4/G4VScoreWriter.hh \
+  /usr/local/include/Geant4/G4VScoringMesh.hh \
   /usr/local/include/Geant4/G4VSensitiveDetector.hh \
   /usr/local/include/Geant4/G4VSolid.hh \
   /usr/local/include/Geant4/G4VSolid.icc \
@@ -3565,6 +3593,8 @@ CMakeFiles/idealDD.dir/src/EventAction.cc.o: /home/niclas/BraggPeakSampler/simul
   /usr/local/include/Geant4/G4VUserEventInformation.hh \
   /usr/local/include/Geant4/G4VUserTrackInformation.hh \
   /usr/local/include/Geant4/G4VVolumeMaterialScanner.hh \
+  /usr/local/include/Geant4/G4VisAttributes.hh \
+  /usr/local/include/Geant4/G4VisAttributes.icc \
   /usr/local/include/Geant4/G4VoxelNavigation.hh \
   /usr/local/include/Geant4/G4VoxelNavigation.icc \
   /usr/local/include/Geant4/G4ios.hh \
@@ -3573,6 +3603,7 @@ CMakeFiles/idealDD.dir/src/EventAction.cc.o: /home/niclas/BraggPeakSampler/simul
   /usr/local/include/Geant4/geomdefs.hh \
   /usr/local/include/Geant4/geomwdefs.hh \
   /usr/local/include/Geant4/globals.hh \
+  /usr/local/include/Geant4/graphics_reps_defs.hh \
   /usr/local/include/Geant4/pwdefs.hh \
   /usr/local/include/Geant4/templates.hh \
   /usr/local/include/Geant4/tls.hh \
@@ -5021,6 +5052,7 @@ CMakeFiles/idealDD.dir/src/RunAction.cc.o: /home/niclas/BraggPeakSampler/simulat
   /usr/include/c++/13/bits/cpp_type_traits.h \
   /usr/include/c++/13/bits/cxxabi_forced.h \
   /usr/include/c++/13/bits/cxxabi_init_exception.h \
+  /usr/include/c++/13/bits/enable_special_members.h \
   /usr/include/c++/13/bits/erase_if.h \
   /usr/include/c++/13/bits/exception.h \
   /usr/include/c++/13/bits/exception_defines.h \
@@ -5029,6 +5061,8 @@ CMakeFiles/idealDD.dir/src/RunAction.cc.o: /home/niclas/BraggPeakSampler/simulat
   /usr/include/c++/13/bits/functexcept.h \
   /usr/include/c++/13/bits/functional_hash.h \
   /usr/include/c++/13/bits/hash_bytes.h \
+  /usr/include/c++/13/bits/hashtable.h \
+  /usr/include/c++/13/bits/hashtable_policy.h \
   /usr/include/c++/13/bits/invoke.h \
   /usr/include/c++/13/bits/ios_base.h \
   /usr/include/c++/13/bits/istream.tcc \
@@ -5095,6 +5129,7 @@ CMakeFiles/idealDD.dir/src/RunAction.cc.o: /home/niclas/BraggPeakSampler/simulat
   /usr/include/c++/13/bits/uniform_int_dist.h \
   /usr/include/c++/13/bits/unique_lock.h \
   /usr/include/c++/13/bits/unique_ptr.h \
+  /usr/include/c++/13/bits/unordered_map.h \
   /usr/include/c++/13/bits/uses_allocator.h \
   /usr/include/c++/13/bits/uses_allocator_args.h \
   /usr/include/c++/13/bits/utility.h \
@@ -5172,6 +5207,7 @@ CMakeFiles/idealDD.dir/src/RunAction.cc.o: /home/niclas/BraggPeakSampler/simulat
   /usr/include/c++/13/tuple \
   /usr/include/c++/13/type_traits \
   /usr/include/c++/13/typeinfo \
+  /usr/include/c++/13/unordered_map \
   /usr/include/c++/13/utility \
   /usr/include/c++/13/vector \
   /usr/include/ctype.h \
@@ -5483,6 +5519,8 @@ CMakeFiles/idealDD.dir/src/RunAction.cc.o: /home/niclas/BraggPeakSampler/simulat
   /usr/local/include/Geant4/G4RunManager.hh \
   /usr/local/include/Geant4/G4RunManagerKernel.hh \
   /usr/local/include/Geant4/G4SandiaTable.hh \
+  /usr/local/include/Geant4/G4ScoringBox.hh \
+  /usr/local/include/Geant4/G4ScoringManager.hh \
   /usr/local/include/Geant4/G4SmartTrackStack.hh \
   /usr/local/include/Geant4/G4SmartVoxelHeader.hh \
   /usr/local/include/Geant4/G4SmartVoxelHeader.icc \
@@ -5492,6 +5530,7 @@ CMakeFiles/idealDD.dir/src/RunAction.cc.o: /home/niclas/BraggPeakSampler/simulat
   /usr/local/include/Geant4/G4SmartVoxelProxy.icc \
   /usr/local/include/Geant4/G4StackManager.hh \
   /usr/local/include/Geant4/G4StackedTrack.hh \
+  /usr/local/include/Geant4/G4StatDouble.hh \
   /usr/local/include/Geant4/G4Step.hh \
   /usr/local/include/Geant4/G4Step.icc \
   /usr/local/include/Geant4/G4StepPoint.hh \
@@ -5509,6 +5548,8 @@ CMakeFiles/idealDD.dir/src/RunAction.cc.o: /home/niclas/BraggPeakSampler/simulat
   /usr/local/include/Geant4/G4TH1ToolsManager.hh \
   /usr/local/include/Geant4/G4TH2ToolsManager.hh \
   /usr/local/include/Geant4/G4TH3ToolsManager.hh \
+  /usr/local/include/Geant4/G4THitsCollection.hh \
+  /usr/local/include/Geant4/G4THitsMap.hh \
   /usr/local/include/Geant4/G4THnManager.hh \
   /usr/local/include/Geant4/G4THnManager.icc \
   /usr/local/include/Geant4/G4THnMessenger.hh \
@@ -5561,6 +5602,8 @@ CMakeFiles/idealDD.dir/src/RunAction.cc.o: /home/niclas/BraggPeakSampler/simulat
   /usr/local/include/Geant4/G4VPhysicalVolume.hh \
   /usr/local/include/Geant4/G4VPhysicalVolume.icc \
   /usr/local/include/Geant4/G4VProcess.hh \
+  /usr/local/include/Geant4/G4VScoreWriter.hh \
+  /usr/local/include/Geant4/G4VScoringMesh.hh \
   /usr/local/include/Geant4/G4VSolid.hh \
   /usr/local/include/Geant4/G4VSolid.icc \
   /usr/local/include/Geant4/G4VSteppingVerbose.hh \
@@ -6979,6 +7022,12 @@ CMakeFiles/idealDD.dir/src/TrackerSD.cc.o: /home/niclas/BraggPeakSampler/simulat
 
 /home/niclas/BraggPeakSampler/simulation/idealDD/src/DetectorMessenger.cc:
 
+/usr/local/include/Geant4/G4VScoreWriter.hh:
+
+/usr/local/include/Geant4/G4VPrimitiveScorer.hh:
+
+/usr/local/include/Geant4/G4VPrimitivePlotter.hh:
+
 /usr/local/include/Geant4/G4UserLimits.icc:
 
 /usr/local/include/Geant4/G4UnionSolid.hh:
@@ -6991,6 +7040,8 @@ CMakeFiles/idealDD.dir/src/TrackerSD.cc.o: /home/niclas/BraggPeakSampler/simulat
 
 /usr/local/include/Geant4/G4PVPlacement.hh:
 
+/usr/local/include/Geant4/G4PSEnergyDeposit.hh:
+
 /usr/local/include/Geant4/G4NistManager.hh:
 
 /usr/local/include/Geant4/G4AutoDelete.hh:
@@ -7002,6 +7053,8 @@ CMakeFiles/idealDD.dir/src/TrackerSD.cc.o: /home/niclas/BraggPeakSampler/simulat
 /usr/include/nlohmann/json_fwd.hpp:
 
 /usr/include/nlohmann/detail/value_t.hpp:
+
+/usr/local/include/Geant4/G4StatDouble.hh:
 
 /usr/include/nlohmann/detail/output/serializer.hpp:
 
@@ -7028,6 +7081,8 @@ CMakeFiles/idealDD.dir/src/TrackerSD.cc.o: /home/niclas/BraggPeakSampler/simulat
 /usr/include/nlohmann/detail/input/lexer.hpp:
 
 /usr/include/nlohmann/detail/conversions/to_json.hpp:
+
+/usr/local/include/Geant4/G4ScoringManager.hh:
 
 /usr/include/nlohmann/detail/abi_macros.hpp:
 
@@ -7574,6 +7629,8 @@ CMakeFiles/idealDD.dir/src/TrackerSD.cc.o: /home/niclas/BraggPeakSampler/simulat
 /usr/local/include/Geant4/G4PhysicsFreeVector.hh:
 
 /usr/local/include/Geant4/G4Physics2DVector.icc:
+
+/usr/local/include/Geant4/G4VScoringMesh.hh:
 
 /usr/local/include/Geant4/G4Physics2DVector.hh:
 
@@ -8361,6 +8418,8 @@ CMakeFiles/idealDD.dir/src/TrackerSD.cc.o: /home/niclas/BraggPeakSampler/simulat
 
 /usr/include/c++/13/bits/quoted_string.h:
 
+/usr/local/include/Geant4/G4MultiFunctionalDetector.hh:
+
 /usr/include/c++/13/bits/uses_allocator.h:
 
 /usr/include/c++/13/bits/postypes.h:
@@ -8576,6 +8635,8 @@ CMakeFiles/idealDD.dir/src/TrackerSD.cc.o: /home/niclas/BraggPeakSampler/simulat
 /usr/include/c++/13/bits/locale_conv.h:
 
 /usr/include/x86_64-linux-gnu/bits/stdio_lim.h:
+
+/usr/local/include/Geant4/G4ScoringBox.hh:
 
 /usr/local/include/Geant4/G4Allocator.hh:
 

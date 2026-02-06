@@ -601,4 +601,17 @@ CMakeFiles/idealDD.dir/src/RunAction.cc.o: \
  /usr/local/include/Geant4/G4UserTrackingAction.hh \
  /usr/local/include/Geant4/G4RunManagerKernel.hh \
  /usr/local/include/Geant4/rundefs.hh /usr/include/c++/13/list \
- /usr/include/c++/13/bits/stl_list.h /usr/include/c++/13/bits/list.tcc
+ /usr/include/c++/13/bits/stl_list.h /usr/include/c++/13/bits/list.tcc \
+ /usr/local/include/Geant4/G4ScoringBox.hh \
+ /usr/local/include/Geant4/G4VScoringMesh.hh \
+ /usr/local/include/Geant4/G4THitsMap.hh \
+ /usr/local/include/Geant4/G4THitsCollection.hh \
+ /usr/include/c++/13/unordered_map \
+ /usr/include/c++/13/bits/unordered_map.h \
+ /usr/include/c++/13/bits/hashtable.h \
+ /usr/include/c++/13/bits/hashtable_policy.h \
+ /usr/include/c++/13/bits/enable_special_members.h \
+ /usr/local/include/Geant4/G4StatDouble.hh \
+ /usr/local/include/Geant4/G4ScoringManager.hh \
+ /usr/local/include/Geant4/G4VScoreWriter.hh \
+ /usr/local/include/Geant4/G4VScoringMesh.hh

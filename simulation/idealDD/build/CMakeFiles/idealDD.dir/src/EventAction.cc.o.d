@@ -621,4 +621,32 @@ CMakeFiles/idealDD.dir/src/EventAction.cc.o: \
  /home/niclas/BraggPeakSampler/simulation/idealDD/include/SiPMSD.hh \
  /usr/local/include/Geant4/G4VSensitiveDetector.hh \
  /home/niclas/BraggPeakSampler/simulation/idealDD/include/TrackerSD.hh \
- /usr/local/include/Geant4/G4SystemOfUnits.hh
+ /usr/local/include/Geant4/G4SystemOfUnits.hh \
+ /home/niclas/BraggPeakSampler/simulation/idealDD/src/HeteroParametrisation.cc \
+ /usr/local/include/Geant4/G4VPVParameterisation.hh \
+ /usr/local/include/Geant4/G4VPhysicalVolume.hh \
+ /usr/local/include/Geant4/G4LogicalVolume.hh \
+ /usr/local/include/Geant4/G4Material.hh \
+ /usr/local/include/Geant4/G4VisAttributes.hh \
+ /usr/local/include/Geant4/graphics_reps_defs.hh \
+ /usr/local/include/Geant4/G4Colour.hh \
+ /usr/local/include/Geant4/G4Color.hh \
+ /usr/local/include/Geant4/G4VisAttributes.icc \
+ /usr/local/include/Geant4/Randomize.hh /usr/include/c++/13/unordered_map \
+ /usr/include/c++/13/bits/unordered_map.h \
+ /usr/include/c++/13/bits/hashtable.h \
+ /usr/include/c++/13/bits/hashtable_policy.h \
+ /usr/include/c++/13/bits/enable_special_members.h \
+ /usr/local/include/Geant4/G4RegularNavigation.hh \
+ /usr/local/include/Geant4/G4PSEnergyDeposit.hh \
+ /usr/local/include/Geant4/G4VPrimitivePlotter.hh \
+ /usr/local/include/Geant4/G4VPrimitiveScorer.hh \
+ /usr/local/include/Geant4/G4MultiFunctionalDetector.hh \
+ /usr/local/include/Geant4/G4THitsMap.hh \
+ /usr/local/include/Geant4/G4THitsCollection.hh \
+ /usr/local/include/Geant4/G4ScoringManager.hh \
+ /usr/local/include/Geant4/G4VScoringMesh.hh \
+ /usr/local/include/Geant4/G4StatDouble.hh \
+ /usr/local/include/Geant4/G4VScoreWriter.hh \
+ /usr/local/include/Geant4/G4ScoringBox.hh \
+ /usr/local/include/Geant4/G4MultiFunctionalDetector.hh

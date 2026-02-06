@@ -563,6 +563,18 @@ CMakeFiles/idealDD.dir/src/DetectorConstruction.cc.o: \
  /usr/local/include/Geant4/CLHEP/Random/RandStudentT.icc \
  /usr/local/include/Geant4/G4RegularNavigation.hh \
  /usr/local/include/Geant4/G4VNavigation.hh \
+ /usr/local/include/Geant4/G4PSEnergyDeposit.hh \
+ /usr/local/include/Geant4/G4VPrimitivePlotter.hh \
+ /usr/local/include/Geant4/G4VPrimitiveScorer.hh \
+ /usr/local/include/Geant4/G4MultiFunctionalDetector.hh \
+ /usr/local/include/Geant4/G4THitsMap.hh \
+ /usr/local/include/Geant4/G4THitsCollection.hh \
+ /usr/local/include/Geant4/G4ScoringManager.hh \
+ /usr/local/include/Geant4/G4VScoringMesh.hh \
+ /usr/local/include/Geant4/G4StatDouble.hh \
+ /usr/local/include/Geant4/G4VScoreWriter.hh \
+ /usr/local/include/Geant4/G4ScoringBox.hh \
+ /usr/local/include/Geant4/G4MultiFunctionalDetector.hh \
  /usr/local/include/Geant4/G4EmCalculator.hh \
  /usr/local/include/Geant4/G4VAtomDeexcitation.hh \
  /usr/local/include/Geant4/G4EmParameters.hh \
