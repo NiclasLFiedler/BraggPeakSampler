@@ -608,7 +608,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
       logicalTracker->SetVisAttributes(waterVisAttr);
       new G4PVPlacement(nullptr, G4ThreeVector(0, 0, 4*mm), logicalTracker, "physTracker", logicalworld, false, 0);
   } 
-  if(ftarget == 2){ //homogeneous
+  if(ftarget == 1){ //homogeneous
     solidHomo =  new G4Box("solidHomo", 300/2, 300/2, 20/2);
     logicalHomo = new G4LogicalVolume(solidHomo, absorberMaterial, "logicalHomo");    
     physHomo = new G4PVPlacement(nullptr, G4ThreeVector(0.,0., 20/2*mm+cubeSizeZ*nz+8*mm), logicalHomo,"physHomo", logicalworld, false, 0, fCheckOverlaps);
@@ -635,35 +635,61 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   //logicalIsocentre->SetVisAttributes(new G4VisAttributes(G4VisAttributes::GetInvisible()));
 
   physNozzle = new G4PVPlacement(nullptr, G4ThreeVector(x_off, y_off, d_NozzleIsocentre), logicalNozzle,"physNozzle", logicalworld, false, 0, fCheckOverlaps);
-  physIsocentre = new G4PVPlacement(nullptr, G4ThreeVector(x_off, y_off, 0.), logicalIsocentre,"physIsocentre", logicalworld, false, 0, fCheckOverlaps);
+  physIsocentre = new G4PVPlacement(nullptr, G4ThreeVector(x_off, y_off, dBeamSpot/2), logicalIsocentre,"physIsocentre", logicalworld, false, 0, fCheckOverlaps);
 
   // logicalworld->SetVisAttributes(new G4VisAttributes(G4VisAttributes::GetInvisible()));
   return physworld;
 }
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
 void DetectorConstruction::ConstructSDandField()
 {  
   G4ScoringManager* scoringManager = G4ScoringManager::GetScoringManager();
-  G4ScoringBox* mesh = new G4ScoringBox("waterMesh");
+  G4ScoringBox* mesh1 = new G4ScoringBox("waterMesh1");
+  // G4ScoringBox* mesh2 = new G4ScoringBox("waterMesh2");
+  // G4ScoringBox* mesh3 = new G4ScoringBox("waterMesh3");
   
-  G4double meshSize[3] = {50*cm, 50*cm, 50*cm};
-  G4int meshSegNumber[3] = {1, 1, 400};
-  G4double meshCenter[3] = {0,0, -50*cm};
+  G4double meshSize = 25*cm;
+  G4double sizeZ1 = meshSize;
+  // G4double sizeZ1 = 8*cm;
+  // G4double sizeZ2 = 9*cm;
+  // G4double sizeZ3 = meshSize-sizeZ1-sizeZ2;
+
+  G4double meshSize1[3] = {50*cm, 50*cm, sizeZ1};
+  // G4double meshSize2[3] = {50*cm, 50*cm, sizeZ2};
+  // G4double meshSize3[3] = {50*cm, 50*cm, sizeZ3};
+
+  G4int meshSegNumber1[3] = {1, 1, 2000};
+  // G4int meshSegNumber2[3] = {1, 1, 800};
+  // G4int meshSegNumber3[3] = {1, 1, 300};
+
+  G4double meshCenter1[3] = {0,0, -sizeZ1};
+  // G4double meshCenter2[3] = {0,0, -(sizeZ1*2+sizeZ2)};
+  // G4double meshCenter3[3] = {0,0, -(sizeZ1*2+sizeZ2*2+sizeZ3)};
   
-  mesh->SetSize(meshSize);
-  mesh->SetNumberOfSegments(meshSegNumber);
-  mesh->SetCenterPosition(meshCenter);
-  mesh->SetPrimitiveScorer(new G4PSEnergyDeposit("Edep"));
+  mesh1->SetSize(meshSize1);
+  mesh1->SetNumberOfSegments(meshSegNumber1);
+  mesh1->SetCenterPosition(meshCenter1);
+  mesh1->SetPrimitiveScorer(new G4PSEnergyDeposit("Edep"));
   
+  // mesh2->SetSize(meshSize2);
+  // mesh2->SetNumberOfSegments(meshSegNumber2);
+  // mesh2->SetCenterPosition(meshCenter2);
+  // mesh2->SetPrimitiveScorer(new G4PSEnergyDeposit("Edep"));
+
+  // mesh3->SetSize(meshSize3);
+  // mesh3->SetNumberOfSegments(meshSegNumber3);
+  // mesh3->SetCenterPosition(meshCenter3);
+  // mesh3->SetPrimitiveScorer(new G4PSEnergyDeposit("Edep"));
+
+
+
   scoringManager->SetVerboseLevel(1); // optional: for debug info
-  scoringManager->RegisterScoringMesh(mesh);
+  scoringManager->RegisterScoringMesh(mesh1);
+  // scoringManager->RegisterScoringMesh(mesh2);
+  // scoringManager->RegisterScoringMesh(mesh3);
   
   return;
 }
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
 void DetectorConstruction::SetCheckOverlaps(G4bool checkOverlaps)
 {

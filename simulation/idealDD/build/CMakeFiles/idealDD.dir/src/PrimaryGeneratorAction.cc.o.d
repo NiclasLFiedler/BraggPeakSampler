@@ -1,7 +1,7 @@
 CMakeFiles/idealDD.dir/src/PrimaryGeneratorAction.cc.o: \
- /home/niclas/BraggPeakSampler/simulation/idealDD/src/PrimaryGeneratorAction.cc \
+ /home/user/BraggPeakSampler/simulation/idealDD/src/PrimaryGeneratorAction.cc \
  /usr/include/stdc-predef.h \
- /home/niclas/BraggPeakSampler/simulation/idealDD/include/PrimaryGeneratorAction.hh \
+ /home/user/BraggPeakSampler/simulation/idealDD/include/PrimaryGeneratorAction.hh \
  /usr/local/include/Geant4/G4VUserPrimaryGeneratorAction.hh \
  /usr/local/include/Geant4/globals.hh /usr/local/include/Geant4/G4ios.hh \
  /usr/local/include/Geant4/G4Types.hh \
@@ -228,7 +228,7 @@ CMakeFiles/idealDD.dir/src/PrimaryGeneratorAction.cc.o: \
  /usr/local/include/Geant4/CLHEP/Vector/ThreeVector.h \
  /usr/local/include/Geant4/CLHEP/Utility/defs.h \
  /usr/local/include/Geant4/CLHEP/Vector/ThreeVector.icc \
- /home/niclas/BraggPeakSampler/simulation/idealDD/include/DetectorConstruction.hh \
+ /home/user/BraggPeakSampler/simulation/idealDD/include/DetectorConstruction.hh \
  /usr/local/include/Geant4/G4VUserDetectorConstruction.hh \
  /usr/include/c++/13/vector /usr/include/c++/13/bits/stl_uninitialized.h \
  /usr/include/c++/13/bits/stl_vector.h \
@@ -326,7 +326,7 @@ CMakeFiles/idealDD.dir/src/PrimaryGeneratorAction.cc.o: \
  /usr/include/c++/13/bits/this_thread_sleep.h \
  /usr/local/include/Geant4/G4VPhysicalVolume.icc \
  /usr/local/include/Geant4/G4LogicalBorderSurface.icc \
- /home/niclas/BraggPeakSampler/simulation/idealDD/include/G4STL.hh \
+ /home/user/BraggPeakSampler/simulation/idealDD/include/G4STL.hh \
  /usr/local/include/Geant4/G4SystemOfUnits.hh \
  /usr/local/include/Geant4/G4PhantomParameterisation.hh \
  /usr/local/include/Geant4/G4VPVParameterisation.hh \
