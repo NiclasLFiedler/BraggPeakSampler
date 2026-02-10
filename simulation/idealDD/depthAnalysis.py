@@ -97,7 +97,7 @@ plt.show()
 np.savez(
     f"{datapath}/input/depthdose.npz",
     depth = depth1,
-    depth_err = (depth1[1]-depth1[0])/np.sqrt(12),
+    depth_err = (abs(depth1[-1]-depth1[-2]))/np.sqrt(12),
     dose = edep1,
     dose_err = np.sqrt(edep1)
 )

@@ -102,7 +102,7 @@ def cyl_gauss(a,x):
     return yarr
 
 def depth_dose_distribution(z, Phi0, R0, sigma, epsilon): 
-    beta =  0.0
+    beta =  0.012
     gamma = 0.6
 
     return Phi0*sigma**(1/p_h2o)*special.gamma(1/p_h2o)/(np.sqrt(2*np.pi)*p_h2o*a_h2o**(1/p_h2o)*(1+beta*R0))*(sigma**(-1)*cyl_gauss(-1/p_h2o,(z-R0)/sigma)+(beta/p_h2o + gamma*beta + epsilon/R0)*cyl_gauss(-1/p_h2o-1,(z-R0)/sigma))
@@ -239,20 +239,20 @@ depth = []
 depthTarget = []
 depthTargetTemp = []
 depthErr = []
-depthErrTarget = []
-depthErrTargetTemp = []
+depthTargetErr = []
+depthTargetErrTemp = []
 dose = []
 doseTarget = []
 doseTargetTemp = []
 doseErr = []
-doseErrTarget = []
-doseErrTargetTemp = []
+doseTargetErr = []
+doseTargetErrTemp = []
 unfoldedDose = []
 unfoldedDoseTarget = []
 unfoldedDoseTargetTemp = []
 unfoldedDoseErr = []
-unfoldedDoseErrTarget = []
-unfoldedDoseErrTargetTemp = []
+unfoldedDoseTargetErr = []
+unfoldedDoseTargetErrTemp = []
 
 unfoldedEntries = []
 unfoldedEntriesTarget = []
@@ -266,7 +266,7 @@ doseErr = dataFile["dose_err"]
 unfoldedEntries = dataFile["dose"][0]
 
 if(bhetero):
-    dataFile = np.load(f"{dataset}/{file}/input/depthdose.npz")
+    dataFile = np.load(f"{dataset}/{targetFile}/input/depthdose.npz")
     depthTarget = dataFile["depth"] 
     depthTargetErr = dataFile["depth_err"] 
     doseTarget = dataFile["dose"] 
@@ -276,57 +276,19 @@ if(bhetero):
 targetThicknesses = [52, 53, 54, 55, 56, 57]
 if(targetSelect == 1):
     for thickness in targetThicknesses:
-        depthTargetTemp = []
-        depthErrTargetTemp = []
-        unfoldedDoseErrTargetTemp = []
-        unfoldedDoseTargetTemp = []
-        doseTargetTemp = []
-        doseErrTargetTemp = []
-        unfoldedEntriesTargetTemp = []
-        for ch in range(nLayers):
-            dataFile = np.load(f"{dataset}/{file}/input/depthdose.npz")
+        dataFile = np.load(f"{dataset}/{targetFile}/input/depthdose.npz")
+        depthTarget.append(dataFile["depth"])
+        depthTargetErr.append(dataFile["depth_err"])
+        doseTarget.append(dataFile["dose"])
+        doseTargetErr.append(dataFile["dose_err"])
+        unfoldedEntriesTarget.append(dataFile["dose"][0])
 
-            # Tdepth, Tdeptherr = dataFile["depth"] 
-            # depthTargetTemp.append(Tdepth)
-            # depthErrTargetTemp.append(Tdeptherr)
-            
-            depthTargetTemp.append(WETDepthTarget[ch])
-            depthErrTargetTemp.append(WETDepthErrTarget[ch])
-            
-            Tdose, Tdoseerr = dataFile["unfoldedDose"]
-            unfoldedDoseTargetTemp.append(Tdose)
-            unfoldedDoseErrTargetTemp.append(Tdoseerr)
-            Tdose, Tdoseerr = dataFile["dose"]
-            doseTargetTemp.append(Tdose)
-            doseErrTargetTemp.append(Tdoseerr)
-            unfoldedEntriesTargetTemp.append(np.sum(dataFile["unfolded"][1]))
-            # if thickness == 54:
-                # chi2 = dataFile["reduced_chi2"]
-                # print(f"{ch} Chi^2: {chi2}")
-        depthTarget.append(depthTargetTemp)
-        depthErrTarget.append(depthErrTargetTemp)
-        unfoldedDoseTarget.append(unfoldedDoseTargetTemp)
-        unfoldedDoseErrTarget.append(unfoldedDoseErrTargetTemp)
-        doseTarget.append(doseTargetTemp)
-        doseErrTarget.append(doseErrTargetTemp)
-        unfoldedEntriesTarget.append(unfoldedEntriesTargetTemp)
-
-# print(unfoldedEntriesTarget[1])
 if targetSelect == 1:
     targetFile = f"{targetFile}{52}"
 
 plt.rcParams.update({'font.size': 32})
 fig, ax1 = plt.subplots(figsize=(16, 12))
-# ax1.set_title(f'Fitted energy depth dose distribution {in_title[targetSelect]}')
-# if(bhetero):
-#     print(f'Fitted energy depth dose distribution {in_title[2]}')
-#     ax1.set_title(f'LN300 Phantom: Fitted energy depth dose distribution')
-#     # ax1.set_title(f'Fitted energy depth dose distribution')
-# elif(targetSelect == 1):
-#     ax1.set_title(f'Fitted energy depth dose distribution with PMMA Phantoms')
-# else:
-#     print(f'Fitted energy depth dose distribution {in_title[targetSelect]}')
-    
+
 start_time = time.time()
 
 z = np.linspace(0, 40, 4001)
@@ -374,65 +336,44 @@ for i in range(nbOfFits):
         
 bestfit_params = bortfeld_fit(depth, dose, Phi0, R0, sigma, epsilon, weights)
 if(targetSelect == 2):
-    doseConversion = unfoldedEntries[0]/unfoldedEntriesTarget[0]*(1+beta*(bestfit_params.R0-200*0.029))/(1+beta*bestfit_params.R0)
+    doseConversion = unfoldedEntries/unfoldedEntriesTarget*(1+beta*(bestfit_params.R0-200*0.029))/(1+beta*bestfit_params.R0)
     print(doseConversion)
-    
-    # doseTarget = np.array(doseTarget)
-    # doseErrTarget = np.array(doseErrTarget)
+    doseConversion = 1
     for idx, value in enumerate(doseTarget):
         doseTarget[idx] = doseTarget[idx] * doseConversion
-        doseErrTarget[idx] = doseErrTarget[idx] *doseConversion
+        doseTargetErr[idx] = doseTargetErr[idx] *doseConversion
 
-    # doseTarget = doseTarget * doseConversion
-    # doseErrTarget = doseErrTarget *doseConversion
 elif(targetSelect == 1):
     for idx, unfoldedEntriesTargetSingle in enumerate(unfoldedEntriesTarget):
-        doseConversion = unfoldedEntries[0]/unfoldedEntriesTargetSingle[0]*(1+beta*(bestfit_params.R0-targetThickness*0.118))/(1+beta*bestfit_params.R0)
+        doseConversion = unfoldedEntries/unfoldedEntriesTargetSingle*(1+beta*(bestfit_params.R0-targetThickness*0.118))/(1+beta*bestfit_params.R0)
         print(doseConversion)
         
         # doseTargetTemp = np.array(doseTarget[idx])
-        # doseErrTargetTemp = np.array(doseErrTarget[idx])
+        # doseTargetErrTemp = np.array(doseTargetErr[idx])
         for index, value in enumerate(doseTarget[idx]):
             doseTarget[idx][index] = doseTarget[idx][index] * doseConversion
-            doseErrTarget[idx][index] = doseErrTarget[idx][index]*doseConversion
+            doseTargetErr[idx][index] = doseTargetErr[idx][index]*doseConversion
         # doseTarget[idx] = doseTargetTemp * doseConversion
-        # doseErrTarget[idx] = doseErrTargetTemp *doseConversion
+        # doseTargetErr[idx] = doseTargetErrTemp *doseConversion
 
 targetColorMap = ["#1f77b4", "#4e79a7", "#76b7b2", "#bab0ac", "#f28e2b", "#e15759", "#9c755f"]
 
 if(bhetero):
     ax1.errorbar(depth, dose, doseErr, depthErr, fmt='s', markersize=1, capsize=capSize, elinewidth=lineWidth, color="#000000")#, label="No target data") 
-    ax1.errorbar(depthTarget, doseTarget, doseErrTarget, depthErrTarget, fmt='o', markersize=1, capsize=capSize, elinewidth=lineWidth, color=targetColorMap[0])#, label="Hetero. data") 
-    
-    depthTarget =  depthTarget[:8] + depthTarget[9:]
-    doseTarget =  doseTarget[:8] + doseTarget[9:]
-    doseErrTarget =  doseErrTarget[:8] + doseErrTarget[9:]
-    depthErrTarget = depthErrTarget[:8] + depthErrTarget[9:]
+    ax1.errorbar(depthTarget, doseTarget, doseTargetErr, depthTargetErr, fmt='o', markersize=1, capsize=capSize, elinewidth=lineWidth, color=targetColorMap[0])#, label="Hetero. data") 
     
 elif(targetSelect == 1):
     ax1.errorbar(depth, dose, doseErr, depthErr, fmt='s', markersize=1, capsize=capSize, elinewidth=lineWidth, color='#000000')#, label="No target data")
     for idx, thickness in enumerate(targetThicknesses):
-        ax1.errorbar(depthTarget[idx], doseTarget[idx], doseErrTarget[idx], depthErrTarget[idx], fmt='o', markersize=1, capsize=capSize, elinewidth=lineWidth, color=targetColorMap[idx])#, label=f"{thickness} mm PMMA data")
+        ax1.errorbar(depthTarget[idx], doseTarget[idx], doseTargetErr[idx], depthTargetErr[idx], fmt='o', markersize=1, capsize=capSize, elinewidth=lineWidth, color=targetColorMap[idx])#, label=f"{thickness} mm PMMA data")
 
-        depthTarget[idx] =  depthTarget[idx][:8] + depthTarget[idx][9:]
-        doseTarget[idx] =  doseTarget[idx][:8] + doseTarget[idx][9:]
-        doseErrTarget[idx] =  doseErrTarget[idx][:8] + doseErrTarget[idx][9:]
-        depthErrTarget[idx] = depthErrTarget[idx][:8] + depthErrTarget[idx][9:]
 else:
     ax1.errorbar(depth, dose, doseErr, depthErr, fmt='o', markersize=1, capsize=capSize, elinewidth=lineWidth, color="#000000")#, label="No target data") 
 
-print(type(dose))
-print(type(doseTarget))
-
-depth =  depth[:8] + depth[9:]
-dose =  dose[:8] + dose[9:]
-doseErr =  doseErr[:8] + doseErr[9:]
-depthErr = depthErr[:8] + depthErr[9:]
-
-print(f"Phi0: {bestfit_params.Phi0} \pm {bestfit_params.stddev[0]}")
-print(f"R0: {bestfit_params.R0} \pm {bestfit_params.stddev[1]}")
-print(f"sigma: {bestfit_params.sigma} \pm {bestfit_params.stddev[2]}")
-print(f"epsilon: {bestfit_params.epsilon} \pm {bestfit_params.stddev[3]}")
+print(rf"Phi0: {bestfit_params.Phi0} \pm {bestfit_params.stddev[0]}")
+print(rf"R0: {bestfit_params.R0} \pm {bestfit_params.stddev[1]}")
+print(rf"sigma: {bestfit_params.sigma} \pm {bestfit_params.stddev[2]}")
+print(rf"epsilon: {bestfit_params.epsilon} \pm {bestfit_params.stddev[3]}")
 
 if(targetSelect > 0):
     ax1.plot(z, bestfit_params.curve, color="black", linewidth = lineWidth, label=fr"No target")# rf"$R_0={bestfit_params.R0:.3f}~cm$, $\sigma={bestfit_params.sigma:.3f}~cm$")
@@ -468,10 +409,10 @@ if(bhetero):
 
     print()
     print("Heteogeneous Target")
-    print(f"Phi0: {convParams.Phi0} \pm {convParams.stddev[0]}")
-    print(f"R0: {convParams.R0} \pm {convParams.stddev[1]}")
-    print(f"sigma: {convParams.sigma} \pm {convParams.stddev[2]}")
-    print(f"epsilon: {convParams.epsilon} \pm {convParams.stddev[3]}")
+    print(rf"Phi0: {convParams.Phi0} \pm {convParams.stddev[0]}")
+    print(rf"R0: {convParams.R0} \pm {convParams.stddev[1]}")
+    print(rf"sigma: {convParams.sigma} \pm {convParams.stddev[2]}")
+    print(rf"epsilon: {convParams.epsilon} \pm {convParams.stddev[3]}")
 
     params_list = []
     for i in range(nbOfFitsHetero):
@@ -480,9 +421,9 @@ if(bhetero):
         x_with_err = []
         y_with_err = []
         for index, mean in enumerate(depthTarget):
-            x_with_err.append(gaussian_with_cutoff(mean, depthErrTarget[index]))
+            x_with_err.append(gaussian_with_cutoff(mean, depthTargetErr[index]))
         for index, mean in enumerate(doseTarget):
-            y_with_err.append(gaussian_with_cutoff(mean, doseErrTarget[index]))
+            y_with_err.append(gaussian_with_cutoff(mean, doseTargetErr[index]))
         #params = bortfeld_fit_hetero(x_with_err, y_with_err, bestfit_params.Phi0, R0, sigma, bestfit_params.epsilon, weights)
         params = bortfeld_fit(x_with_err, y_with_err, Phi0Target, R0Target, sigmaTarget, epsilon, weights)
 
@@ -506,7 +447,9 @@ if(bhetero):
     o_sigmat = np.sqrt(convParams.sigma**2/(convParams.sigma**2-bestfit_params.sigma**2)*convParams.stddev[2]**2+bestfit_params.sigma**2/(convParams.sigma**2-bestfit_params.sigma**2)*bestfit_params.stddev[2]**2)
     pmod = sigmat**2/t*10000
     sigma_pmod = np.sqrt((2*sigmat/t**2*o_sigmat)**2+(sigmat**2/t**2*o_t)**2)*10000
-    
+    print(rf"t: {t:.3f} $\pm$ {o_t:.3f}")
+    print(rf"sigmat: {sigmat:.3f} $\pm$ {o_sigmat:.3f}")
+    print(rf"Pmod: {pmod:.3f} $\pm$ {sigma_pmod:.3f}")
     # ax1.plot(z, convParams.curve, color=targetColorMap[0], linewidth = lineWidth, label=fr"Hetero. target fit paramters: $\frac{{\Phi_0}}{{N_0}}={convParams.Phi0:.3f}~\frac{{1}}{{cm^2}}$," "\n" rf"$R_0={convParams.R0:.3f}~cm$, $\sigma={convParams.sigma:.3f}~cm$, " "\n" fr"$t= {t:.3f}" "\pm" fr"{o_t:.3f}~cm, \sigma={sigmat:.3f} \pm {o_sigmat:.3f}~cm,~P_{{mod}}={pmod:.3f} \pm {sigma_pmod:.3f}$" rf"$~\mu m$")
     ax1.plot(z, convParams.curve, color=targetColorMap[0], linewidth = lineWidth, label=fr"LN300 " rf"$P_{{mod}}={pmod:.3f} \pm {sigma_pmod:.3f}$" rf"$~\mu m$")
 elif(targetSelect == 1):
@@ -526,10 +469,10 @@ elif(targetSelect == 1):
         convParams = bortfeld_fit(depthTarget[idx], doseTarget[idx], Phi0Target, R0Target, sigmaTarget, epsilon, None)
 
         print(f"{thickness} mm PMMA Target")
-        print(f"Phi0: {convParams.Phi0} \pm {convParams.stddev[0]}")
-        print(f"R0: {convParams.R0} \pm {convParams.stddev[1]}")
-        print(f"sigma: {convParams.sigma} \pm {convParams.stddev[2]}")
-        print(f"epsilon: {convParams.epsilon} \pm {convParams.stddev[3]}")
+        print(rf"Phi0: {convParams.Phi0} \pm {convParams.stddev[0]}")
+        print(rf"R0: {convParams.R0} \pm {convParams.stddev[1]}")
+        print(rf"sigma: {convParams.sigma} \pm {convParams.stddev[2]}")
+        print(rf"epsilon: {convParams.epsilon} \pm {convParams.stddev[3]}")
         print()
         params_list = []
         for i in range(nbOfFitsHetero):
@@ -538,9 +481,9 @@ elif(targetSelect == 1):
             x_with_err = []
             y_with_err = []
             for index, mean in enumerate(depthTarget[idx]):
-                x_with_err.append(gaussian_with_cutoff(mean, depthErrTarget[idx][index]))
-            for index, mean in enumerate(doseTarget):
-                y_with_err.append(gaussian_with_cutoff(mean, doseErrTarget[idx][index]))
+                x_with_err.append(gaussian_with_cutoff(mean, depthTargetErr[idx][index]))
+            for index, mean in enumerate(doseTarget[idx]):
+                y_with_err.append(gaussian_with_cutoff(mean, doseTargetErr[idx][index]))
             #params = bortfeld_fit_hetero(x_with_err, y_with_err, bestfit_params.Phi0, R0, sigma, bestfit_params.epsilon, weights)
             params = bortfeld_fit(x_with_err, y_with_err, bestfit_params.Phi0, R0, sigma, bestfit_params.epsilon, weights)
 
@@ -583,14 +526,14 @@ ax1.legend(loc='upper left',  fancybox=False, edgecolor='black')
 fig.tight_layout()
 
 if(targetSelect > 0):
-    plt.savefig(f"../data/{dataset}/{targetFile}/output/pdf/braggfit.pdf", format='pdf', bbox_inches='tight')
-    plt.savefig(f"../data/{dataset}/{targetFile}/output/pdf/braggfit.svg", format='svg', bbox_inches='tight')
-    plt.savefig(f"../data/{dataset}/{targetFile}/output/pdf/braggfit.jpg", format='jpg', bbox_inches='tight', dpi=600)
+    plt.savefig(f"{dataset}/{targetFile}/output/pdf/braggfit.pdf", format='pdf', bbox_inches='tight')
+    plt.savefig(f"{dataset}/{targetFile}/output/pdf/braggfit.svg", format='svg', bbox_inches='tight')
+    plt.savefig(f"{dataset}/{targetFile}/output/pdf/braggfit.jpg", format='jpg', bbox_inches='tight', dpi=600)
 else:    
     print(f"Save to PDF: ../data/{dataset}/{file}/output/pdf/braggfit.pdf")
-    plt.savefig(f"../data/{dataset}/{file}/output/pdf/braggfit.pdf", format='pdf', bbox_inches='tight')
-    plt.savefig(f"../data/{dataset}/{file}/output/pdf/braggfit.svg", format='svg', bbox_inches='tight')
-    plt.savefig(f"../data/{dataset}/{file}/output/pdf/braggfit.png", format='png', bbox_inches='tight', dpi=600)
+    plt.savefig(f"{dataset}/{file}/output/pdf/braggfit.pdf", format='pdf', bbox_inches='tight')
+    plt.savefig(f"{dataset}/{file}/output/pdf/braggfit.svg", format='svg', bbox_inches='tight')
+    plt.savefig(f"{dataset}/{file}/output/pdf/braggfit.png", format='png', bbox_inches='tight', dpi=600)
 
 zoom_half_width = 5  # cm (adjust to taste: 1–2 cm is typical)
 zmin_zoom = 24 - 4
@@ -641,8 +584,8 @@ if targetSelect == 1:
         axz.errorbar(
             depthTarget[idx],
             doseTarget[idx],
-            doseErrTarget[idx],
-            depthErrTarget[idx],
+            doseTargetErr[idx],
+            depthTargetErr[idx],
             fmt='o',
             markersize=3,
             capsize=capSize,

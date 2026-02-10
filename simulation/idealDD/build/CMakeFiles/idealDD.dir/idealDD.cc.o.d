@@ -1,7 +1,7 @@
 CMakeFiles/idealDD.dir/idealDD.cc.o: \
- /home/user/BraggPeakSampler/simulation/idealDD/idealDD.cc \
+ /home/niclas/BraggPeakSampler/simulation/idealDD/idealDD.cc \
  /usr/include/stdc-predef.h \
- /home/user/BraggPeakSampler/simulation/idealDD/include/DetectorConstruction.hh \
+ /home/niclas/BraggPeakSampler/simulation/idealDD/include/DetectorConstruction.hh \
  /usr/local/include/Geant4/globals.hh /usr/local/include/Geant4/G4ios.hh \
  /usr/local/include/Geant4/G4Types.hh \
  /usr/local/include/Geant4/G4GlobalConfig.hh /usr/include/c++/13/complex \
@@ -323,7 +323,7 @@ CMakeFiles/idealDD.dir/idealDD.cc.o: \
  /usr/include/c++/13/bits/this_thread_sleep.h \
  /usr/local/include/Geant4/G4VPhysicalVolume.icc \
  /usr/local/include/Geant4/G4LogicalBorderSurface.icc \
- /home/user/BraggPeakSampler/simulation/idealDD/include/G4STL.hh \
+ /home/niclas/BraggPeakSampler/simulation/idealDD/include/G4STL.hh \
  /usr/local/include/Geant4/G4SystemOfUnits.hh \
  /usr/local/include/Geant4/G4PhantomParameterisation.hh \
  /usr/local/include/Geant4/G4VPVParameterisation.hh \
@@ -352,7 +352,7 @@ CMakeFiles/idealDD.dir/idealDD.cc.o: \
  /usr/local/include/Geant4/G4PhantomParameterisation.icc \
  /usr/local/include/Geant4/G4PVParameterised.hh \
  /usr/local/include/Geant4/G4PVReplica.hh \
- /home/user/BraggPeakSampler/simulation/idealDD/include/ActionInitialization.hh \
+ /home/niclas/BraggPeakSampler/simulation/idealDD/include/ActionInitialization.hh \
  /usr/local/include/Geant4/G4VUserActionInitialization.hh \
  /usr/local/include/Geant4/G4RunManagerFactory.hh \
  /usr/local/include/Geant4/G4MTRunManager.hh \

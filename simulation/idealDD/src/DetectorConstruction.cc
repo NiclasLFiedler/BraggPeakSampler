@@ -567,9 +567,9 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
       airVisAttr->SetForceSolid(true);
 
       cubeSizeX = 0.5 * mm, cubeSizeY = 0.5 * mm;
-      //cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7900)*0.001;
+      cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7900)*0.001;
   
-      cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7355)*0.001;
+      // cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7355)*0.001;
       
       nx = 100;
       ny = nx;
