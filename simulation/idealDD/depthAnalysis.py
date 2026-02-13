@@ -39,7 +39,8 @@ sizeZ1 = meshSize
 # sizeZ2 = 18
 # sizeZ3 = meshSize-sizeZ1-sizeZ2
 
-SegNumber1 = 2000
+SegNumber1 = nLayers
+
 # SegNumber2 = 800
 # SegNumber3 = 300
 
@@ -76,10 +77,10 @@ edep1 = data1[:, 3]*1/bin_width1
 # edep3 = data3[:, 3]*1/bin_width3
 
 
-depth1 = (abs(iZ1-SegNumber1-1) + 0.5) * bin_width1
+depth1 = (abs(iZ1-SegNumber1)-0.5) * bin_width1
 # depth2 = depth1[0] + (abs(iZ2-SegNumber2-1) + 0.5) * bin_width2
 # depth3 = depth2[0] + (abs(iZ3-SegNumber3-1) + 0.5) * bin_width3
-
+print(len(abs(iZ1-SegNumber1)-0.5))
 
 # ---- Plot ----
 plt.figure()
@@ -92,7 +93,7 @@ plt.ylabel("Deposited energy (MeV)")
 plt.title("Proton Depth Dose Curve")
 plt.grid()
 
-plt.show()
+plt.close()
 
 np.savez(
     f"{datapath}/input/depthdose.npz",

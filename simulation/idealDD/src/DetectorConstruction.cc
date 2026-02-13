@@ -78,7 +78,7 @@ DetectorConstruction::DetectorConstruction()
     targetThickness                                   = config["targetThickness"];
     
     pmod                                              = allConfigs["pmod"];
-    heteroThickness                                   = allConfigs["heteroThickness"];
+    heteroThickness                                   = targetThickness;
     
 
     detSizeX = crystalSize.at(0)* mm;
@@ -385,6 +385,7 @@ void DetectorConstruction::DefineMaterials()
   Air->AddElement(elO, 23.20/ttt);
   Air->AddElement(elAr, 1.28/ttt);
 
+  Air = nistManager->FindOrBuildMaterial("G4_Galactic"); 
   aluminumFoil = new G4Material("aluminumFoil", 2.71*g/cm3,1);
   aluminumFoil->AddElement(elAl,1);
 
@@ -551,9 +552,6 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   waterLog = new G4LogicalVolume(waterBox, water, "WaterLog");
   new G4PVPlacement(0, G4ThreeVector(0,0,-50*cm), waterLog, "WaterPhys", logicalworld, false, 0);
   
-
-
-  
   G4double dBeamSpot = 0.1*mm;
   G4int nx, ny, nz;
   G4double cubeSizeX, cubeSizeY, cubeSizeZ;
@@ -567,15 +565,16 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
       airVisAttr->SetForceSolid(true);
 
       cubeSizeX = 0.5 * mm, cubeSizeY = 0.5 * mm;
-      cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7900)*0.001;
-  
+      cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.76923)*0.001;
+      
+      // cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7900)*0.001;
       // cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7355)*0.001;
       
       nx = 100;
       ny = nx;
       nz = static_cast<int>(std::round(heteroThickness/cubeSizeZ));
       G4double tickness_real = nz * cubeSizeZ;
-      G4double pmod_real = static_cast<double>(0.7355)*1000*tickness_real/nz;
+      G4double pmod_real = static_cast<double>(0.76923)*1000*tickness_real/nz;
       std::cout << "pmod_real: " << pmod_real << std::endl;
       std::cout << "tickness_real: " << tickness_real << std::endl;
       auto voxelSolid = new G4Box("Voxel", cubeSizeX/2, cubeSizeY/2, cubeSizeZ/2);
@@ -587,7 +586,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
 
       auto voxelContainerSolid = new G4Box("VoxelContainer", (nx*cubeSizeX)/2, (ny*cubeSizeY)/2, (nz*cubeSizeZ)/2);
       auto voxelContainerLV = new G4LogicalVolume(voxelContainerSolid, Air, "VoxelContainerLV");
-      new G4PVPlacement(nullptr, G4ThreeVector(0,0,(cubeSizeZ*nz)/2+5*mm), voxelContainerLV, "VoxelContainer", logicalworld, false, 0);
+      new G4PVPlacement(nullptr, G4ThreeVector(0,0,heteroThickness/2+5*mm), voxelContainerLV, "VoxelContainer", logicalworld, false, 0);
 
       auto* parameterisation = new HeteroParameterisation(nx, ny, nz,
         cubeSizeX, cubeSizeY, cubeSizeZ,
@@ -609,9 +608,9 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
       new G4PVPlacement(nullptr, G4ThreeVector(0, 0, 4*mm), logicalTracker, "physTracker", logicalworld, false, 0);
   } 
   if(ftarget == 1){ //homogeneous
-    solidHomo =  new G4Box("solidHomo", 300/2, 300/2, 20/2);
-    logicalHomo = new G4LogicalVolume(solidHomo, absorberMaterial, "logicalHomo");    
-    physHomo = new G4PVPlacement(nullptr, G4ThreeVector(0.,0., 20/2*mm+cubeSizeZ*nz+8*mm), logicalHomo,"physHomo", logicalworld, false, 0, fCheckOverlaps);
+    solidHomo =  new G4Box("solidHomo", 50*cm, 50*cm, targetThickness/2);
+    logicalHomo = new G4LogicalVolume(solidHomo, water, "logicalHomo");    
+    physHomo = new G4PVPlacement(nullptr, G4ThreeVector(0.,0., targetThickness/2+5*mm), logicalHomo,"physHomo", logicalworld, false, 0, fCheckOverlaps);
 
     G4VisAttributes* visHomo = new G4VisAttributes(G4Colour(0.0, 1.0, 1.0, 0.5)); // Red for the detector
     visHomo->SetVisibility(true);
@@ -619,11 +618,6 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
     logicalHomo->SetVisAttributes(visHomo);
   }
 
-  if(absorberStatus == 1){
-    solidPassiveAbsorber =  new G4Box("solidPassiveAbsorber", detSizeX/2, detSizeY/2, absorberSize/2);
-    logicalPassiveAbsorber = new G4LogicalVolume(solidPassiveAbsorber, absorberMaterial, "logicalPassiveAbsorber");
-    physPassiveAbsorber = new G4PVPlacement(nullptr, G4ThreeVector(0.,0., -d_IsocentreDetector-absorberSize/2-detSizeZ/2-gapSizeZ), logicalPassiveAbsorber,"physPassiveAbsorber", logicalworld, false, 0, fCheckOverlaps);
-  }
   solidNozzle = new G4EllipticalTube("solidNozzle", FWHMNozzleX/2, FWHMNozzleY/2, dBeamSpot/2);
   logicalNozzle = new G4LogicalVolume(solidNozzle, worldMat, "logicalNozzle");
   logicalNozzle->SetVisAttributes(G4Color::Red());
@@ -658,7 +652,7 @@ void DetectorConstruction::ConstructSDandField()
   // G4double meshSize2[3] = {50*cm, 50*cm, sizeZ2};
   // G4double meshSize3[3] = {50*cm, 50*cm, sizeZ3};
 
-  G4int meshSegNumber1[3] = {1, 1, 2000};
+  G4int meshSegNumber1[3] = {1, 1, fLayers};
   // G4int meshSegNumber2[3] = {1, 1, 800};
   // G4int meshSegNumber3[3] = {1, 1, 300};
 
