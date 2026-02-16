@@ -68,7 +68,7 @@ data1 = np.loadtxt(
 # )
 
 iZ1 = data1[:, 2]
-edep1 = data1[:, 3]*1/bin_width1
+edep1 = data1[:, 3]
 
 # iZ2 = data2[:, 2]
 # edep2 = data2[:, 3]*1/bin_width2
