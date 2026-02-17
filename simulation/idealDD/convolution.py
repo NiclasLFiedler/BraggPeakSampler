@@ -137,7 +137,7 @@ unfoldedEntries = []
 unfoldedEntriesTarget = []
 
 
-dataFile = np.load(f"{dataset}/{file}/input/depthdose.npz")
+dataFile = np.load(f"{dataset}/{file}/input/depthdose{nLayers}.npz")
 depth = np.flip(dataFile["depth"])
 depthErr = np.flip(dataFile["depth_err"]) 
 Dose = np.flip(dataFile["dose"]) 
@@ -145,7 +145,7 @@ DoseErr = np.flip(dataFile["dose_err"])
 unfoldedEntries = dataFile["dose"][0]
 
 if(bhetero):
-    dataFile = np.load(f"{dataset}/{targetFile}/input/depthdose.npz")
+    dataFile = np.load(f"{dataset}/{targetFile}/input/depthdose{nLayers}.npz")
     depthTarget = np.flip(dataFile["depth"]) 
     depthTargetErr = np.flip(dataFile["depth_err"]) 
     DoseTarget = np.flip(dataFile["dose"]) 
@@ -155,7 +155,7 @@ if(bhetero):
 targetThicknesses = [52, 53, 54, 55, 56, 57]
 if(targetSelect == 1):
     for thickness in targetThicknesses:
-        dataFile = np.load(f"{dataset}/{targetFile}/input/depthdose.npz")
+        dataFile = np.load(f"{dataset}/{targetFile}/input/depthdose{nLayers}.npz")
         depthTarget.append(np.flip(dataFile["depth"]))
         depthTargetErr.append(np.flip(dataFile["depth_err"]))
         DoseTarget.append(np.flip(dataFile["dose"]))

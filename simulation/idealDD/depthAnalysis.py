@@ -96,7 +96,7 @@ plt.grid()
 plt.close()
 
 np.savez(
-    f"{datapath}/input/depthdose.npz",
+    f"{datapath}/input/depthdose{nLayers}.npz",
     depth = depth1,
     depth_err = (abs(depth1[-1]-depth1[-2]))/np.sqrt(12),
     dose = edep1,

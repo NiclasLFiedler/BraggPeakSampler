@@ -5,25 +5,20 @@ JSON_IN="../../analysis/config.json"
 JSON_OUT="../../analysis/config_tmp.json"
 
 # -------- PARAMETER LISTS --------
-TARGET_SELECT_LIST=(0 2)
-TARGET_THICKNESS_LIST=(0 200)
-RESOLUTION=(4000 3500 3000 2500 2000 1500 1000 750 500 250 100 75 50 40 30 20)
-
+TARGET_SELECT_LIST=(1)
+TARGET_THICKNESS_LIST=(50 100 150 200)
+#RESOLUTION=(4000 3500 3000 2500 2000 1500 1000 750 500 250 100 75 50 40 30 20)
+RESOLUTION=(1000 1000 1000 1000)
 # TARGET_SELECT_LIST=(1)
 # TARGET_THICKNESS_LIST=(52)
-# -------- SAFETY CHECK --------
-if [ "${#TARGET_SELECT_LIST[@]}" -ne "${#TARGET_THICKNESS_LIST[@]}" ]; then
-  echo "Error: TARGET_SELECT_LIST and TARGET_THICKNESS_LIST must have same length"
-  exit 1
-fi
 
 # -------- LOOP (ZIPPED) --------
-for (( i=0; i<${#TARGET_SELECT_LIST[@]}; i++ )); do
+for (( j=0; j<${#RESOLUTION[@]}; j++ )); do
   for (( i=0; i<${#TARGET_SELECT_LIST[@]}; i++ )); do
 
     TARGET_SELECT="${TARGET_SELECT_LIST[i]}"
-    TARGET_THICKNESS="${TARGET_THICKNESS_LIST[i]}"
-    SIMULATION_RESOLUTION="${RESOLUTION}"
+    TARGET_THICKNESS="${TARGET_THICKNESS_LIST[j]}"
+    SIMULATION_RESOLUTION="${RESOLUTION[j]}"
     echo "========================================"
     echo "Run $((i+1)):"
     echo "  targetSelect     = $TARGET_SELECT"
@@ -55,4 +50,4 @@ for (( i=0; i<${#TARGET_SELECT_LIST[@]}; i++ )); do
   done
 done
 
-python3 convolution.py
+# python3 convolution.py

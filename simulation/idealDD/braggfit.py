@@ -258,7 +258,7 @@ unfoldedEntries = []
 unfoldedEntriesTarget = []
 unfoldedEntriesTargetTemp = []
 
-dataFile = np.load(f"{dataset}/{file}/input/depthdose.npz")
+dataFile = np.load(f"{dataset}/{file}/input/depthdose{nLayers}.npz")
 depth = dataFile["depth"] 
 depthErr = dataFile["depth_err"] 
 dose = dataFile["dose"] 
@@ -266,25 +266,22 @@ doseErr = dataFile["dose_err"]
 unfoldedEntries = dataFile["dose"][0]
 
 if(bhetero):
-    dataFile = np.load(f"{dataset}/{targetFile}/input/depthdose.npz")
+    dataFile = np.load(f"{dataset}/{targetFile}/input/depthdose{nLayers}.npz")
     depthTarget = dataFile["depth"] 
     depthTargetErr = dataFile["depth_err"] 
     doseTarget = dataFile["dose"] 
     doseTargetErr = dataFile["dose_err"] 
     unfoldedEntriesTarget = dataFile["dose"][0]
 
-targetThicknesses = [52, 53, 54, 55, 56, 57]
+targetThicknesses = [50, 100, 150, 200]
 if(targetSelect == 1):
     for thickness in targetThicknesses:
-        dataFile = np.load(f"{dataset}/{targetFile}/input/depthdose.npz")
+        dataFile = np.load(f"{dataset}/{targetFile}/input/depthdose{thickness}.npz")
         depthTarget.append(dataFile["depth"])
         depthTargetErr.append(dataFile["depth_err"])
         doseTarget.append(dataFile["dose"])
         doseTargetErr.append(dataFile["dose_err"])
         unfoldedEntriesTarget.append(dataFile["dose"][0])
-
-if targetSelect == 1:
-    targetFile = f"{targetFile}{52}"
 
 plt.rcParams.update({'font.size': 32})
 fig, ax1 = plt.subplots(figsize=(16, 12))
@@ -347,7 +344,7 @@ elif(targetSelect == 1):
     for idx, unfoldedEntriesTargetSingle in enumerate(unfoldedEntriesTarget):
         doseConversion = unfoldedEntries/unfoldedEntriesTargetSingle*(1+beta*(bestfit_params.R0-targetThickness*0.118))/(1+beta*bestfit_params.R0)
         print(doseConversion)
-        
+        doseConversion = 1
         # doseTargetTemp = np.array(doseTarget[idx])
         # doseTargetErrTemp = np.array(doseTargetErr[idx])
         for index, value in enumerate(doseTarget[idx]):
@@ -617,7 +614,7 @@ if targetSelect == 1:
     fig_zoom.tight_layout()
 
     plt.savefig(
-        f"../data/{dataset}/{targetFile}/output/pdf/braggfit_zoom.pdf",
+        f"{dataset}/{targetFile}/output/pdf/braggfit_zoom.pdf",
         format="pdf",
         bbox_inches="tight"
     )
@@ -639,7 +636,7 @@ sigmat_branch = np.zeros(1, dtype='float32')
 curve_branch = np.zeros(len(z), dtype='float32')
 
 if(bhetero):
-    fit_file1 = ROOT.TFile(f"../data/{dataset}/{targetFile}/output/{targetFile}_fit.root", "RECREATE")
+    fit_file1 = ROOT.TFile(f"{dataset}/{targetFile}/output/{targetFile}_fit.root", "RECREATE")
     vtree = ROOT.TTree("vtree", "Tree holding fit parameters")
     Phi0_branch[0] = convParams.Phi0
     R0_branch[0] = convParams.R0
@@ -653,7 +650,7 @@ if(bhetero):
     curve_branch[:] = convParams.curve
     hist.Write()
 else:
-    fit_file1 = ROOT.TFile(f"../data/{dataset}/{file}/output/{file}_fit.root", "RECREATE")
+    fit_file1 = ROOT.TFile(f"{dataset}/{file}/output/{file}_fit.root", "RECREATE")
     vtree = ROOT.TTree("vtree", "Tree holding fit parameters")
     
     Phi0_branch[0] = bestfit_params.Phi0
