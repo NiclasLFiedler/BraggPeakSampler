@@ -146,7 +146,8 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event* anEvent)
 
     // G4ParticleDefinition* particle = G4Gamma::GammaDefinition();
     fParticleGun->SetParticleDefinition(particle);
-    G4double energy = 221.6*MeV;
+    // G4double energy = 221.6*MeV;
+    G4double energy = 90*MeV;
     //G4double energy = 0.662*MeV;
     //fParticleGun->SetParticleEnergy(G4RandGauss::shoot(energy, energy*0.005));
     fParticleGun->SetParticleEnergy(energy);
@@ -164,10 +165,10 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event* anEvent)
     
     physNozzle = logicalWorld->GetDaughter(logicalWorld->GetNoDaughters()-2);
     physIsocentre = logicalWorld->GetDaughter(logicalWorld->GetNoDaughters()-1);
-    G4double FWHMNozzleX = solidNozzle->GetDx()*2;
-    G4double FWHMNozzleY = solidNozzle->GetDy()*2;
-    G4double FWHMIsocentreX = solidIsocentre->GetDx()*2;
-    G4double FWHMIsocentreY = solidIsocentre->GetDy()*2;
+    G4double FWHMNozzleX = solidNozzle->GetDx();
+    G4double FWHMNozzleY = solidNozzle->GetDy();
+    G4double FWHMIsocentreX = solidIsocentre->GetDx();
+    G4double FWHMIsocentreY = solidIsocentre->GetDy();
     
     G4ThreeVector PosNozzle = physNozzle->GetObjectTranslation();
     G4ThreeVector Pos_Isocentre = physIsocentre->GetObjectTranslation();
@@ -186,8 +187,7 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event* anEvent)
     //beamPosNozzle = G4ThreeVector(0, 0, PosNozzle.z());
     //beamPosIsocentre = G4ThreeVector(0, 0, 0);
     beamPosIsocentre = G4ThreeVector(x0+PosNozzle.x(), y0+PosNozzle.y(), Pos_Isocentre.z());
-    fParticleGun->SetParticleMomentumDirection(beamPosIsocentre-beamPosNozzle);
-    
+    fParticleGun->SetParticleMomentumDirection(beamPosIsocentre-beamPosNozzle);    
     beamPos = beamPosNozzle;
   }
   else if(particle->GetParticleName() == "mu-"){

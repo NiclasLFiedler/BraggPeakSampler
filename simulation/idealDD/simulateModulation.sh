@@ -5,10 +5,10 @@ JSON_IN="../../analysis/config.json"
 JSON_OUT="../../analysis/config_tmp.json"
 
 # -------- PARAMETER LISTS --------
-TARGET_SELECT_LIST=(1)
-TARGET_THICKNESS_LIST=(50 100 150 200)
-#RESOLUTION=(4000 3500 3000 2500 2000 1500 1000 750 500 250 100 75 50 40 30 20)
-RESOLUTION=(1000 1000 1000 1000)
+TARGET_SELECT_LIST=(2 2 2)
+TARGET_THICKNESS_LIST=(50 100 150)
+RESOLUTION=(500)
+# RESOLUTION=(1000 1000 1000 1000)
 # TARGET_SELECT_LIST=(1)
 # TARGET_THICKNESS_LIST=(52)
 
@@ -17,7 +17,7 @@ for (( j=0; j<${#RESOLUTION[@]}; j++ )); do
   for (( i=0; i<${#TARGET_SELECT_LIST[@]}; i++ )); do
 
     TARGET_SELECT="${TARGET_SELECT_LIST[i]}"
-    TARGET_THICKNESS="${TARGET_THICKNESS_LIST[j]}"
+    TARGET_THICKNESS="${TARGET_THICKNESS_LIST[i]}"
     SIMULATION_RESOLUTION="${RESOLUTION[j]}"
     echo "========================================"
     echo "Run $((i+1)):"
@@ -50,4 +50,4 @@ for (( j=0; j<${#RESOLUTION[@]}; j++ )); do
   done
 done
 
-# python3 convolution.py
+python3 convolution.py

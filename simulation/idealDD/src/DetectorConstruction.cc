@@ -385,7 +385,7 @@ void DetectorConstruction::DefineMaterials()
   Air->AddElement(elO, 23.20/ttt);
   Air->AddElement(elAr, 1.28/ttt);
 
-  Air = nistManager->FindOrBuildMaterial("G4_Galactic"); 
+  // Air = nistManager->FindOrBuildMaterial("G4_Galactic"); 
   aluminumFoil = new G4Material("aluminumFoil", 2.71*g/cm3,1);
   aluminumFoil->AddElement(elAl,1);
 
@@ -564,25 +564,27 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
       airVisAttr->SetVisibility(true);
       airVisAttr->SetForceSolid(true);
 
-      cubeSizeX = 0.5 * mm, cubeSizeY = 0.5 * mm;
+      cubeSizeX = 0.3 * mm, cubeSizeY = 0.3 * mm;
       cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.76923)*0.001;
-      
+      // cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.5)*0.001;
       // cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7900)*0.001;
       // cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7355)*0.001;
       
-      nx = 100;
+      nx = 150;
       ny = nx;
       nz = static_cast<int>(std::round(heteroThickness/cubeSizeZ));
+      // nz = 1;
       G4double tickness_real = nz * cubeSizeZ;
       G4double pmod_real = static_cast<double>(0.76923)*1000*tickness_real/nz;
+      // G4double pmod_real = static_cast<double>(0.5)*1000*tickness_real/nz;
       std::cout << "pmod_real: " << pmod_real << std::endl;
       std::cout << "tickness_real: " << tickness_real << std::endl;
       auto voxelSolid = new G4Box("Voxel", cubeSizeX/2, cubeSizeY/2, cubeSizeZ/2);
 
       std::cout << "pmod: " << pmod << std::endl;
-      std::cout << "heteroThickness: " << heteroThickness << std::endl;
-      std::cout << "voxelZ: " << cubeSizeZ << std::endl;
-      std::cout << "NbOfSlices: " << nz << G4endl;
+      std::cout << "heteroThickness: " << (nz*cubeSizeZ) << std::endl;
+      std::cout << "heteroThickness/cubeSizeZ " << heteroThickness/cubeSizeZ << std::endl;
+      std::cout << "std::round(heteroThickness/cubeSizeZ) " << std::round(heteroThickness/cubeSizeZ) << G4endl;
 
       auto voxelContainerSolid = new G4Box("VoxelContainer", (nx*cubeSizeX)/2, (ny*cubeSizeY)/2, (nz*cubeSizeZ)/2);
       auto voxelContainerLV = new G4LogicalVolume(voxelContainerSolid, Air, "VoxelContainerLV");
@@ -590,7 +592,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
 
       auto* parameterisation = new HeteroParameterisation(nx, ny, nz,
         cubeSizeX, cubeSizeY, cubeSizeZ,
-        lungTissue, Air,
+        water, Air,
         waterVisAttr, airVisAttr);
     
       int nVoxels = nx * ny * nz;

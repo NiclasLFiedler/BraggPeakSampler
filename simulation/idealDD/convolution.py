@@ -145,7 +145,7 @@ DoseErr = np.flip(dataFile["dose_err"])
 unfoldedEntries = dataFile["dose"][0]
 
 if(bhetero):
-    dataFile = np.load(f"{dataset}/{targetFile}/input/depthdose{nLayers}.npz")
+    dataFile = np.load(f"{dataset}/{targetFile}/input/depthdose{nLayers}_{targetThickness}.npz")
     depthTarget = np.flip(dataFile["depth"]) 
     depthTargetErr = np.flip(dataFile["depth_err"]) 
     DoseTarget = np.flip(dataFile["dose"]) 
@@ -207,7 +207,7 @@ ax1.errorbar(depthTarget, DoseTarget, DoseTargetErr, depthTargetErr, fmt='o', ma
 f = interp1d(depth, Dose, kind='linear', fill_value="extrapolate")
 # f = interp1d(depth, Dose, kind='cubic', fill_value="extrapolate")
 
-popt, pcov =  curve_fit(lambda x, amp, mean, stddev: right_sided_convolution(f, lambda x2: gaussian(x2, amp, mean, stddev), x), depthTarget, DoseTarget, p0 = [1, 5, 0.3], bounds=((0.999, 0, 0), (1.0001, 10, 0.5)))
+popt, pcov =  curve_fit(lambda x, amp, mean, stddev: right_sided_convolution(f, lambda x2: gaussian(x2, amp, mean, stddev), x), depthTarget, DoseTarget, p0 = [1, 5, 0.3], bounds=((0.999, 0, 0), (1.0001, 25, 0.5)))
 
 stddev = np.sqrt(np.diag(pcov))
     

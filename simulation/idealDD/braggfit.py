@@ -266,7 +266,7 @@ doseErr = dataFile["dose_err"]
 unfoldedEntries = dataFile["dose"][0]
 
 if(bhetero):
-    dataFile = np.load(f"{dataset}/{targetFile}/input/depthdose{nLayers}.npz")
+    dataFile = np.load(f"{dataset}/{targetFile}/input/depthdose{nLayers}_{targetThickness}.npz")
     depthTarget = dataFile["depth"] 
     depthTargetErr = dataFile["depth_err"] 
     doseTarget = dataFile["dose"] 
