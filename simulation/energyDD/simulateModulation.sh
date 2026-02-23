@@ -1,0 +1,53 @@
+#!/bin/bash
+
+# -------- CONFIG --------
+JSON_IN="../../analysis/config.json"
+JSON_OUT="../../analysis/config_tmp.json"
+
+# -------- PARAMETER LISTS --------
+TARGET_SELECT_LIST=(2 2 2)
+TARGET_THICKNESS_LIST=(50 100 150)
+RESOLUTION=(500)
+# RESOLUTION=(1000 1000 1000 1000)
+# TARGET_SELECT_LIST=(1)
+# TARGET_THICKNESS_LIST=(52)
+
+# -------- LOOP (ZIPPED) --------
+for (( j=0; j<${#RESOLUTION[@]}; j++ )); do
+  for (( i=0; i<${#TARGET_SELECT_LIST[@]}; i++ )); do
+
+    TARGET_SELECT="${TARGET_SELECT_LIST[i]}"
+    TARGET_THICKNESS="${TARGET_THICKNESS_LIST[i]}"
+    SIMULATION_RESOLUTION="${RESOLUTION[j]}"
+    echo "========================================"
+    echo "Run $((i+1)):"
+    echo "  targetSelect     = $TARGET_SELECT"
+    echo "  targetThickness  = $TARGET_THICKNESS"
+    echo "  RESOLUTION  = $RESOLUTION"
+    echo "========================================"
+
+    jq \
+      --argjson ts "$TARGET_SELECT" \
+      --argjson tt "$TARGET_THICKNESS" \
+      --argjson sr "$SIMULATION_RESOLUTION" \
+      '
+      .targetSelect = $ts
+      | (.detectors[] | select(.detectorID == 0) | .targetThickness) = $tt
+      | (.detectors[] | select(.detectorID == 0) | .nLayers) = $sr
+      ' \
+      "$JSON_IN" > "$JSON_OUT"  && mv "$JSON_OUT" "$JSON_IN"
+
+
+      if [ $? -ne 0 ]; then
+        echo "JSON modification failed — skipping"
+        continue
+      fi
+      cd build
+      make -j8
+      ./idealDD run_p.mac
+      cd ..
+      python3 depthAnalysis.py
+  done
+done
+
+python3 convolution.py

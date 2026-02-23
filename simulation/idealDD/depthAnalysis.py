@@ -48,6 +48,7 @@ bin_width1 = sizeZ1/SegNumber1
 # bin_width2 = sizeZ2 / SegNumber2
 # bin_width3 = sizeZ3 / SegNumber3
 
+print(f"Binwidth: {bin_width1}")
 data1 = np.loadtxt(
     "build/meshEdep1.txt",
     delimiter=",",
@@ -80,7 +81,7 @@ edep1 = data1[:, 3]
 depth1 = (abs(iZ1-SegNumber1)-0.5) * bin_width1
 # depth2 = depth1[0] + (abs(iZ2-SegNumber2-1) + 0.5) * bin_width2
 # depth3 = depth2[0] + (abs(iZ3-SegNumber3-1) + 0.5) * bin_width3
-print(len(abs(iZ1-SegNumber1)-0.5))
+print(depth1)
 
 # ---- Plot ----
 plt.figure()
