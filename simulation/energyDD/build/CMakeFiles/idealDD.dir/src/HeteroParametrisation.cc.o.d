@@ -1,5 +1,5 @@
 CMakeFiles/idealDD.dir/src/HeteroParametrisation.cc.o: \
- /home/user/BraggPeakSampler/simulation/energyDD/src/HeteroParametrisation.cc \
+ /home/niclas/BraggPeakSampler/simulation/energyDD/src/HeteroParametrisation.cc \
  /usr/include/stdc-predef.h \
  /usr/local/include/Geant4/G4VPVParameterisation.hh \
  /usr/local/include/Geant4/G4Types.hh \

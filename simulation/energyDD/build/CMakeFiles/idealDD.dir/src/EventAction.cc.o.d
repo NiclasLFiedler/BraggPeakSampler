@@ -1,7 +1,7 @@
 CMakeFiles/idealDD.dir/src/EventAction.cc.o: \
- /home/user/BraggPeakSampler/simulation/energyDD/src/EventAction.cc \
+ /home/niclas/BraggPeakSampler/simulation/energyDD/src/EventAction.cc \
  /usr/include/stdc-predef.h \
- /home/user/BraggPeakSampler/simulation/energyDD/include/EventAction.hh \
+ /home/niclas/BraggPeakSampler/simulation/energyDD/include/EventAction.hh \
  /usr/local/include/Geant4/G4UserEventAction.hh \
  /usr/local/include/Geant4/globals.hh /usr/local/include/Geant4/G4ios.hh \
  /usr/local/include/Geant4/G4Types.hh \
@@ -488,7 +488,7 @@ CMakeFiles/idealDD.dir/src/EventAction.cc.o: \
  /usr/local/include/Geant4/G4VReadOutGeometry.hh \
  /usr/local/include/Geant4/G4SensitiveVolumeList.hh \
  /usr/local/include/Geant4/G4VSDFilter.hh \
- /home/user/BraggPeakSampler/simulation/energyDD/include/TrackerHit.hh \
+ /home/niclas/BraggPeakSampler/simulation/energyDD/include/TrackerHit.hh \
  /usr/local/include/Geant4/G4VHit.hh \
  /usr/local/include/Geant4/G4THitsCollection.hh \
  /usr/local/include/Geant4/G4Allocator.hh \
@@ -618,11 +618,11 @@ CMakeFiles/idealDD.dir/src/EventAction.cc.o: \
  /usr/local/include/Geant4/G4TrajectoryPoint.hh \
  /usr/local/include/Geant4/G4VTrajectoryPoint.hh \
  /usr/local/include/Geant4/G4ios.hh \
- /home/user/BraggPeakSampler/simulation/energyDD/include/SiPMSD.hh \
+ /home/niclas/BraggPeakSampler/simulation/energyDD/include/SiPMSD.hh \
  /usr/local/include/Geant4/G4VSensitiveDetector.hh \
- /home/user/BraggPeakSampler/simulation/energyDD/include/TrackerSD.hh \
+ /home/niclas/BraggPeakSampler/simulation/energyDD/include/TrackerSD.hh \
  /usr/local/include/Geant4/G4SystemOfUnits.hh \
- /home/user/BraggPeakSampler/simulation/energyDD/src/HeteroParametrisation.cc \
+ /home/niclas/BraggPeakSampler/simulation/energyDD/src/HeteroParametrisation.cc \
  /usr/local/include/Geant4/G4VPVParameterisation.hh \
  /usr/local/include/Geant4/G4VPhysicalVolume.hh \
  /usr/local/include/Geant4/G4LogicalVolume.hh \

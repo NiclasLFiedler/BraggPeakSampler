@@ -254,6 +254,12 @@ unfoldedDoseErr = []
 unfoldedDoseTargetErr = []
 unfoldedDoseTargetErrTemp = []
 
+amplitudeTarget = []
+meanTarget = []
+sigmaTarget = []
+mean_errTarget = []
+sigma_errTarget = []
+
 unfoldedEntries = []
 unfoldedEntriesTarget = []
 unfoldedEntriesTargetTemp = []
@@ -264,6 +270,11 @@ depthErr = dataFile["depth_err"]
 dose = dataFile["dose"] 
 doseErr = dataFile["dose_err"] 
 unfoldedEntries = dataFile["dose"][0]
+amplitude = dataFile["amplitude"]
+mean = dataFile["mean"]
+sigma = dataFile["sigma"]
+mean_err = dataFile["mean_err"]
+sigma_err = dataFile["sigma_err"]
 
 if(bhetero):
     dataFile = np.load(f"{dataset}/{targetFile}/input/depthdose{nLayers}_{targetThickness}.npz")
@@ -272,6 +283,11 @@ if(bhetero):
     doseTarget = dataFile["dose"] 
     doseTargetErr = dataFile["dose_err"] 
     unfoldedEntriesTarget = dataFile["dose"][0]
+    amplitudeTarget = dataFile["amplitude"]
+    meanTarget = dataFile["mean"]
+    sigmaTarget = dataFile["sigma"]
+    mean_errTarget = dataFile["mean_err"]
+    sigma_errTarget = dataFile["sigma_err"]
 
 targetThicknesses = [50, 100, 150, 200]
 if(targetSelect == 1):
@@ -282,6 +298,28 @@ if(targetSelect == 1):
         doseTarget.append(dataFile["dose"])
         doseTargetErr.append(dataFile["dose_err"])
         unfoldedEntriesTarget.append(dataFile["dose"][0])
+        amplitudeTarget.append(dataFile["amplitude"])
+        meanTarget.append(dataFile["mean"])
+        sigmaTarget.append(dataFile["sigma"])
+        mean_errTarget.append(dataFile["mean_err"])
+        sigma_errTarget.append(dataFile["sigma_err"])
+
+alpha = 0.02585
+p = 1.738
+
+
+print(f"Means: {mean} & {meanTarget}")
+print(f"Sigmas: {sigma} & {sigmaTarget}")
+
+t = mean-meanTarget
+sigmat = np.sqrt(sigmaTarget**2-sigma**2)
+pmod = sigmat**2/t
+print(f"t = {t}")
+print(f"sigmat = {sigmat}")
+print(f"pmod = {pmod}")
+
+t_E = alpha*(mean**p- meanTarget**p)
+print(f"t Energy: {t_E}")
 
 plt.rcParams.update({'font.size': 32})
 fig, ax1 = plt.subplots(figsize=(16, 12))

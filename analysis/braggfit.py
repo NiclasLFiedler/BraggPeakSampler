@@ -473,8 +473,8 @@ elif(targetSelect == 1):
 targetColorMap = ["#1f77b4", "#4e79a7", "#76b7b2", "#bab0ac", "#f28e2b", "#e15759", "#9c755f"]
 
 if(bhetero):
-    ax1.errorbar(depth, unfoldedDose, unfoldedDoseErr, depthErr, fmt='s', markersize=1, capsize=capSize, elinewidth=lineWidth, color="#000000")#, label="No target data") 
-    ax1.errorbar(depthTarget, unfoldedDoseTarget, unfoldedDoseErrTarget, depthErrTarget, fmt='o', markersize=1, capsize=capSize, elinewidth=lineWidth, color=targetColorMap[0])#, label="Hetero. data") 
+    ax1.errorbar(depth, unfoldedDose, unfoldedDoseErr, depthErr, fmt='s', markersize=3, capsize=capSize, elinewidth=lineWidth, color="#000000")#, label="No target data") 
+    ax1.errorbar(depthTarget, unfoldedDoseTarget, unfoldedDoseErrTarget, depthErrTarget, fmt='o', markersize=3, capsize=capSize, elinewidth=lineWidth, color=targetColorMap[0])#, label="Hetero. data") 
     
     depthTarget =  depthTarget[:8] + depthTarget[9:]
     unfoldedDoseTarget =  unfoldedDoseTarget[:8] + unfoldedDoseTarget[9:]
@@ -482,16 +482,16 @@ if(bhetero):
     depthErrTarget = depthErrTarget[:8] + depthErrTarget[9:]
     
 elif(targetSelect == 1):
-    ax1.errorbar(depth, unfoldedDose, unfoldedDoseErr, depthErr, fmt='s', markersize=1, capsize=capSize, elinewidth=lineWidth, color='#000000')#, label="No target data")
+    ax1.errorbar(depth, unfoldedDose, unfoldedDoseErr, depthErr, fmt='s', markersize=3, capsize=capSize, elinewidth=lineWidth, color='#000000')#, label="No target data")
     for idx, thickness in enumerate(targetThicknesses):
-        ax1.errorbar(depthTarget[idx], unfoldedDoseTarget[idx], unfoldedDoseErrTarget[idx], depthErrTarget[idx], fmt='o', markersize=1, capsize=capSize, elinewidth=lineWidth, color=targetColorMap[idx])#, label=f"{thickness} mm PMMA data")
+        ax1.errorbar(depthTarget[idx], unfoldedDoseTarget[idx], unfoldedDoseErrTarget[idx], depthErrTarget[idx], fmt='o', markersize=3, capsize=capSize, elinewidth=lineWidth, color=targetColorMap[idx])#, label=f"{thickness} mm PMMA data")
 
         depthTarget[idx] =  depthTarget[idx][:8] + depthTarget[idx][9:]
         unfoldedDoseTarget[idx] =  unfoldedDoseTarget[idx][:8] + unfoldedDoseTarget[idx][9:]
         unfoldedDoseErrTarget[idx] =  unfoldedDoseErrTarget[idx][:8] + unfoldedDoseErrTarget[idx][9:]
         depthErrTarget[idx] = depthErrTarget[idx][:8] + depthErrTarget[idx][9:]
 else:
-    ax1.errorbar(depth, unfoldedDose, unfoldedDoseErr, depthErr, fmt='o', markersize=1, capsize=capSize, elinewidth=lineWidth, color="#000000")#, label="No target data") 
+    ax1.errorbar(depth, unfoldedDose, unfoldedDoseErr, depthErr, fmt='o', markersize=3, capsize=capSize, elinewidth=lineWidth, color="#000000")#, label="No target data") 
 
 print(type(unfoldedDose))
 print(type(unfoldedDoseTarget))
@@ -686,7 +686,7 @@ if targetSelect == 1:
         unfoldedDoseErr,
         depthErr,
         fmt='s',
-        markersize=3,
+        markersize=7,
         capsize=capSize,
         elinewidth=lineWidth,
         color='black',
@@ -716,7 +716,7 @@ if targetSelect == 1:
             unfoldedDoseErrTarget[idx],
             depthErrTarget[idx],
             fmt='o',
-            markersize=3,
+            markersize=7,
             capsize=capSize,
             elinewidth=lineWidth,
             color=targetColorMap[idx],

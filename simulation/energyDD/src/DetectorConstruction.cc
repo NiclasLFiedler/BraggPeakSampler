@@ -547,8 +547,8 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   logicalworld = new G4LogicalVolume(solidworld, worldMat, "logicalWorld");
   physworld = new G4PVPlacement(nullptr, G4ThreeVector(), logicalworld, "physworld", nullptr, false, 0, fCheckOverlaps);  
   
-  G4double phantomX = 50.0 * cm;
-  G4double phantomY = 50.0 * cm;
+  G4double phantomX = 200.0 * cm;
+  G4double phantomY = 200.0 * cm;
   G4double phantomZ = 50.0 * cm;
 
   detSizeZ = phantomZ/fLayers;
