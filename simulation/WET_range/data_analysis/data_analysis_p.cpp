@@ -553,7 +553,8 @@ void simple_plot(TH1D* hist, TString x_title, TString y_title){
     hist->Draw("HIST");
 }
 
-void data_analysis_p(int nLayer = 0){
+void data_analysis_p(double dLayer = 0){
+    int nLayer = dLayer;
     ROOT::EnableImplicitMT();
     Char_t filename[100]; // temp store of histnames
     cout << "nLayer " << nLayer << endl; 

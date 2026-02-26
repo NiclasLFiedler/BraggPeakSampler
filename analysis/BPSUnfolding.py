@@ -13,7 +13,7 @@ from matplotlib.colors import SymLogNorm
 import ROOT
 import uproot
 import matplotlib
-matplotlib.use('Agg')  # or 'Agg' for non-interactive
+# matplotlib.use('Agg')  # or 'Agg' for non-interactive
 import os
 import json
 import time
@@ -984,7 +984,7 @@ if __name__ == "__main__":
     plt.tight_layout()
     plt.savefig(f"{datapath}/unfold/img/TotalEnergyDeposition.pdf", format="pdf", bbox_inches="tight")
     # plt.savefig(f"{datapath}/Redunfold/img/TotalEnergyDeposition.pdf", format="pdf", bbox_inches="tight")
-    # plt.show()
+    plt.show()
     plt.close()
 
     exit()

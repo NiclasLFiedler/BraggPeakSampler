@@ -5,8 +5,8 @@ JSON_IN="../../../analysis/config.json"
 JSON_OUT="../../../analysis/config_tmp.json"
 
 # -------- PARAMETER LISTS --------
-nLayers=(23 24 25 26)
-energies=(205 210 215 220)
+nLayers=(21 22 23 24 25)
+energies=(195 195 200 205 210)
 nolayer=(0)
 
 cd build
@@ -42,6 +42,9 @@ for (( i=0; i<${#nLayers[@]}; i++ )); do
     ./merge_p.sh
     mv "raw_data_p.root" $output_file
     root -l -b -q "data_analysis_p.cpp(${nLayer})"
+    rm $output_file
+    rangeoutput="range_${nLayer}.root"
+    mv $rangeoutput targettestpbwo4/
     cd ../build
     echo "Simulation for $nLayer completed. Output saved"
 done
@@ -75,6 +78,9 @@ for (( i=0; i<${#nLayers[@]}; i++ )); do
     ./merge_p.sh
     mv "raw_data_p.root" $output_file
     root -l -b -q "data_analysis_p.cpp(${energy})"
+    rm $output_file
+    rangeoutput="range_${energy}.root"
+    mv $rangeoutput targettest/
     cd ../build
     echo "Simulation for $energy MeV completed. Output saved"
 done

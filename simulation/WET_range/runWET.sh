@@ -37,6 +37,9 @@ for (( i=0; i<${#nLayers[@]}; i++ )); do
     ./merge_p.sh
     mv "raw_data_p.root" $output_file
     root -l -b -q "data_analysis_p.cpp(${nLayer})"
+    rm $output_file
+    rangeoutput="range_${nLayer}.root"
+    mv $rangeoutput targettestpbwo4/
     cd ../build
     echo "Simulation for $nLayer completed. Output saved"
 
