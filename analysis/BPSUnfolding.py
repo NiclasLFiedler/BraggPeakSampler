@@ -13,7 +13,7 @@ from matplotlib.colors import SymLogNorm
 import ROOT
 import uproot
 import matplotlib
-# matplotlib.use('Agg')  # or 'Agg' for non-interactive
+matplotlib.use('Agg')  # or 'Agg' for non-interactive
 import os
 import json
 import time
@@ -641,6 +641,7 @@ if __name__ == "__main__":
         plt.grid(True)
         # plt.savefig(f"{datapath}/Redunfold/img/UnfoldedMeasured_CH{ch}.pdf", bbox_inches='tight')
         plt.savefig(f"{datapath}/unfold/img/UnfoldedMeasured_CH{ch}.pdf", bbox_inches='tight')
+        plt.savefig(f"{datapath}/unfold/img/UnfoldedMeasured_CH{ch}.svg", bbox_inches='tight')
         plt.close()
         
         h_predicted = response.ApplyToTruth(h_unfold)# or .Hmeas()
@@ -682,6 +683,7 @@ if __name__ == "__main__":
         plt.grid(True)
         # plt.savefig(f"{datapath}/Redunfold/img/PredictedMeasured_CH{ch}.pdf", bbox_inches='tight')
         plt.savefig(f"{datapath}/unfold/img/PredictedMeasured_CH{ch}.pdf", bbox_inches='tight')
+        plt.savefig(f"{datapath}/unfold/img/PredictedMeasured_CH{ch}.svg", bbox_inches='tight')
         plt.close()
 
         conv = 1.60218e-13
@@ -733,6 +735,7 @@ if __name__ == "__main__":
         plt.title('Energy Covariance Matrix')
         plt.colorbar(im)
         plt.savefig(f"{datapath}/unfold/img/EnergyCovariance_CH{ch}.pdf", bbox_inches='tight')
+        plt.savefig(f"{datapath}/unfold/img/EnergyCovariance_CH{ch}.svg", bbox_inches='tight')
         # plt.savefig(f"{datapath}/Redunfold/img/EnergyCovariance_CH{ch}.pdf", bbox_inches='tight')
         plt.close()
         
@@ -748,6 +751,7 @@ if __name__ == "__main__":
         plt.title('Unfold Covariance Matrix')
         plt.colorbar(im)
         plt.savefig(f"{datapath}/unfold/img/UnfoldCovariance_CH{ch}.pdf", bbox_inches='tight')
+        plt.savefig(f"{datapath}/unfold/img/UnfoldCovariance_CH{ch}.svg", bbox_inches='tight')
         # plt.savefig(f"{datapath}/Redunfold/img/UnfoldCovariance_CH{ch}.pdf", bbox_inches='tight')
         plt.close()
         
@@ -762,6 +766,7 @@ if __name__ == "__main__":
         plt.ylabel('Charge / ADC Count')
         plt.colorbar(im)
         plt.savefig(f"{datapath}/unfold/img/ResponseMatrix_CH{ch}.pdf", bbox_inches='tight')
+        plt.savefig(f"{datapath}/unfold/img/ResponseMatrix_CH{ch}.svg", bbox_inches='tight')
         # plt.savefig(f"{datapath}/Redunfold/img/ResponseMatrix_CH{ch}.pdf", bbox_inches='tight')
         plt.close()
     
@@ -901,7 +906,7 @@ if __name__ == "__main__":
         idx += 1
         energyEvent = []
         for layer, layerCharge in enumerate(event):
-            if(layerCharge == 0 or layer == 8):
+            if(layerCharge == 0):# or layer == 8):
                 energyEvent.append(0)
             else:
                 energyEvent.append(detector.adc_to_energy(layer, layerCharge))
@@ -983,11 +988,12 @@ if __name__ == "__main__":
     plt.ylabel("Counts")
     plt.tight_layout()
     plt.savefig(f"{datapath}/unfold/img/TotalEnergyDeposition.pdf", format="pdf", bbox_inches="tight")
+    plt.savefig(f"{datapath}/unfold/img/TotalEnergyDeposition.svg", format="svg", bbox_inches="tight")
     # plt.savefig(f"{datapath}/Redunfold/img/TotalEnergyDeposition.pdf", format="pdf", bbox_inches="tight")
-    plt.show()
+    # plt.show()
     plt.close()
 
-    exit()
+    # exit()
     selectedCharge = np.array(selectedCharge)
     
     for i in range(0,32):

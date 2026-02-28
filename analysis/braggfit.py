@@ -581,6 +581,7 @@ if(bhetero):
     
     # ax1.plot(z, convParams.curve, color=targetColorMap[0], linewidth = lineWidth, label=fr"Hetero. target fit paramters: $\frac{{\Phi_0}}{{N_0}}={convParams.Phi0:.3f}~\frac{{1}}{{cm^2}}$," "\n" rf"$R_0={convParams.R0:.3f}~cm$, $\sigma={convParams.sigma:.3f}~cm$, " "\n" fr"$t= {t:.3f}" "\pm" fr"{o_t:.3f}~cm, \sigma={sigmat:.3f} \pm {o_sigmat:.3f}~cm,~P_{{mod}}={pmod:.3f} \pm {sigma_pmod:.3f}$" rf"$~\mu m$")
     ax1.plot(z, convParams.curve, color=targetColorMap[0], linewidth = lineWidth, label=fr"LN300 " rf"$P_{{mod}}={pmod:.3f} \pm {sigma_pmod:.3f}$" rf"$~\mu m$")
+    print(f"${convParams.R0:.3f} \\pm {convParams.stddev[1]:.3f}$ & ${convParams.sigma:.3f} \\pm {convParams.stddev[2]:.3f}$ & ${t:.3f} \\pm {o_t:.3f}$ & ${sigmat:.3f} \\pm {o_sigmat:.3f}$ & ${pmod:.3f} \\pm {sigma_pmod:.3f}$ \\\\")
 elif(targetSelect == 1):
     for idx, thickness  in enumerate(targetThicknesses):
         spline_func = interp1d(depthTarget[idx], unfoldedDoseTarget[idx], kind='cubic')
