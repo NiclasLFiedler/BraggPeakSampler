@@ -234,9 +234,7 @@ def main():
     dataWater = []
 
     layers = range(1,26)
-    energies = [221, 225, 230, 235, 240, 245]
-
-    energies = [195, 195, 200, 205, 210]
+    energies = [193, 195, 200, 205, 210]
 
 
 

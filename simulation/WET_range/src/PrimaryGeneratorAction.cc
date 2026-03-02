@@ -1,6 +1,6 @@
 #include "PrimaryGeneratorAction.hh"
 #include "PrimaryGeneratorMessenger.hh"
-
+#include "G4PhysicalVolumeStore.hh"
 #include "G4LogicalVolumeStore.hh"
 #include "G4LogicalVolume.hh"
 #include "G4PVPlacement.hh"
@@ -77,6 +77,7 @@ PrimaryGeneratorAction::PrimaryGeneratorAction()
     detSizeY = crystalSize.at(1)* mm;
     detSizeZ = crystalSize.at(2)* mm;
 
+    G4double beamOffSet = 
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
@@ -91,24 +92,33 @@ PrimaryGeneratorAction::~PrimaryGeneratorAction()
 
 
 void PrimaryGeneratorAction::SetBeamEnergy(G4double energy) {
-    // G4cout << "Changed beamenergy to " << energy << " MeV" << G4endl;
     G4cout << "Energy change " << fBeamEnergy << G4endl;
-
-    // G4UserLimits* userLimits = new G4UserLimits();
-    // if(energy < 5){
-    //   userLimits->SetMaxAllowedStep(0.1*mm);
-    //   G4LogicalVolume* logicaldetector = G4LogicalVolumeStore::GetInstance()->GetVolume("logicaldetector");
-    //   logicaldetector->SetUserLimits(userLimits);
-    // }
     fParticleGun->SetParticleEnergy(fBeamEnergy);
 }
 
 void PrimaryGeneratorAction::GeneratePrimaries(G4Event* anEvent)
 {
-  
+  G4PhysicalVolumeStore* store = G4PhysicalVolumeStore::GetInstance();
+  for (auto volume : *store) {
+    if(fLayers <= fLayersCut){
+      if (volume->GetName() == "physAluFoil" && volume->GetCopyNo() == fLayers-1)   // <-- your desired ID
+      {
+        G4ThreeVector pos = volume->GetObjectTranslation();
+        G4cout << "Copy position: " << pos << G4endl;
+      }
+    }
+    else{
+      if (volume->GetName() == "physAluFoilAbs" && volume->GetCopyNo() == fLayers-fLayersCut-1)   // <-- your desired ID
+      {
+        G4ThreeVector pos = volume->GetObjectTranslation();
+        G4cout << "Copy position: " << pos << G4endl;
+      }
+
+    }
+  }
   fParticleGun->SetParticleEnergy(fBeamEnergy);
   
-  G4double offSet = 65*mm;
+  G4double offSet = 70*mm;
   offSet = 0*mm;
   if(fLayers <= fLayersCut){
     offSet = offSet + ((absSizeZ/2+ThicknessTeflon/2+ThicknessAlu/2)*2+gapSizeZ)*fLayers;

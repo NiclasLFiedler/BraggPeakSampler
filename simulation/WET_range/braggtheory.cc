@@ -34,7 +34,7 @@ int main(int argc,char** argv)
   // Set mandatory initialization classes
   //
   runManager->SetUserInitialization(new B2a::DetectorConstruction());
-
+  G4cout << "DetectorConstruction complete" << G4endl;
   auto physicsList = new QBBC();
   //auto physicsList = new QGSP_BIC_HP();
   G4StepLimiterPhysics* stepLimitPhys = new G4StepLimiterPhysics();

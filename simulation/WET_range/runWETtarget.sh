@@ -6,7 +6,7 @@ JSON_OUT="../../../analysis/config_tmp.json"
 
 # -------- PARAMETER LISTS --------
 nLayers=(21 22 23 24 25)
-energies=(195 195 200 205 210)
+energies=(195 200 205 210 215)
 nolayer=(0)
 
 cd build
