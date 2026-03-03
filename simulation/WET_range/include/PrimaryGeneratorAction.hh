@@ -60,7 +60,7 @@ class PrimaryGeneratorAction : public G4VUserPrimaryGeneratorAction
     G4double targetThickness = 0;
     G4int heteroThickness = 0;
     G4int pmod = 0;
-
+    G4double beamOffSet = 0;
     G4ParticleGun* fParticleGun = nullptr; // G4 particle gun
     G4ThreeVector beamPos = G4ThreeVector(0.,0.,0.);
     G4ThreeVector beamDis = G4ThreeVector(0.,0.,0.);

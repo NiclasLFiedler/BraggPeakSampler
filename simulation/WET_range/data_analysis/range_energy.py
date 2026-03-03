@@ -233,9 +233,9 @@ def main():
     data = []
     dataWater = []
 
-    layers = range(1,26)
+    layers = range(1,32)
     energies = [193, 195, 200, 205, 210]
-
+    energies = [221, 225, 230, 235, 240]
 
 
     for index, value in enumerate(layers):

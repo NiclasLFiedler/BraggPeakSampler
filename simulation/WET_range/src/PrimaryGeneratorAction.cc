@@ -77,7 +77,21 @@ PrimaryGeneratorAction::PrimaryGeneratorAction()
     detSizeY = crystalSize.at(1)* mm;
     detSizeZ = crystalSize.at(2)* mm;
 
-    G4double beamOffSet = 
+  G4PhysicalVolumeStore* store = G4PhysicalVolumeStore::GetInstance();
+  G4ThreeVector pos;
+
+  if(fLayers != 0){
+    for (auto volume : *store) {
+      if (volume->GetName() == "physAluFoilAbs" && volume->GetCopyNo() == 0)
+      {
+        beamOffSet = volume->GetTranslation().z();
+      }
+    }
+  }
+  else{
+    beamOffSet = -10 * mm;
+  }
+  G4cout << "Copy z position: " << beamOffSet << G4endl;
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
@@ -98,36 +112,11 @@ void PrimaryGeneratorAction::SetBeamEnergy(G4double energy) {
 
 void PrimaryGeneratorAction::GeneratePrimaries(G4Event* anEvent)
 {
-  G4PhysicalVolumeStore* store = G4PhysicalVolumeStore::GetInstance();
-  for (auto volume : *store) {
-    if(fLayers <= fLayersCut){
-      if (volume->GetName() == "physAluFoil" && volume->GetCopyNo() == fLayers-1)   // <-- your desired ID
-      {
-        G4ThreeVector pos = volume->GetObjectTranslation();
-        G4cout << "Copy position: " << pos << G4endl;
-      }
-    }
-    else{
-      if (volume->GetName() == "physAluFoilAbs" && volume->GetCopyNo() == fLayers-fLayersCut-1)   // <-- your desired ID
-      {
-        G4ThreeVector pos = volume->GetObjectTranslation();
-        G4cout << "Copy position: " << pos << G4endl;
-      }
-
-    }
-  }
   fParticleGun->SetParticleEnergy(fBeamEnergy);
   
-  G4double offSet = 70*mm;
-  offSet = 0*mm;
-  if(fLayers <= fLayersCut){
-    offSet = offSet + ((absSizeZ/2+ThicknessTeflon/2+ThicknessAlu/2)*2+gapSizeZ)*fLayers;
-  }
-  else{
-    offSet = offSet + ((absSizeZ/2+ThicknessTeflon/2+ThicknessAlu/2)*2+gapSizeZ)*fLayersCut + ((detSizeZ/2+ThicknessAlu/2+ThicknessTeflon/2)*2+gapSizeZ)*(fLayers-fLayersCut);
-  }
+  G4double offSet = beamOffSet;
 
-  beamPos = G4ThreeVector(0,0,-offSet-2*mm);
+  beamPos = G4ThreeVector(0,0, offSet-5*mm);
   fParticleGun->SetParticleMomentumDirection(G4ThreeVector(0, 0, 1.));
   
   // Apply beam position and direction

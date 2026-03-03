@@ -5,8 +5,8 @@ JSON_IN="../../../analysis/config.json"
 JSON_OUT="../../../analysis/config_tmp.json"
 
 # -------- PARAMETER LISTS --------
-nLayers=(21 22 23 24 25)
-energies=(195 200 205 210 215)
+nLayers=(26 27 28 29 30 31)
+energies=(221.6 225 230 235 240 245)
 nolayer=(0)
 
 cd build
@@ -53,6 +53,7 @@ done
 for (( i=0; i<${#nLayers[@]}; i++ )); do
 
   energy="${energies[i]}"
+  energy_label=${energy%.*}  # Truncates "221.6" to "221"
   nLayer="${nolayer[0]}"
   echo "========================================"
   echo "Run $((i+1)):"
@@ -70,7 +71,7 @@ for (( i=0; i<${#nLayers[@]}; i++ )); do
     "$JSON_IN" > "$JSON_OUT"  && mv "$JSON_OUT" "$JSON_IN"
       
 
-    output_file="raw_data_${energy}.root"
+    output_file="raw_data_${energy_label}.root"
 
     # Run the simulation with the modified macro file
     ./braggtheory run_p.mac
@@ -79,7 +80,7 @@ for (( i=0; i<${#nLayers[@]}; i++ )); do
     mv "raw_data_p.root" $output_file
     root -l -b -q "data_analysis_p.cpp(${energy})"
     rm $output_file
-    rangeoutput="range_${energy}.root"
+    rangeoutput="range_${energy_label}.root"
     mv $rangeoutput targettest/
     cd ../build
     echo "Simulation for $energy MeV completed. Output saved"
