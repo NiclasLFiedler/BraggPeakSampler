@@ -89,7 +89,7 @@ PrimaryGeneratorAction::PrimaryGeneratorAction()
     }
   }
   else{
-    beamOffSet = -10 * mm;
+    beamOffSet = 0 * mm;
   }
   G4cout << "Copy z position: " << beamOffSet << G4endl;
 }
@@ -116,7 +116,7 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event* anEvent)
   
   G4double offSet = beamOffSet;
 
-  beamPos = G4ThreeVector(0,0, offSet-5*mm);
+  beamPos = G4ThreeVector(0,0, offSet-100*cm);
   fParticleGun->SetParticleMomentumDirection(G4ThreeVector(0, 0, 1.));
   
   // Apply beam position and direction

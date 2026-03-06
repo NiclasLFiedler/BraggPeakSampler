@@ -62,7 +62,7 @@ def get_range_energy(energy, path, enable_output=False, enable_plot=False):
     max_bin = np.argmax(bin_contents[10:])
     peak_value = bin_centers[max_bin+10]
 
-    initial_sigma_guess = np.std(values)
+    initial_sigma_guess = 3
     # Fit a Gaussian to the histogram data
     initial_guess = [peak_value, initial_sigma_guess, np.max(bin_contents[10:])]
     print(initial_guess)
@@ -106,34 +106,14 @@ def GetWET(data, water_data):
     print()
     for idx in range(0,27):
         waterRange = water_data[0][1]
-        print(f"{data[idx][1]}")
-        WET.append(waterRange-data[idx][1])
-    print()
-    for idx in range(27,28):
-        waterRange = water_data[1][1]
-        print(f"{data[idx][1]}")
-        WET.append(waterRange-data[idx][1])
-    print()
-    for idx in range(28,29):
-        waterRange = water_data[2][1]
-        print(f"{data[idx][1]}")
-        WET.append(waterRange-data[idx][1])
-    print()
-    for idx in range(29,30):
-        waterRange = water_data[3][1]
-        print(f"{data[idx][1]}")
-        WET.append(waterRange-data[idx][1])
-    print()
-    for idx in range(30,31):
-        waterRange = water_data[4][1]
-        print(f"{data[idx][1]}")
-        WET.append(waterRange-data[idx][1])
-    print()
-    for idx in range(31,32):
-        waterRange = water_data[5][1]
-        print(f"{data[idx][1]}")
-        WET.append(waterRange-data[idx][1])
+        wetcache = waterRange-data[idx][1]
+        print(f"{idx} WaterRange: {waterRange} - {data[idx][1]} = {wetcache}")
+        WET.append(wetcache)
         
+    for idx in range(32-len(WET)):
+        print((WET[-1]-WET[-2])+WET[-1])
+        WET.append((WET[-1]-WET[-2])+WET[-1])
+
     WETDepth = []
     for idx, value in enumerate(WET):
         if (idx == 0):
@@ -158,41 +138,12 @@ def GetWETtarget(data, water_data):
     
     print(f"WaterRange {water_data[0]}")
     print()
-    for idx in range(0,20):
+    for idx in range(20):
         waterRange = water_data[0][1]
-        print(f"{data[idx][1]}")
-        WET.append(waterRange-data[idx][1])
-    print()
-    for idx in range(20,21):
-        waterRange = water_data[1][1]
-        print(f"{data[idx][1]}")
-        WET.append(waterRange-data[idx][1])
-    print()
-    for idx in range(21,22):
-        waterRange = water_data[2][1]
-        print(f"{data[idx][1]}")
-        WET.append(waterRange-data[idx][1])
-    print()
-    for idx in range(22,23):
-        waterRange = water_data[3][1]
-        print(f"{data[idx][1]}")
-        WET.append(waterRange-data[idx][1])
-    print()
-    for idx in range(23,24):
-        waterRange = water_data[4][1]
-        print(f"{data[idx][1]}")
-        WET.append(waterRange-data[idx][1])
-    # print()
-    # for idx in range(24,25):
-    #     waterRange = water_data[5][1]
-    #     print(f"{data[idx][1]}")
-    #     WET.append(waterRange-data[idx][1])
-    # print()
-    # for idx in range(25,26):
-    #     waterRange = water_data[6][1]
-    #     print(f"{data[idx][1]}")
-    #     WET.append(waterRange-data[idx][1])
-        
+        wetcache = waterRange-data[idx][1]
+        print(f"{idx} WaterRange: {waterRange} - {data[idx][1]} = {wetcache}")
+        WET.append(wetcache)
+
     for idx in range(32-len(WET)):
         print((WET[-1]-WET[-2])+WET[-1])
         WET.append((WET[-1]-WET[-2])+WET[-1])
@@ -233,22 +184,35 @@ def main():
     data = []
     dataWater = []
 
+    #notarget
+    #layers = range(1,33)
+    #energies = [221, 225, 230, 235, 240, 245]
+
+    #pmma 52 194
     layers = range(1,32)
-    energies = [193, 195, 200, 205, 210]
-    energies = [221, 225, 230, 235, 240]
 
-
+    energies = [221, 193, 192, 192, 191, 190, 190]
+    thickness = [0, 52, 53, 54, 55, 56, 57]
+    select = 0
+    datadir = f"WET{thickness[select]}"
+    energies =  [energies[select]]
     for index, value in enumerate(layers):
-        if index == 0:
-            data.append(get_range_energy(value, "targettestpbwo4", enable_output=True, enable_plot=True))
+        if value == 33:
+            data.append(get_range_energy(value, datadir, enable_output=True, enable_plot=True))
         else:
-            data.append(get_range_energy(value, "targettestpbwo4", enable_output=True, enable_plot=False))
+            data.append(get_range_energy(value, datadir, enable_output=True, enable_plot=False))
             
     for index, value in enumerate(energies):        
-        dataWater.append(get_range_energy(value, "targettest", enable_output=True, enable_plot=False))
+        if index == 0:
+            dataWater.append(get_range_energy(value, datadir, enable_output=True, enable_plot=True))
+        else:
+            dataWater.append(get_range_energy(value, datadir, enable_output=True, enable_plot=False))
         
-    # GetWET(data, dataWater)
-    GetWETtarget(data, dataWater)
+        
+    if(select == 0):        
+        GetWET(data, dataWater)
+    else:
+        GetWETtarget(data, dataWater)
 
 if __name__ == "__main__":
     main()

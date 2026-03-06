@@ -645,7 +645,7 @@ void data_analysis_p(double dLayer = 0){
     
     int64_t entries = datatree->GetEntries();
 	TH2D *h2_curve = new TH2D("h2_curve", "h2_edep", 500, 0, 500, 500, 0, 5);
-    TH1D *h_range = new TH1D("h_range", "h_range", 310, 0, 310);
+    TH1D *h_range = new TH1D("h_range", "h_range", 930, 0, 310);
     for (int64_t i = 0; i<entries; i++){
         if((i + 1) % (entries / 10) == 0) {
             int percentage = (i + 1) * 100 / entries;

@@ -585,7 +585,7 @@ if __name__ == "__main__":
         # print(f"Histogram edges: {hist_edges_ch}")
         # print(f"detectorpath {detectorpath}")
         # print(f"datapath {datapath}")
-        n_iter = 15
+        n_iter = 12
         if(np.sum(hist_ch)<50):
             n_iter = 1
         start = time.perf_counter()
@@ -644,6 +644,7 @@ if __name__ == "__main__":
         plt.savefig(f"{datapath}/unfold/img/UnfoldedMeasured_CH{ch}.svg", bbox_inches='tight')
         plt.close()
         
+        print(f"Maximum Energy: {x_unf[np.argmax(y_unf)]}")
         h_predicted = response.ApplyToTruth(h_unfold)# or .Hmeas()
         x_pred, y_pred = th1_to_numpy(h_predicted)
         
@@ -906,7 +907,7 @@ if __name__ == "__main__":
         idx += 1
         energyEvent = []
         for layer, layerCharge in enumerate(event):
-            if(layerCharge == 0):# or layer == 8):
+            if(layerCharge == 0 or layer == 8):
                 energyEvent.append(0)
             else:
                 energyEvent.append(detector.adc_to_energy(layer, layerCharge))
@@ -968,10 +969,14 @@ if __name__ == "__main__":
 
     x_smooth = np.linspace(TEnergyCenters[0], TEnergyCenters[-1], 1000)
     y_smooth = gauss(x_smooth, *popt)
+    
+    ch8Energy = [7.449727330559672, 7.453257268411435, 7.476103577336389, 7.496305293163929, 7.521611829149524, 7.543090448048813]
 
-    print(f"Peak at {mu+8.1} MeV +. {perr[1]}: Energycut at {energyCutOff} MeV")
-    print(f"Difference: {207.7-(mu+8.1)}")
-    print(f"{221.6*(mu+8.1)/207.7}")
+    print(f"Peak at {mu} MeV +. {perr[1]}: Energycut at {energyCutOff} MeV")
+    if(targetSelect == 1):
+        print(f"Difference: {207.7-(mu+ch8Energy[targetThickness-52])}")
+        print(f"{221.6*(mu+ch8Energy[targetThickness-52])/207.7}")
+    
     plt.rcParams.update({'font.size': 32})
     plt.figure(figsize=(16,12))
     plt.step(TEnergyCenters, TEnergyCounts, where="mid", color=targetColorMap[0])
@@ -993,7 +998,7 @@ if __name__ == "__main__":
     # plt.show()
     plt.close()
 
-    # exit()
+    exit()
     selectedCharge = np.array(selectedCharge)
     
     for i in range(0,32):
@@ -1028,7 +1033,7 @@ if __name__ == "__main__":
 
     print("\nPerforming Bayesian unfolding...")
     
-    channels = list(range(0, 1))
+    channels = list(range(8, 9))
     # UnfoldChannel(0, hist[0], ehist[0], hist_edges[0], eedges[0], detector, datapath, detectorpath, depth[0], deptherr[0])
     # exit()
     args = [(hist[ch], ehist[ch], hist_edges[ch], eedges[ch], detector, datapath, detectorpath, depth, deptherr) for ch in channels]

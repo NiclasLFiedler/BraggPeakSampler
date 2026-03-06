@@ -5,8 +5,14 @@ JSON_IN="../../../analysis/config.json"
 JSON_OUT="../../../analysis/config_tmp.json"
 
 # -------- PARAMETER LISTS --------
-nLayers=(26 27 28 29 30 31)
-energies=(221.6 225 230 235 240 245)
+#notarget
+#nLayers=(28 29 30 31 32)
+#energies=(225 230 235 240 245)
+
+#pmma 52mm 195 MeV
+nLayers=(22)
+# energies=(195 200 205 210 215 220)
+energies=(196)
 nolayer=(0)
 
 cd build
@@ -49,8 +55,14 @@ for (( i=0; i<${#nLayers[@]}; i++ )); do
     echo "Simulation for $nLayer completed. Output saved"
 done
 
+#notarget
+#energies=(221.6 225 230 235 240 245)
+
+#pmma 52 194MeV
+energies=(193.7 196 199 202 205 208)
+
 # -------- LOOP (ZIPPED) --------
-for (( i=0; i<${#nLayers[@]}; i++ )); do
+for (( i=0; i<${#energies[@]}; i++ )); do
 
   energy="${energies[i]}"
   energy_label=${energy%.*}  # Truncates "221.6" to "221"
