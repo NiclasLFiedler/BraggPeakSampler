@@ -13,7 +13,7 @@ from matplotlib.colors import SymLogNorm
 import ROOT
 import uproot
 import matplotlib
-matplotlib.use('Agg')  # or 'Agg' for non-interactive
+# matplotlib.use('Agg')  # or 'Agg' for non-interactive
 import os
 import json
 import time
@@ -98,7 +98,7 @@ class ChannelCalibration:
     """
 
     def __init__(self, a, b, a_err, b_err, channelWidth, simVar, simStatVar, ADCVar, ADCStatVar, covAB, quenched, ADCchannel):
-        self.kB = 12.68 * 0.001
+        self.kB = 12.68 * 0.001*0.7
         self.kbVariance = abs(self.kB*0.3)**2
         self.a = a
         self.b = b
@@ -907,7 +907,7 @@ if __name__ == "__main__":
         idx += 1
         energyEvent = []
         for layer, layerCharge in enumerate(event):
-            if(layerCharge == 0 or layer == 8):
+            if(layerCharge == 0):# or layer == 8):
                 energyEvent.append(0)
             else:
                 energyEvent.append(detector.adc_to_energy(layer, layerCharge))
