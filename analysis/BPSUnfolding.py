@@ -13,7 +13,7 @@ from matplotlib.colors import SymLogNorm
 import ROOT
 import uproot
 import matplotlib
-# matplotlib.use('Agg')  # or 'Agg' for non-interactive
+matplotlib.use('Agg')  # or 'Agg' for non-interactive
 import os
 import json
 import time
@@ -585,7 +585,7 @@ if __name__ == "__main__":
         # print(f"Histogram edges: {hist_edges_ch}")
         # print(f"detectorpath {detectorpath}")
         # print(f"datapath {datapath}")
-        n_iter = 12
+        n_iter = 10
         if(np.sum(hist_ch)<50):
             n_iter = 1
         start = time.perf_counter()
@@ -934,7 +934,7 @@ if __name__ == "__main__":
     
     energyCutOff = mu - (FWHM) / 2
     if(targetThickness == 0):
-        energyCutOff = 195
+        energyCutOff = 195-3
     elif (targetThickness == 52):
         energyCutOff = mu - 2.5*sigma
     elif (targetThickness == 53):
@@ -998,7 +998,7 @@ if __name__ == "__main__":
     # plt.show()
     plt.close()
 
-    exit()
+    # exit()
     selectedCharge = np.array(selectedCharge)
     
     for i in range(0,32):
@@ -1033,13 +1033,13 @@ if __name__ == "__main__":
 
     print("\nPerforming Bayesian unfolding...")
     
-    channels = list(range(8, 9))
+    channels = list(range(0, 32))
     # UnfoldChannel(0, hist[0], ehist[0], hist_edges[0], eedges[0], detector, datapath, detectorpath, depth[0], deptherr[0])
     # exit()
     args = [(hist[ch], ehist[ch], hist_edges[ch], eedges[ch], detector, datapath, detectorpath, depth, deptherr) for ch in channels]
 
 
-    with ProcessPoolExecutor(max_workers=1) as executor:
+    with ProcessPoolExecutor(max_workers=16) as executor:
         for ch in executor.map(UnfoldChannel,
         channels,
         [hist[ch] for ch in channels],

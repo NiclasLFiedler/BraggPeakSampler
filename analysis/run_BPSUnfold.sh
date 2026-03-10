@@ -5,8 +5,8 @@ JSON_IN="config.json"
 JSON_OUT="config_tmp.json"
 
 # -------- PARAMETER LISTS --------
-TARGET_SELECT_LIST=(0 1 1 1 1 1 1 2)
-TARGET_THICKNESS_LIST=(0 52 53 54 55 56 57 200)
+TARGET_SELECT_LIST=(0 1 1 1 1 1 1)
+TARGET_THICKNESS_LIST=(0 52 53 54 55 56 57)
 
 # TARGET_SELECT_LIST=(1)
 # TARGET_THICKNESS_LIST=(52)
@@ -45,5 +45,3 @@ for (( i=0; i<${#TARGET_SELECT_LIST[@]}; i++ )); do
     # root -q 'analysis.cpp()'
     python3 BPSUnfolding.py
 done
-
-sudo shutdown -h now

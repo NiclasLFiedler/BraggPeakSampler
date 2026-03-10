@@ -58,7 +58,7 @@ class ChannelCalibration:
     """
 
     def __init__(self, a, b, a_err, b_err, channelWidth, simVar, simStatVar, ADCVar, ADCStatVar, covAB, quenched, ADCchannel):
-        self.kB = 12.68 * 0.001 * 1.3
+        self.kB = 12.68 * 0.001 * 0.7
         self.kbVariance = abs(self.kB*0.3)**2
         self.a = a
         self.b = b
@@ -772,7 +772,7 @@ if __name__ == "__main__":
     #     plotCovMatrix(cov, adc)
     
     channels = list(range(0, 32))
-    with ProcessPoolExecutor(max_workers=16 ) as executor:
+    with ProcessPoolExecutor(max_workers=16) as executor:
         for ch in executor.map(build_channel_response, channels):
             print(f"Finished channel {ch}")
                 
