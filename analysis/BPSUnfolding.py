@@ -98,7 +98,7 @@ class ChannelCalibration:
     """
 
     def __init__(self, a, b, a_err, b_err, channelWidth, simVar, simStatVar, ADCVar, ADCStatVar, covAB, quenched, ADCchannel):
-        self.kB = 12.68 * 0.001*0.7
+        self.kB = 12.68 * 0.001
         self.kbVariance = abs(self.kB*0.3)**2
         self.a = a
         self.b = b
@@ -585,7 +585,7 @@ if __name__ == "__main__":
         # print(f"Histogram edges: {hist_edges_ch}")
         # print(f"detectorpath {detectorpath}")
         # print(f"datapath {datapath}")
-        n_iter = 10
+        n_iter = 15
         if(np.sum(hist_ch)<50):
             n_iter = 1
         start = time.perf_counter()
@@ -593,6 +593,7 @@ if __name__ == "__main__":
 
         R  = data["response_matrix"]
         Ecov = data["Energy_covariance_matrix"]
+        kbcov = data["kb_covariance_matrix"]
         E_true = data["true_energy"]
         initial_prior = np.ones_like(E_true)
         measured = hist_ch
@@ -710,16 +711,23 @@ if __name__ == "__main__":
         DoseVariance = np.dot(x_Emeas, np.dot(cov, x_Emeas))+np.dot(y_Emeas, np.dot(Ecov, y_Emeas))
         DoseVariance *= conv**2 / mass**2 * 1e6**2 
 
+        DoseVariance *= conv**2 / mass**2 * 1e6**2 
+
 
         E = np.array(x_unf)
         N = np.array(y_unf) 
-        
-        unfoldedDoseVariance = np.dot(E, np.dot(cov, E))+np.dot(N, np.dot(Ecov, N))
-        # doseVariance = np.sum(E[:, None] * E[None, :] * cov)+np.sum(N[:, None] * N[None, :] * Ecov)
-        unfoldedDosePartial = np.dot(N, np.dot(Ecov, N))
-        unfoldedDosePartial *= conv**2 / mass**2 * 1e6**2 
 
+        unfoldedDoseVariance = np.dot(E, np.dot(cov, E))+np.dot(N, np.dot(Ecov, N))
         unfoldedDoseVariance *= conv**2 / mass**2 * 1e6**2 
+
+        unfoldedDoseVariancekb = np.dot(N, np.dot(kbcov, N))
+        unfoldedDoseVariancekb *= conv**2 / mass**2 * 1e6**2 
+
+        unfoldedDoseVarianceN = np.dot(E, np.dot(cov, E))
+        unfoldedDoseVarianceN *= conv**2 / mass**2 * 1e6**2 
+
+        unfoldedDoseVarianceE = np.dot(N, np.dot(Ecov, N))
+        unfoldedDoseVarianceE *= conv**2 / mass**2 * 1e6**2 
 
         print(f"Unfolded dose for channel {ch}: {unfoldedDose:.2f} ± {np.sqrt(unfoldedDoseVariance):.2f} μGy")
         print(f"Normally calculated dose for channel {ch}: {dose:.2f} ± {np.sqrt(DoseVariance):.2f} μGy")
@@ -783,6 +791,7 @@ if __name__ == "__main__":
             unfolded=[x_unf, y_unf],
             predicted_measured=[x_pred, y_pred],
             unfoldedDose =[unfoldedDose, unfoldedDoseVariance],
+            unfoldedDoseVariances = [unfoldedDoseVariancekb, unfoldedDoseVarianceE, unfoldedDoseVarianceN],
             dose =[dose, DoseVariance],
             depth = [depth, deptherr],
             n_iter_used = n_iter,
@@ -907,7 +916,9 @@ if __name__ == "__main__":
         idx += 1
         energyEvent = []
         for layer, layerCharge in enumerate(event):
-            if(layerCharge == 0):# or layer == 8):
+            if(layerCharge == 0):
+                energyEvent.append(0)
+            elif(layer == 8 and targetSelect != 0):
                 energyEvent.append(0)
             else:
                 energyEvent.append(detector.adc_to_energy(layer, layerCharge))
@@ -925,16 +936,15 @@ if __name__ == "__main__":
         return A * np.exp(-(x - mu)**2 / (2 * sigma**2))
 
     p0 = [TEnergyCounts[peak_idx], peak_x, np.std(energy) / 5]
-
     popt, pcov = curve_fit(gauss, x_fit, y_fit, p0=p0)
     perr = np.sqrt(np.diag(pcov))
     energy = []
     A, mu, sigma = popt
     FWHM = 2.355 * sigma
-    
+
     energyCutOff = mu - (FWHM) / 2
     if(targetThickness == 0):
-        energyCutOff = 195-3
+        energyCutOff = 195 
     elif (targetThickness == 52):
         energyCutOff = mu - 2.5*sigma
     elif (targetThickness == 53):
@@ -949,7 +959,7 @@ if __name__ == "__main__":
         energyCutOff = mu - 2.5*sigma   
     elif (targetThickness == 200):
         energyCutOff = mu - 2.5*sigma   
-        
+    # energyCutOff = mu - FWHM
     idx = 0
     for event in charge:
         idx += 1
@@ -969,19 +979,19 @@ if __name__ == "__main__":
 
     x_smooth = np.linspace(TEnergyCenters[0], TEnergyCenters[-1], 1000)
     y_smooth = gauss(x_smooth, *popt)
-    
+
     ch8Energy = [7.449727330559672, 7.453257268411435, 7.476103577336389, 7.496305293163929, 7.521611829149524, 7.543090448048813]
 
-    print(f"Peak at {mu} MeV +. {perr[1]}: Energycut at {energyCutOff} MeV")
+    print(f"Peak at {mu:.2f} MeV +. {perr[1]:.2f}: Energycut at {energyCutOff:.2f} MeV")
     if(targetSelect == 1):
-        print(f"Difference: {207.7-(mu+ch8Energy[targetThickness-52])}")
-        print(f"{221.6*(mu+ch8Energy[targetThickness-52])/207.7}")
+        print(f"Difference: {207.71-(mu+ch8Energy[targetThickness-52]):.2f}")
+        print(f"{221.6*(mu+ch8Energy[targetThickness-52])/207.71:.2f}")
     
     plt.rcParams.update({'font.size': 32})
     plt.figure(figsize=(16,12))
     plt.step(TEnergyCenters, TEnergyCounts, where="mid", color=targetColorMap[0])
-    # plt.step(TCutEnergyCenters, TCutEnergyCounts, where="mid", color='green')
-    # plt.plot(x_smooth, y_smooth, label="Gaussian fit")
+    plt.step(TCutEnergyCenters, TCutEnergyCounts, where="mid", color='green')
+    plt.plot(x_smooth, y_smooth, label="Gaussian fit")
     plt.axvline(
     x=221.6,
     linestyle="--",
@@ -998,7 +1008,7 @@ if __name__ == "__main__":
     # plt.show()
     plt.close()
 
-    # exit()
+    exit()
     selectedCharge = np.array(selectedCharge)
     
     for i in range(0,32):

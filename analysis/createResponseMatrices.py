@@ -58,7 +58,7 @@ class ChannelCalibration:
     """
 
     def __init__(self, a, b, a_err, b_err, channelWidth, simVar, simStatVar, ADCVar, ADCStatVar, covAB, quenched, ADCchannel):
-        self.kB = 12.68 * 0.001 * 0.7
+        self.kB = 12.68 * 0.001
         self.kbVariance = abs(self.kB*0.3)**2
         self.a = a
         self.b = b
@@ -626,6 +626,7 @@ if __name__ == "__main__":
     def build_covMatrix(channel, adc):
         calib = builder.detector.channels[channel]
         cov = np.zeros((len(adc), len(adc)))
+        covkB = np.zeros((len(adc), len(adc)))
         
         muADC = calib.ADCchannel
         muE = calib.quenched
@@ -662,26 +663,29 @@ if __name__ == "__main__":
                     termkB = deltaX*E_i*E_j/((kb*E_i-deltaX)*(kb*E_j-deltaX))*kbVar**2
                         
                     cov[i][j] = term1E + term2E + termkB
+                    covkB[i][j] = termkB
                 else:
                     term1 = adc[i]*adc[j] * vara + varb + (adc[i]+adc[j])*covab
                     termE = deltaX**2/((kb*E_i-deltaX)*(kb*E_j-deltaX))*term1
                     termkB = deltaX*E_i*E_j/((kb*E_i-deltaX)*(kb*E_j-deltaX))*kbVar**2
                     
                     cov[i][j] = termE + termkB
+                    covkB[i][j] = termkB
         
-        return cov
+        return cov, covkB
         
     def build_channel_response(channel):
         R, true_energies, measured_energies = builder.build_response_matrix(
             custom_drf=sipm_response,
             channel=channel
         )
-        cov = build_covMatrix(channel, measured_energies)
+        cov, covkb = build_covMatrix(channel, measured_energies)
         # plotCovMatrix(cov, measured_energies)
         np.savez(
             f"{datapath}responseMatrix_CH{channel}.npz",
             response_matrix=R,
             Energy_covariance_matrix=cov,
+            kb_covariance_matrix=covkb,
             true_energy=true_energies,
             measured_energy=measured_energies
         )

@@ -338,8 +338,9 @@ else:
 
 for ch in range(nLayers):
     dataFile = np.load(f"../data/{dataset}/{file}/output/unfold/data/Unfolded{ch}.npz")
-    # Tdepth, Tdeptherr = dataFile["depth"] 
+    Tdepth, Tdeptherr = dataFile["depth"] 
     # depth.append(Tdepth)
+    print(Tdepth)
     # depthErr.append(Tdeptherr)
     depth.append(WETDepth[ch])
     depthErr.append(WETDepthErr[ch])
@@ -360,7 +361,11 @@ for ch in range(nLayers):
     print(f"Ch: {ch} Reduced Chi^2: {chi2_red}")
     Tdose, Tdoseerr = dataFile["unfoldedDose"]
     unfoldedDose.append(Tdose)
-    unfoldedDoseErr.append(Tdoseerr)
+    unfoldedDoseErr.append(np.sqrt(Tdoseerr))
+    unfoldedDoseVariancekb, unfoldedDoseVarianceE, unfoldedDoseVarianceN = dataFile["unfoldedDoseVariances"]
+    print(f"CH: {ch}; Uncertainty: {Tdoseerr:.2f}; kb: {unfoldedDoseVariancekb:.2f}; Ratio: {unfoldedDoseVariancekb/Tdoseerr:.2f}")
+    print(f"CH: {ch}; Uncertainty: {Tdoseerr:.2f}; E: {unfoldedDoseVarianceE:.2f}; Ratio: {unfoldedDoseVarianceE/Tdoseerr:.2f}")
+    print(f"CH: {ch}; Uncertainty: {Tdoseerr:.2f}; N: {unfoldedDoseVarianceN:.2f}; Ratio: {unfoldedDoseVarianceN/Tdoseerr:.2f}")
     Tdose, Tdoseerr = dataFile["dose"]
     dose.append(Tdose)
     doseErr.append(Tdoseerr)
@@ -378,10 +383,10 @@ if(bhetero):
         depthErrTarget.append(WETDepthErrTarget[ch])
         Tdose, Tdoseerr = dataFile["unfoldedDose"]
         unfoldedDoseTarget.append(Tdose)
-        unfoldedDoseErrTarget.append(Tdoseerr)
+        unfoldedDoseErrTarget.append(np.sqrt(Tdoseerr))
         Tdose, Tdoseerr = dataFile["dose"]
         doseTarget.append(Tdose)
-        doseErrTarget.append(Tdoseerr)
+        doseErrTarget.append(np.sqrt(Tdoseerr))
         unfoldedEntriesTarget.append(np.sum(dataFile["unfolded"][1]))
 
 if(targetSelect == 1):
@@ -405,10 +410,10 @@ if(targetSelect == 1):
             
             Tdose, Tdoseerr = dataFile["unfoldedDose"]
             unfoldedDoseTargetTemp.append(Tdose)
-            unfoldedDoseErrTargetTemp.append(Tdoseerr)
+            unfoldedDoseErrTargetTemp.append(np.sqrt(Tdoseerr))
             Tdose, Tdoseerr = dataFile["dose"]
             doseTargetTemp.append(Tdose)
-            doseErrTargetTemp.append(Tdoseerr)
+            doseErrTargetTemp.append(np.sqrt(Tdoseerr))
             unfoldedEntriesTargetTemp.append(np.sum(dataFile["unfolded"][1]))
             # if thickness == 54:
                 # chi2 = dataFile["reduced_chi2"]
@@ -768,7 +773,7 @@ if targetSelect == 1:
             unfoldedDoseErrTarget[idx],
             depthErrTarget[idx],
             fmt='o',
-            markersize=7,
+            markersize=5,
             capsize=capSize,
             elinewidth=lineWidth,
             color=targetColorMap[idx],
