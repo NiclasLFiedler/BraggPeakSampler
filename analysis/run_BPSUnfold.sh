@@ -5,8 +5,8 @@ JSON_IN="config.json"
 JSON_OUT="config_tmp.json"
 
 # -------- PARAMETER LISTS --------
-TARGET_SELECT_LIST=(0 1 1 1 1 1 1)
-TARGET_THICKNESS_LIST=(0 52 53 54 55 56 57)
+TARGET_SELECT_LIST=(0 1 1 1 1 1 1 2)
+TARGET_THICKNESS_LIST=(0 52 53 54 55 56 57 200)
 
 # TARGET_SELECT_LIST=(1)
 # TARGET_THICKNESS_LIST=(52)
@@ -16,6 +16,8 @@ if [ "${#TARGET_SELECT_LIST[@]}" -ne "${#TARGET_THICKNESS_LIST[@]}" ]; then
   exit 1
 fi
 
+python3 createResponseMatrices.py
+s
 # -------- LOOP (ZIPPED) --------
 for (( i=0; i<${#TARGET_SELECT_LIST[@]}; i++ )); do
 
@@ -42,6 +44,6 @@ for (( i=0; i<${#TARGET_SELECT_LIST[@]}; i++ )); do
       echo "JSON modification failed — skipping"
       continue
     fi
-    # root -q 'analysis.cpp()'
+    root -q 'analysis.cpp()'
     python3 BPSUnfolding.py
 done

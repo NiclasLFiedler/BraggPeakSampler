@@ -918,8 +918,8 @@ if __name__ == "__main__":
         for layer, layerCharge in enumerate(event):
             if(layerCharge == 0):
                 energyEvent.append(0)
-            elif(layer == 8 and targetSelect != 0):
-                energyEvent.append(0)
+            # elif(layer == 8 and targetSelect != 0):
+                # energyEvent.append(0)
             else:
                 energyEvent.append(detector.adc_to_energy(layer, layerCharge))
         energy.append(np.sum(energyEvent))
@@ -1008,7 +1008,7 @@ if __name__ == "__main__":
     # plt.show()
     plt.close()
 
-    exit()
+    # exit()
     selectedCharge = np.array(selectedCharge)
     
     for i in range(0,32):
