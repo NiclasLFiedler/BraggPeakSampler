@@ -5,9 +5,9 @@ JSON_IN="../../analysis/config.json"
 JSON_OUT="../../analysis/config_tmp.json"
 
 # -------- PARAMETER LISTS --------
-TARGET_SELECT_LIST=(2 2 2)
-TARGET_THICKNESS_LIST=(50 100 150)
-RESOLUTION=(500)
+TARGET_SELECT_LIST=(0 2)
+TARGET_THICKNESS_LIST=(0 200)
+RESOLUTION=(1000)
 # RESOLUTION=(1000 1000 1000 1000)
 # TARGET_SELECT_LIST=(1)
 # TARGET_THICKNESS_LIST=(52)
@@ -46,6 +46,7 @@ for (( j=0; j<${#RESOLUTION[@]}; j++ )); do
       make -j8
       ./idealDD run_p.mac
       cd ..
+      ./merge_p.sh
       python3 depthAnalysis.py
   done
 done

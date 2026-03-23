@@ -71,8 +71,8 @@ plt.plot(depth, energy)
 plt.xlabel("Detector Layer (NDet)")
 plt.ylabel("Total Deposited Energy")
 plt.title("Bragg Curve")
-plt.show()
-
+# plt.show()
+plt.close()
 
 energy_values = np.array(list(energy_per_event.values()))
 counts, bins = np.histogram(energy_values, bins=2000)
@@ -111,7 +111,8 @@ plt.plot(x_plot, gaussian(x_plot, *popt),
 plt.xlabel("Cumulative deposited energy")
 plt.ylabel("Counts")
 plt.legend()
-plt.show()
+# plt.show()
+plt.close()
 
 if(targetSelect == 0):
     np.savez(

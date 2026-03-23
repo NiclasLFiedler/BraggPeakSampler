@@ -439,7 +439,7 @@ void analysis(){
     cout << "Detected pileups: " << pileup_counter << endl;
     cout << "Detected prepeak steps: " << prepeak_step_counter << endl;
     cout << "Number of lower coincidence particles: " << coinc_layer_counter << endl;
-    c1->cd(nLayers+1);    
+    c1->cd(nLayers+1);
 
     for(int i = 0; i<nLayers; i++){
         std::cout << "Channel " << i << " Mean " <<  detector->CoincEnergyHist(i)->GetMean() << " Error " << detector->CoincEnergyHist(i)->GetStdDev() << std::endl;
