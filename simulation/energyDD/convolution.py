@@ -48,7 +48,7 @@ def gaussian(x, amp, mean, stddev):
 def right_sided_convolution(f, g, z_values):
     def convole(z):
         if(len(z_values)<100):
-            zlin = np.linspace(0,50,1000)
+            zlin = np.linspace(0, 40, 1000)
             combined = np.concatenate([zlin, z_values])
             zFull = np.sort(combined)
         else:
@@ -115,6 +115,7 @@ file = in_data[0]
 targetFile = in_data[targetSelect]
 if(targetSelect == 1):
     targetFile = f"{targetFile}{targetThickness}"
+
 nosave = False
 
 bhetero = False
@@ -138,6 +139,8 @@ unfoldedEntriesTarget = []
 
 
 dataFile = np.load(f"{dataset}/{file}/input/depthdose{nLayers}.npz")
+print(f"File: {dataFile}")
+
 depth = np.flip(dataFile["depth"])
 depthErr = np.flip(dataFile["depth_err"]) 
 Dose = np.flip(dataFile["dose"]) 
@@ -146,6 +149,7 @@ unfoldedEntries = dataFile["dose"][0]
 
 if(bhetero):
     dataFile = np.load(f"{dataset}/{targetFile}/input/depthdose{nLayers}_{targetThickness}.npz")
+    print(f"Hetero File: {dataFile}")
     depthTarget = np.flip(dataFile["depth"]) 
     depthTargetErr = np.flip(dataFile["depth_err"]) 
     DoseTarget = np.flip(dataFile["dose"]) 
@@ -201,10 +205,18 @@ start_time = time.time()
 
 z = np.linspace(0, 40, 4001)
 
-f = interp1d(depth, Dose, kind='linear', fill_value="extrapolate")
-# f = interp1d(depth, Dose, kind='cubic', fill_value="extrapolate")
+depth = np.array(depth[::-1])
+Dose = Dose[::-1]
+depthTarget=np.array(depthTarget[::-1])
+DoseTarget= DoseTarget[::-1]
+print(f"depth: {depth}")
+print(f"Dose {Dose}")
+print(f"depthTarget {depthTarget}")
+print(f"DoseTarget {DoseTarget}")
+# f = interp1d(depth, Dose, kind='linear', fill_value="extrapolate")
+f = interp1d(depth, Dose, kind='cubic', fill_value="extrapolate")
 
-popt, pcov =  curve_fit(lambda x, amp, mean, stddev: right_sided_convolution(f, lambda x2: gaussian(x2, amp, mean, stddev), x), depthTarget, DoseTarget, p0 = [1, 3, 0.3], bounds=((0.999, 0, 0), (1.0001, 10, 0.5)))
+popt, pcov =  curve_fit(lambda x, amp, mean, stddev: right_sided_convolution(f, lambda x2: gaussian(x2, amp, mean, stddev), x), depthTarget, DoseTarget, p0 = [1, 6, 0.3], bounds=((0.999, 0, 0), (1.0001, 10, 0.5)))
 
 stddev = np.sqrt(np.diag(pcov))
     
@@ -224,7 +236,7 @@ print(f"pmod = {pmod} +- {sigma_pmod}")
 
 # popt = [1, 7.5, 0.3]
 plt.errorbar(depth, Dose, DoseErr, depthErr, fmt='s', markersize=1, capsize=capSize, elinewidth=lineWidth, color='#004600', label="No target data points") 
-plt.errorbar(depthTarget, DoseTarget, DoseTargetErr, depthTargetErr, fmt='o', markersize=1, capsize=capSize, elinewidth=lineWidth, color="#cc7000", label="Hetero. data points") #Convolution
+plt.errorbar(depthTarget, DoseTarget, DoseTargetErr, depthTargetErr, fmt='o', markersize=1, capsize=capSize, elinewidth=lineWidth, color="#cc7000", label="Hetero. data points")
 plt.plot(z, f(z), label='Linear interpolation of no target data')
 plt.plot(z, right_sided_convolution(f, lambda x2: gaussian(x2, *popt), z), label='Right sided convolution: \n' fr"$t= {t:.3f}" "\pm" fr"{o_t:.3f}~cm, \sigma={sigmat:.3f} \pm {o_sigmat:.3f}~cm,~P_{{mod}}={pmod:.3e} \pm {sigma_pmod:.3f}$" rf"$~\mu m$")
 plt.grid(True)

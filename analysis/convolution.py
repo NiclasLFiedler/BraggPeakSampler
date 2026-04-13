@@ -232,8 +232,13 @@ z = np.linspace(0, 40, 4001)
 ax1.errorbar(depth, unfoldedDose, unfoldedDoseErr, depthErr, fmt='s', markersize=1, capsize=capSize, elinewidth=lineWidth, color='#004600', label="No target data points") 
 ax1.errorbar(depthTarget, unfoldedDoseTarget, unfoldedDoseErrTarget, depthErrTarget, fmt='o', markersize=1, capsize=capSize, elinewidth=lineWidth, color="#cc7000", label="Hetero. data points") #Convolution
 
-f = interp1d(depth, unfoldedDose, kind='linear', fill_value="extrapolate")
-# f = interp1d(depth, unfoldedDose, kind='cubic', fill_value="extrapolate")
+# f = interp1d(depth, unfoldedDose, kind='linear', fill_value="extrapolate")
+f = interp1d(depth, unfoldedDose, kind='cubic', fill_value="extrapolate")
+
+print(f"depth: {depth}")
+print(f"Dose {unfoldedDose}")
+print(f"depthTarget {depthTarget}")
+print(f"DoseTarget {unfoldedDoseTarget}")
 
 popt, pcov =  curve_fit(lambda x, amp, mean, stddev: right_sided_convolution(f, lambda x2: gaussian(x2, amp, mean, stddev), x), depthTarget, unfoldedDoseTarget, p0 = [1, 6, 0.3], bounds=((0.999, 0, 0), (1.00001, 10, 0.5)))
 
