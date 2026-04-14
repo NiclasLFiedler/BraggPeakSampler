@@ -16,6 +16,8 @@ from scipy.interpolate import interp1d
 from scipy.integrate import quad
 from scipy import ndimage
 from scipy.integrate import simpson
+from scipy.interpolate import PchipInterpolator
+from scipy.interpolate import Akima1DInterpolator
 import json
 
 #plt.style.use(['science','notebook','grid']) 
@@ -45,6 +47,35 @@ class fit_params_conv:
 def gaussian(x, amp, mean, stddev):
     return amp * np.exp(-(x-mean)**2 / (2 * stddev**2)) / (np.sqrt(2 * np.pi) * stddev)
 
+def normalized_gaussian(x, amp, mean, stddev):
+    """Properly normalized — integrates to 1. No amp parameter."""
+    return amp * np.exp(-(x - mean)**2 / (2 * stddev**2)) / (np.sqrt(2 * np.pi) * stddev)
+
+def right_sided_convolution_stable(f, amp, t_shift, sigma, z_values):
+    """
+    Convolves f(z) with a normalized Gaussian g(t) = N(t_shift, sigma),
+    integrated over t in [0, t_max] where t_max adapts to sigma.
+    
+    Physical meaning: f is the no-target depth-dose, g describes
+    the straggling + mean shift from the heterogeneous target.
+    """
+    z_values = np.asarray(z_values)
+    
+    # Adaptive integration range: cover at least 5 sigma beyond mean
+    t_max = t_shift + 6 * sigma
+    t_max = max(t_max, 2.0)  # minimum range
+    n_points = max(1000, int(t_max / sigma * 200))  # density scales with sigma
+    
+    t = np.linspace(0, t_max, n_points)
+    g_vals = normalized_gaussian(t, amp,t_shift, sigma)
+    
+    # Vectorized: shape (len(z_values), len(t))
+    Z, T = np.meshgrid(z_values, t, indexing='ij')
+    integrand = f(Z + T) * g_vals  # g_vals broadcasts over z axis
+    
+    result = simpson(integrand, x=t, axis=1)
+    return result
+
 def right_sided_convolution(f, g, z_values):
     def convole(z):
         if(len(z_values)<100):
@@ -67,6 +98,34 @@ def right_sided_convolution(f, g, z_values):
         return convolution_result[indices]
 
     return convole(z_values)
+
+def fft_convolution_onesided(f_interp, amp, t_shift, sigma, z_values):
+    z_values = np.asarray(z_values)
+    
+    z_min = z_values.min()
+    z_max = z_values.max()
+    dz = 0.01
+    z_grid = np.arange(z_min, z_max, dz)
+    
+    f_vals = f_interp(z_grid)
+    # plt.plot(z_grid, f_vals, label='f(z) on grid')
+    # plt.show()
+    # Kernel on positive t axis — this shifts f to the LEFT when convolved
+    t_kernel = np.arange(0, t_shift + 8 * sigma, dz)
+    kernel = np.exp(-(t_kernel - t_shift)**2 / (2 * sigma**2))
+    kernel /= kernel.sum() * dz
+    kernel *= amp
+    # Use 'valid'-style: we want (f * g)[z] = sum_t f(z+t)*g(t)
+    # fftconvolve with mode='full' gives sum_t f(z-t)*g(t), i.e. wrong direction
+    # Flip f to get the correct left-shift direction
+    conv = fftconvolve(f_vals[::-1], kernel * dz, mode='full')
+    conv = conv[::-1]  # flip back
+    
+    z_conv = np.arange(len(conv)) * dz + z_grid[0] - (len(kernel) - 1) * dz
+    
+    conv_interp = interp1d(z_conv, conv, kind='linear',
+                           bounds_error=False, fill_value=0.0)
+    return conv_interp(z_values)
 
 def gaussian_with_cutoff(mean, sigma, cutoff=2.5):
     while True:
@@ -141,29 +200,29 @@ unfoldedEntriesTarget = []
 dataFile = np.load(f"{dataset}/{file}/input/depthdose{nLayers}.npz")
 print(f"File: {dataFile}")
 
-depth = np.flip(dataFile["depth"])
-depthErr = np.flip(dataFile["depth_err"]) 
-Dose = np.flip(dataFile["dose"]) 
-DoseErr = np.flip(dataFile["dose_err"]) 
+depth = dataFile["depth"]
+depthErr = dataFile["depth_err"]
+Dose = dataFile["dose"]
+DoseErr = dataFile["dose_err"]
 unfoldedEntries = dataFile["dose"][0]
 
 if(bhetero):
     dataFile = np.load(f"{dataset}/{targetFile}/input/depthdose{nLayers}_{targetThickness}.npz")
     print(f"Hetero File: {dataFile}")
-    depthTarget = np.flip(dataFile["depth"]) 
-    depthTargetErr = np.flip(dataFile["depth_err"]) 
-    DoseTarget = np.flip(dataFile["dose"]) 
-    DoseTargetErr = np.flip(dataFile["dose_err"]) 
+    depthTarget = dataFile["depth"] 
+    depthTargetErr = dataFile["depth_err"] 
+    DoseTarget = dataFile["dose"] 
+    DoseTargetErr = dataFile["dose_err"] 
     unfoldedEntriesTarget = dataFile["dose"][0]
 
 targetThicknesses = [52, 53, 54, 55, 56, 57]
 if(targetSelect == 1):
     for thickness in targetThicknesses:
         dataFile = np.load(f"{dataset}/{targetFile}/input/depthdose{nLayers}_{targetThickness}.npz")
-        depthTarget.append(np.flip(dataFile["depth"]))
-        depthTargetErr.append(np.flip(dataFile["depth_err"]))
-        DoseTarget.append(np.flip(dataFile["dose"]))
-        DoseTargetErr.append(np.flip(dataFile["dose_err"]))
+        depthTarget.append(dataFile["depth"])
+        depthTargetErr.append(dataFile["depth_err"])
+        DoseTarget.append(dataFile["dose"])
+        DoseTargetErr.append(dataFile["dose_err"])
         unfoldedEntriesTarget.append(dataFile["dose"][0])
 
 beta = 0.012
@@ -205,21 +264,32 @@ start_time = time.time()
 
 z = np.linspace(0, 40, 4001)
 
-depth = np.array(depth[::-1])
-Dose = Dose[::-1]
-depthTarget=np.array(depthTarget[::-1])
-DoseTarget= DoseTarget[::-1]
-print(f"depth: {depth}")
-print(f"Dose {Dose}")
-print(f"depthTarget {depthTarget}")
-print(f"DoseTarget {DoseTarget}")
-# f = interp1d(depth, Dose, kind='linear', fill_value="extrapolate")
-f = interp1d(depth, Dose, kind='cubic', fill_value="extrapolate")
+f = interp1d(depth, Dose, kind='linear', fill_value="extrapolate")
+f = interp1d(depth, Dose, kind='quadratic', fill_value="extrapolate")
+f = PchipInterpolator(depth, Dose, extrapolate=False)
 
-popt, pcov =  curve_fit(lambda x, amp, mean, stddev: right_sided_convolution(f, lambda x2: gaussian(x2, amp, mean, stddev), x), depthTarget, DoseTarget, p0 = [1, 6, 0.3], bounds=((0.999, 0, 0), (1.0001, 10, 0.5)))
+# def interpolate(z):
+#     z = np.asarray(z)
+#     result = f_pchip(z)
+#     result = np.where(np.isnan(result), 0.0, result)  # zero outside data range
+#     result = np.clip(result, 0.0, None)               # no negative values
+#     return result
+
+# f = interpolate(z)
+# f = Akima1DInterpolator(depth, Dose)
+# # popt, pcov =  curve_fit(lambda x, amp, mean, stddev: right_sided_convolution(f, lambda x2: gaussian(x2, amp, mean, stddev), x), depthTarget, DoseTarget, p0 = [1, 6, 0.3], bounds=((0.999, 0, 0), (10, 10, 0.5)), maxfev=100000)
+
+popt, pcov = curve_fit(
+    lambda x, amp, t, sigma: fft_convolution_onesided(f, amp, t, sigma, x),
+    depthTarget,
+    DoseTarget,
+    p0=[1, 6, 0.3],
+    bounds=((0.999, 0, 1e-3), (2, 30, 2.0)),
+    maxfev=100000,
+)
 
 stddev = np.sqrt(np.diag(pcov))
-    
+print(popt)    
 t = popt[1]
 o_t = stddev[1]   
     
@@ -238,7 +308,8 @@ print(f"pmod = {pmod} +- {sigma_pmod}")
 plt.errorbar(depth, Dose, DoseErr, depthErr, fmt='s', markersize=1, capsize=capSize, elinewidth=lineWidth, color='#004600', label="No target data points") 
 plt.errorbar(depthTarget, DoseTarget, DoseTargetErr, depthTargetErr, fmt='o', markersize=1, capsize=capSize, elinewidth=lineWidth, color="#cc7000", label="Hetero. data points")
 plt.plot(z, f(z), label='Linear interpolation of no target data')
-plt.plot(z, right_sided_convolution(f, lambda x2: gaussian(x2, *popt), z), label='Right sided convolution: \n' fr"$t= {t:.3f}" "\pm" fr"{o_t:.3f}~cm, \sigma={sigmat:.3f} \pm {o_sigmat:.3f}~cm,~P_{{mod}}={pmod:.3e} \pm {sigma_pmod:.3f}$" rf"$~\mu m$")
+print(fft_convolution_onesided(f, *popt, z))
+plt.plot(z, fft_convolution_onesided(f, *popt, z), label='Right sided convolution: \n' fr"$t= {t:.3f}" r"\pm" fr"{o_t:.3f}~cm, \sigma={sigmat:.3f} " r"\pm" rf" {o_sigmat:.3f}~cm,~P_{{mod}}={pmod:.3e}" r"\pm" fr"{sigma_pmod:.3f}$" rf"$~\mu m$")
 plt.grid(True)
 plt.xlabel('Water Equivalent Depth / cm')
 plt.ylabel('Energy Deposition per thickness  / MeV/mm')

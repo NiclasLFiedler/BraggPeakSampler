@@ -295,7 +295,7 @@ if(targetSelect == 1):
         dataFile = np.load(f"{dataset}/{targetFile}/input/depthdose{thickness}.npz")
         depthTarget.append(dataFile["depth"])
         depthTargetErr.append(dataFile["depth_err"])
-        doseTarget.append(dataFile["dose"])
+        doseTarget.append(dataFile["dose"]) 
         doseTargetErr.append(dataFile["dose_err"])
         unfoldedEntriesTarget.append(dataFile["dose"][0])
         amplitudeTarget.append(dataFile["amplitude"])
