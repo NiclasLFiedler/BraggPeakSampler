@@ -206,6 +206,7 @@ Dose = dataFile["dose"]
 DoseErr = dataFile["dose_err"]
 unfoldedEntries = dataFile["dose"][0]
 
+
 if(bhetero):
     dataFile = np.load(f"{dataset}/{targetFile}/input/depthdose{nLayers}_{targetThickness}.npz")
     print(f"Hetero File: {dataFile}")
@@ -214,6 +215,12 @@ if(bhetero):
     DoseTarget = dataFile["dose"] 
     DoseTargetErr = dataFile["dose_err"] 
     unfoldedEntriesTarget = dataFile["dose"][0]
+
+
+print(depthTarget)
+print(depthTargetErr)
+print(DoseTarget)
+print(DoseTargetErr)
 
 targetThicknesses = [52, 53, 54, 55, 56, 57]
 if(targetSelect == 1):
@@ -266,21 +273,21 @@ z = np.linspace(0, 40, 4001)
 
 f = interp1d(depth, Dose, kind='linear', fill_value="extrapolate")
 f = interp1d(depth, Dose, kind='quadratic', fill_value="extrapolate")
-f = PchipInterpolator(depth, Dose, extrapolate=False)
+f_pchip = PchipInterpolator(depth, Dose, extrapolate=False)
+# f_pchip = Akima1DInterpolator(depth, Dose)
 
-# def interpolate(z):
-#     z = np.asarray(z)
-#     result = f_pchip(z)
-#     result = np.where(np.isnan(result), 0.0, result)  # zero outside data range
-#     result = np.clip(result, 0.0, None)               # no negative values
-#     return result
+def interpolate(z):
+    z = np.asarray(z)
+    result = f_pchip(z)
+    result = np.where(np.isnan(result), 0.0, result)  # zero outside data range
+    result = np.clip(result, 0.0, None)               # no negative values
+    return result
 
 # f = interpolate(z)
-# f = Akima1DInterpolator(depth, Dose)
 # # popt, pcov =  curve_fit(lambda x, amp, mean, stddev: right_sided_convolution(f, lambda x2: gaussian(x2, amp, mean, stddev), x), depthTarget, DoseTarget, p0 = [1, 6, 0.3], bounds=((0.999, 0, 0), (10, 10, 0.5)), maxfev=100000)
 
 popt, pcov = curve_fit(
-    lambda x, amp, t, sigma: fft_convolution_onesided(f, amp, t, sigma, x),
+    lambda x, amp, t, sigma: fft_convolution_onesided(interpolate, amp, t, sigma, x),
     depthTarget,
     DoseTarget,
     p0=[1, 6, 0.3],
@@ -309,7 +316,7 @@ plt.errorbar(depth, Dose, DoseErr, depthErr, fmt='s', markersize=1, capsize=capS
 plt.errorbar(depthTarget, DoseTarget, DoseTargetErr, depthTargetErr, fmt='o', markersize=1, capsize=capSize, elinewidth=lineWidth, color="#cc7000", label="Hetero. data points")
 plt.plot(z, f(z), label='Linear interpolation of no target data')
 print(fft_convolution_onesided(f, *popt, z))
-plt.plot(z, fft_convolution_onesided(f, *popt, z), label='Right sided convolution: \n' fr"$t= {t:.3f}" r"\pm" fr"{o_t:.3f}~cm, \sigma={sigmat:.3f} " r"\pm" rf" {o_sigmat:.3f}~cm,~P_{{mod}}={pmod:.3e}" r"\pm" fr"{sigma_pmod:.3f}$" rf"$~\mu m$")
+plt.plot(z, fft_convolution_onesided(interpolate, *popt, z), label='Right sided convolution: \n' fr"$t= {t:.3f}" r"\pm" fr"{o_t:.3f}~cm, \sigma={sigmat:.3f} " r"\pm" rf" {o_sigmat:.3f}~cm,~P_{{mod}}={pmod:.3e}" r"\pm" fr"{sigma_pmod:.3f}$" rf"$~\mu m$")
 plt.grid(True)
 plt.xlabel('Water Equivalent Depth / cm')
 plt.ylabel('Energy Deposition per thickness  / MeV/mm')
