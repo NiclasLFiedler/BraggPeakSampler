@@ -195,7 +195,7 @@ DoseErr = []
 DoseTargetErr = []
 unfoldedEntries = []
 unfoldedEntriesTarget = []
-
+targetColorMap = ["#1f77b4", "#4e79a7", "#76b7b2", "#bab0ac", "#f28e2b", "#e15759", "#9c755f"]
 
 dataFile = np.load(f"{dataset}/{file}/input/depthdose{nLayers}.npz")
 print(f"File: {dataFile}")
@@ -206,23 +206,24 @@ Dose = dataFile["dose"]
 DoseErr = dataFile["dose_err"]
 unfoldedEntries = dataFile["dose"][0]
 
+targetThicknesses = [50, 100, 200, 250]
+resolution = []
 
 if(bhetero):
-    dataFile = np.load(f"{dataset}/{targetFile}/input/depthdose{nLayers}_{targetThickness}.npz")
-    print(f"Hetero File: {dataFile}")
-    depthTarget = dataFile["depth"] 
-    depthTargetErr = dataFile["depth_err"] 
-    DoseTarget = dataFile["dose"] 
-    DoseTargetErr = dataFile["dose_err"] 
-    unfoldedEntriesTarget = dataFile["dose"][0]
-
+    for thickness in targetThicknesses:
+        dataFile = np.load(f"{dataset}/{targetFile}/input/depthdose{nLayers}_{thickness}.npz")
+        print(f"Hetero File: {dataFile}")
+        depthTarget.append(dataFile["depth"])
+        depthTargetErr.append(dataFile["depth_err"])
+        DoseTarget.append(dataFile["dose"])
+        DoseTargetErr.append(dataFile["dose_err"])
+        unfoldedEntriesTarget.append(dataFile["dose"][0])
 
 print(depthTarget)
 print(depthTargetErr)
 print(DoseTarget)
 print(DoseTargetErr)
 
-targetThicknesses = [52, 53, 54, 55, 56, 57]
 if(targetSelect == 1):
     for thickness in targetThicknesses:
         dataFile = np.load(f"{dataset}/{targetFile}/input/depthdose{nLayers}_{targetThickness}.npz")
@@ -234,27 +235,6 @@ if(targetSelect == 1):
 
 beta = 0.012
 R0 = 30.99
-if(targetSelect == 2):
-    doseConversion = unfoldedEntries/unfoldedEntriesTarget*(1+beta*(R0-targetThickness))/(1+beta*R0)
-    doseConversion = 1
-    print(doseConversion)
-    
-    DoseTarget = np.array(DoseTarget)
-    DoseTargetErr = np.array(DoseTargetErr)
-    DoseTarget = DoseTarget * doseConversion
-    DoseTargetErr = DoseTargetErr *doseConversion
-
-layersize = 3
-energy_notarget = 0
-energy_heterotarget = 0
-    
-if(targetSelect == 0):
-    print(f"Total energy deposition no target: {energy_notarget} MeV")
-if(targetSelect == 1):
-    print(f"Total energy deposition homogeneous target: {energy_notarget} MeV")
-if(targetSelect == 2):
-    print(f"Total energy deposition no target: {energy_notarget} MeV")
-    print(f"Total energy deposition heterogeneous target: {energy_heterotarget} MeV")
 
 
 plt.rcParams.update({'font.size': 20})
@@ -271,8 +251,8 @@ start_time = time.time()
 
 z = np.linspace(0, 40, 4001)
 
-f = interp1d(depth, Dose, kind='linear', fill_value="extrapolate")
-f = interp1d(depth, Dose, kind='quadratic', fill_value="extrapolate")
+f_pchip = interp1d(depth, Dose, kind='linear', fill_value="extrapolate")
+f_pchip = interp1d(depth, Dose, kind='cubic', fill_value="extrapolate")
 f_pchip = PchipInterpolator(depth, Dose, extrapolate=False)
 # f_pchip = Akima1DInterpolator(depth, Dose)
 
@@ -286,37 +266,44 @@ def interpolate(z):
 # f = interpolate(z)
 # # popt, pcov =  curve_fit(lambda x, amp, mean, stddev: right_sided_convolution(f, lambda x2: gaussian(x2, amp, mean, stddev), x), depthTarget, DoseTarget, p0 = [1, 6, 0.3], bounds=((0.999, 0, 0), (10, 10, 0.5)), maxfev=100000)
 
-popt, pcov = curve_fit(
-    lambda x, amp, t, sigma: fft_convolution_onesided(interpolate, amp, t, sigma, x),
-    depthTarget,
-    DoseTarget,
-    p0=[1, 6, 0.3],
-    bounds=((0.999, 0, 1e-3), (2, 30, 2.0)),
-    maxfev=100000,
-)
+fitParamsRaw = []
+fitParams = []
 
-stddev = np.sqrt(np.diag(pcov))
-print(popt)    
-t = popt[1]
-o_t = stddev[1]   
-    
-sigmat = popt[2]
-o_sigmat = stddev[2]
+for index, thickness in enumerate(targetThicknesses):
+    fitParams.append(curve_fit(
+        lambda x, amp, t, sigma: fft_convolution_onesided(interpolate, amp, t, sigma, x),
+        depthTarget[index],
+        DoseTarget[index],
+        p0=[1, 6, 0.3],
+        bounds=((0.999, 0, 1e-3), (2, 30, 2.0)),
+        maxfev=100000,
+    ))
 
-pmod = sigmat**2/t*10000
-sigma_pmod = np.sqrt((2*sigmat/t**2*o_sigmat)**2+(sigmat**2/t**2*o_t)**2)*10000
+    stddev = np.sqrt(np.diag(fitParams[index][1]))
+       
+    t = fitParams[index][0][1]
+    o_t = stddev[1]   
 
-print(f"amp = {popt[0]} +- {stddev[0]}")
-print(f"t = {popt[1]} +- {stddev[1]}")
-print(f"sigmat = {popt[2]} +- {stddev[2]}")
-print(f"pmod = {pmod} +- {sigma_pmod}")
+    sigmat = fitParams[index][0][2]
+    o_sigmat = stddev[2]
+
+    pmod = sigmat**2/t*10000
+    sigma_pmod = np.sqrt((2*sigmat/t**2*o_sigmat)**2+(sigmat**2/t**2*o_t)**2)*10000
+
+    print(f"Target Thickness {thickness}")
+    print(f"amp = {fitParams[index][0][0]} +- {stddev[0]}")
+    print(f"t = {t} +- {stddev[1]}")
+    print(f"sigmat = {sigmat} +- {stddev[2]}")
+    print(f"pmod = {pmod} +- {sigma_pmod}")
 
 # popt = [1, 7.5, 0.3]
-plt.errorbar(depth, Dose, DoseErr, depthErr, fmt='s', markersize=1, capsize=capSize, elinewidth=lineWidth, color='#004600', label="No target data points") 
-plt.errorbar(depthTarget, DoseTarget, DoseTargetErr, depthTargetErr, fmt='o', markersize=1, capsize=capSize, elinewidth=lineWidth, color="#cc7000", label="Hetero. data points")
-plt.plot(z, f(z), label='Linear interpolation of no target data')
-print(fft_convolution_onesided(f, *popt, z))
-plt.plot(z, fft_convolution_onesided(interpolate, *popt, z), label='Right sided convolution: \n' fr"$t= {t:.3f}" r"\pm" fr"{o_t:.3f}~cm, \sigma={sigmat:.3f} " r"\pm" rf" {o_sigmat:.3f}~cm,~P_{{mod}}={pmod:.3e}" r"\pm" fr"{sigma_pmod:.3f}$" rf"$~\mu m$")
+plt.errorbar(depth, Dose, DoseErr, depthErr, fmt='s', markersize=1, capsize=capSize, elinewidth=lineWidth, color=targetColorMap[0], label="No target data points") 
+plt.plot(z, interpolate(z), label='Linear interpolation of no target data')
+
+for index, thickness in enumerate(targetThicknesses):
+    plt.errorbar(depthTarget[index], DoseTarget[index], DoseTargetErr[index], depthTargetErr[index], fmt='o', markersize=1, capsize=capSize, elinewidth=lineWidth, color=targetColorMap[index+1], label="Hetero. data points")
+    plt.plot(z, fft_convolution_onesided(interpolate, *fitParams[index][0], z),color=targetColorMap[index+1])#, label='Right sided convolution: \n' fr"$t= {t:.3f}" r"\pm" fr"{o_t:.3f}~cm, \sigma={sigmat:.3f} " r"\pm" rf" {o_sigmat:.3f}~cm,~P_{{mod}}={pmod:.3e}" r"\pm" fr"{sigma_pmod:.3f}$" rf"$~\mu m$")
+
 plt.grid(True)
 plt.xlabel('Water Equivalent Depth / cm')
 plt.ylabel('Energy Deposition per thickness  / MeV/mm')
