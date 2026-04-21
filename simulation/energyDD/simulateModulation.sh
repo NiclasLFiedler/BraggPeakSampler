@@ -1,18 +1,12 @@
 #!/bin/bash
 
-# -------- CONFIG --------
 JSON_IN="../../analysis/config.json"
 JSON_OUT="../../analysis/config_tmp.json"
 
-# -------- PARAMETER LISTS --------
-TARGET_SELECT_LIST=(0 2 2 2 2)
-TARGET_THICKNESS_LIST=(0 50 100 200 250)
-RESOLUTION=(32 50 75 100 200 500 750 1000)
-# RESOLUTION=(1000 1000 1000 1000)
-# TARGET_SELECT_LIST=(1)
-# TARGET_THICKNESS_LIST=(52)
+TARGET_SELECT_LIST=(0 2)
+TARGET_THICKNESS_LIST=(0 20)
+RESOLUTION=(500)
 
-# -------- LOOP (ZIPPED) --------
 for (( j=0; j<${#RESOLUTION[@]}; j++ )); do
   for (( i=0; i<${#TARGET_SELECT_LIST[@]}; i++ )); do
 

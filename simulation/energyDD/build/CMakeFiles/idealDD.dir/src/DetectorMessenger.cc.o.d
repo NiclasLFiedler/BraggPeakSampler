@@ -1,7 +1,7 @@
 CMakeFiles/idealDD.dir/src/DetectorMessenger.cc.o: \
- /home/user/BraggPeakSampler/simulation/energyDD/src/DetectorMessenger.cc \
+ /home/niclas/BraggPeakSampler/simulation/energyDD/src/DetectorMessenger.cc \
  /usr/include/stdc-predef.h \
- /home/user/BraggPeakSampler/simulation/energyDD/include/DetectorMessenger.hh \
+ /home/niclas/BraggPeakSampler/simulation/energyDD/include/DetectorMessenger.hh \
  /usr/local/include/Geant4/globals.hh /usr/local/include/Geant4/G4ios.hh \
  /usr/local/include/Geant4/G4Types.hh \
  /usr/local/include/Geant4/G4GlobalConfig.hh /usr/include/c++/13/complex \
@@ -239,7 +239,7 @@ CMakeFiles/idealDD.dir/src/DetectorMessenger.cc.o: \
  /usr/local/include/Geant4/G4UIcmdWithAString.hh \
  /usr/local/include/Geant4/G4UIcmdWithADoubleAndUnit.hh \
  /usr/local/include/Geant4/G4UIcmdWithABool.hh \
- /home/user/BraggPeakSampler/simulation/energyDD/include/DetectorConstruction.hh \
+ /home/niclas/BraggPeakSampler/simulation/energyDD/include/DetectorConstruction.hh \
  /usr/local/include/Geant4/G4VUserDetectorConstruction.hh \
  /usr/local/include/Geant4/G4Box.hh \
  /usr/local/include/Geant4/G4GeomTypes.hh \
@@ -333,7 +333,7 @@ CMakeFiles/idealDD.dir/src/DetectorMessenger.cc.o: \
  /usr/include/c++/13/bits/this_thread_sleep.h \
  /usr/local/include/Geant4/G4VPhysicalVolume.icc \
  /usr/local/include/Geant4/G4LogicalBorderSurface.icc \
- /home/user/BraggPeakSampler/simulation/energyDD/include/G4STL.hh \
+ /home/niclas/BraggPeakSampler/simulation/energyDD/include/G4STL.hh \
  /usr/local/include/Geant4/G4SystemOfUnits.hh \
  /usr/local/include/Geant4/G4PhantomParameterisation.hh \
  /usr/local/include/Geant4/G4VPVParameterisation.hh \

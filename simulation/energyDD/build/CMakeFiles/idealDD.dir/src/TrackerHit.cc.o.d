@@ -1,7 +1,7 @@
 CMakeFiles/idealDD.dir/src/TrackerHit.cc.o: \
- /home/user/BraggPeakSampler/simulation/energyDD/src/TrackerHit.cc \
+ /home/niclas/BraggPeakSampler/simulation/energyDD/src/TrackerHit.cc \
  /usr/include/stdc-predef.h \
- /home/user/BraggPeakSampler/simulation/energyDD/include/TrackerHit.hh \
+ /home/niclas/BraggPeakSampler/simulation/energyDD/include/TrackerHit.hh \
  /usr/local/include/Geant4/G4VHit.hh /usr/local/include/Geant4/globals.hh \
  /usr/local/include/Geant4/G4ios.hh /usr/local/include/Geant4/G4Types.hh \
  /usr/local/include/Geant4/G4GlobalConfig.hh /usr/include/c++/13/complex \

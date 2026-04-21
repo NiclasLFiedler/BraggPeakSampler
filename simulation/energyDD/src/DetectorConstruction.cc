@@ -549,7 +549,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   
   G4double phantomX = 200.0 * cm;
   G4double phantomY = 200.0 * cm;
-  G4double phantomZ = 50.0 * cm;
+  G4double phantomZ = detSizeZ/mm*cm;
 
   detSizeZ = phantomZ/fLayers;
   G4Box* solidPhantom = new G4Box("solidPhantom", phantomX/2, phantomY/2, phantomZ/2);
@@ -582,20 +582,14 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
       airVisAttr->SetForceSolid(true);
 
       cubeSizeX = 0.3 * mm, cubeSizeY = 0.3 * mm;
-      cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.76923)*0.001;
-      // cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.5)*0.001;
-      // cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7900)*0.001;
-      // cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7355)*0.001;
+      cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7875)*0.001;
+      // cubeSizeZ = 129*0.001;
       
       nx = 150;
       ny = nx;
       nz = static_cast<int>(std::round(heteroThickness/cubeSizeZ));
       // nz = 1;
-      G4double tickness_real = nz * cubeSizeZ;
-      G4double pmod_real = static_cast<double>(0.76923)*1000*tickness_real/nz;
-      // G4double pmod_real = static_cast<double>(0.5)*1000*tickness_real/nz;
-      std::cout << "pmod_real: " << pmod_real << std::endl;
-      std::cout << "tickness_real: " << tickness_real << std::endl;
+      
       auto voxelSolid = new G4Box("Voxel", cubeSizeX/2, cubeSizeY/2, cubeSizeZ/2);
 
       std::cout << "pmod: " << pmod << std::endl;
@@ -609,7 +603,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
 
       auto* parameterisation = new HeteroParameterisation(nx, ny, nz,
         cubeSizeX, cubeSizeY, cubeSizeZ,
-        water, Air,
+        lungTissue, Air,
         waterVisAttr, airVisAttr);
     
       int nVoxels = nx * ny * nz;

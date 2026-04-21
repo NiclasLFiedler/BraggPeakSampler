@@ -7,12 +7,12 @@
       "comment": "beamtime",
       "datasetSelect": 2,
       "detectorType": "pbwo4",
-      "beamEnergy": 221.6,
+      "beamEnergy": 90,
       "nLayers": 500,
       "crystalSize": [
         30,
         30,
-        2
+        10
       ],
       "gapSizeZ": 3,
       "secondaryLayerStatus": true,
@@ -29,7 +29,7 @@
       "coincidenceTime": 50,
       "coincidenceLayer": 1,
       "discardIndex": 50,
-      "targetThickness": 250
+      "targetThickness": 20
     },
     {
       "detectorID": 1,
@@ -119,7 +119,7 @@
       "targetThickness": 60
     }
   ],
-  "pmod": 200,
+  "pmod": 700,
   "heteroThickness": 200,
   "plotEnable": 1
 }

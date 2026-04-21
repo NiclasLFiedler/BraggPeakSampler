@@ -36,7 +36,7 @@ aluThickness = config["aluThickness"]
 coincidenceTime = config["coincidenceTime"]
 coincidenceLayer = config["coincidenceLayer"]
 targetThickness = config["targetThickness"]
-
+detectorZ = crystalSize[2]
 in_data = ["notarget", "homotarget", "heterotarget"]
 datapath = f"data/{in_data[targetSelect]}"
 
@@ -63,10 +63,9 @@ for event in tree:
     energy_per_event[eventid] = energy_per_event.get(eventid, 0.0) + edep
 
 layers = np.array(sorted(energy_per_layer.keys()))
-depth = (layers+0.5)*50/nLayers
+depth = (layers+0.5)*detectorZ/nLayers
 energy = np.array([energy_per_layer[l] for l in layers])
 energy2 = np.array([energy_per_layer2[l] for l in layers])
-
 plt.plot(depth, energy)
 plt.xlabel("Detector Layer (NDet)")
 plt.ylabel("Total Deposited Energy")
@@ -85,13 +84,12 @@ fit_mask = (bin_centers > peak_position * 0.9) & \
 
 x_fit = bin_centers[fit_mask]
 y_fit = counts[fit_mask]
-# Initial guesses
+
 A0 = np.max(y_fit)
 mu0 = peak_position
-sigma0 = peak_position * 0.02   # 2% guess
+sigma0 = peak_position * 0.02
 
-popt, pcov = curve_fit(gaussian, x_fit, y_fit,
-                       p0=[A0, mu0, sigma0])
+popt, pcov = curve_fit(gaussian, x_fit, y_fit, p0=[A0, mu0, sigma0], maxfev=10000)
 
 A, mu, sigma = popt
 perr = np.sqrt(np.diag(pcov))
