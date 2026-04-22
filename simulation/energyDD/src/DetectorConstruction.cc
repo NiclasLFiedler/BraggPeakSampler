@@ -553,17 +553,17 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
 
   detSizeZ = phantomZ/fLayers;
   G4Box* solidPhantom = new G4Box("solidPhantom", phantomX/2, phantomY/2, phantomZ/2);
-  G4LogicalVolume* logicPhantom = new G4LogicalVolume(solidPhantom, water, "logPhantom");
+  G4LogicalVolume* logicPhantom = new G4LogicalVolume(solidPhantom, detMaterial, "logPhantom");
   new G4PVPlacement(nullptr, G4ThreeVector(0,0,-phantomZ), logicPhantom, "physPhantom", logicalworld, false, 0);
 
   G4Box* solidLayer = new G4Box("solidLayer", phantomX/2, phantomY/2, detSizeZ/2);
-  G4LogicalVolume* logicLayer = new G4LogicalVolume(solidLayer, water, "logLayer");
+  G4LogicalVolume* logicLayer = new G4LogicalVolume(solidLayer, detMaterial, "logLayer");
   
   auto PhantomVisAttr = new G4VisAttributes(G4Colour(0.0, 0.0, 1.0)); // Blue
   PhantomVisAttr->SetVisibility(true);
   PhantomVisAttr->SetForceSolid(true);
 
-  auto* parameterisationPhantom = new HeteroParameterisation(1, 1, fLayers, 0, 0, detSizeZ, water, water, PhantomVisAttr, PhantomVisAttr);
+  auto* parameterisationPhantom = new HeteroParameterisation(1, 1, fLayers, 0, 0, detSizeZ, detMaterial, detMaterial, PhantomVisAttr, PhantomVisAttr);
 
   new G4PVParameterised(
     "Layer", logicLayer, logicPhantom, kUndefined, fLayers, parameterisationPhantom
@@ -598,12 +598,12 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
       std::cout << "std::round(heteroThickness/cubeSizeZ) " << std::round(heteroThickness/cubeSizeZ) << G4endl;
 
       auto voxelContainerSolid = new G4Box("VoxelContainer", (nx*cubeSizeX)/2, (ny*cubeSizeY)/2, (nz*cubeSizeZ)/2);
-      auto voxelContainerLV = new G4LogicalVolume(voxelContainerSolid, Air, "VoxelContainerLV");
+      auto voxelContainerLV = new G4LogicalVolume(voxelContainerSolid, lungTissue, "VoxelContainerLV");
       new G4PVPlacement(nullptr, G4ThreeVector(0,0,heteroThickness/2+5*mm), voxelContainerLV, "VoxelContainer", logicalworld, false, 0);
 
       auto* parameterisation = new HeteroParameterisation(nx, ny, nz,
         cubeSizeX, cubeSizeY, cubeSizeZ,
-        lungTissue, Air,
+        detMaterial, detMaterial,
         waterVisAttr, airVisAttr);
     
       int nVoxels = nx * ny * nz;

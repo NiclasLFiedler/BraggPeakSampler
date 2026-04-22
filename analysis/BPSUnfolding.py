@@ -578,13 +578,6 @@ targetColorMap = ["#000000","#1f77b4", "#4e79a7", "#76b7b2", "#bab0ac", "#f28e2b
 
 if __name__ == "__main__":
     def UnfoldChannel(ch, hist_ch, ehist_ch, hist_edges_ch, eedges_ch, detector, datapath, detectorpath, depth, deptherr):
-        # print(f"Channel: {ch}")
-        # print(f"Depth: {depth} ± {deptherr} mm")
-        # print(f"Histogram sum: {hist_ch}")
-        # print(f"Energy Histogram sum: {ehist_ch}")
-        # print(f"Histogram edges: {hist_edges_ch}")
-        # print(f"detectorpath {detectorpath}")
-        # print(f"datapath {datapath}")
         n_iter = 15
         if(np.sum(hist_ch)<50):
             n_iter = 1

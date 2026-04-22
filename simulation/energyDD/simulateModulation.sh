@@ -4,7 +4,7 @@ JSON_IN="../../analysis/config.json"
 JSON_OUT="../../analysis/config_tmp.json"
 
 TARGET_SELECT_LIST=(0 2)
-TARGET_THICKNESS_LIST=(0 20)
+TARGET_THICKNESS_LIST=(0 10)
 RESOLUTION=(500)
 
 for (( j=0; j<${#RESOLUTION[@]}; j++ )); do

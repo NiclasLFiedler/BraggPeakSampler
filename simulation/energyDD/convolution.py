@@ -250,8 +250,8 @@ start_time = time.time()
 z = np.linspace(0, crystalSize[2], 4001)
 
 f_pchip = interp1d(depth, Dose, kind='linear', fill_value="extrapolate")
-f_pchip = interp1d(depth, Dose, kind='cubic', fill_value="extrapolate")
-f_pchip = PchipInterpolator(depth, Dose, extrapolate=False)
+# f_pchip = interp1d(depth, Dose, kind='cubic', fill_value="extrapolate")
+# f_pchip = PchipInterpolator(depth, Dose, extrapolate=False)
 # f_pchip = Akima1DInterpolator(depth, Dose)
 
 def interpolate(z):
