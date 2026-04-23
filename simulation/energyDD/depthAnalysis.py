@@ -89,7 +89,7 @@ A0 = np.max(y_fit)
 mu0 = peak_position
 sigma0 = peak_position * 0.02
 
-popt, pcov = curve_fit(gaussian, x_fit, y_fit, p0=[A0, mu0, sigma0], maxfev=10000)
+popt, pcov = curve_fit(gaussian, x_fit, y_fit, p0=[A0, mu0, sigma0], maxfev=1000000)
 
 A, mu, sigma = popt
 perr = np.sqrt(np.diag(pcov))

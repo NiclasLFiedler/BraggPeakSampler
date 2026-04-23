@@ -207,7 +207,7 @@ Dose = dataFile["dose"]
 DoseErr = dataFile["dose_err"]
 unfoldedEntries = dataFile["dose"][0]
 
-targetThicknesses = [targetThickness]
+targetThicknesses = [10, 20, 30, 40, 50]
 resolution = []
 
 if(bhetero):
@@ -250,7 +250,7 @@ start_time = time.time()
 z = np.linspace(0, crystalSize[2], 4001)
 
 f_pchip = interp1d(depth, Dose, kind='linear', fill_value="extrapolate")
-# f_pchip = interp1d(depth, Dose, kind='cubic', fill_value="extrapolate")
+f_pchip = interp1d(depth, Dose, kind='cubic', fill_value="extrapolate")
 # f_pchip = PchipInterpolator(depth, Dose, extrapolate=False)
 # f_pchip = Akima1DInterpolator(depth, Dose)
 
@@ -290,11 +290,11 @@ for index, thickness in enumerate(targetThicknesses):
     pmod = sigmat**2/t*10000
     sigma_pmod = np.sqrt((2*sigmat/t**2*o_sigmat)**2+(sigmat**2/t**2*o_t)**2)*10000
 
-    print(f"Target Thickness {thickness}")
-    print(f"amp = {fitParams[index][0][0]} +- {stddev[0]}")
-    print(f"t = {t} +- {stddev[1]}")
-    print(f"sigmat = {sigmat} +- {stddev[2]}")
-    print(f"pmod = {pmod} +- {sigma_pmod}")
+    # print(f"Target Thickness {thickness}")
+    # print(f"amp = {fitParams[index][0][0]} +- {stddev[0]}")
+    # print(f"t = {t} +- {stddev[1]}")
+    print(f"Thickness {thickness}: sigmat = {sigmat} +- {stddev[2]}")
+    # print(f"pmod = {pmod} +- {sigma_pmod}")
 
 # popt = [1, 7.5, 0.3]
 plt.errorbar(depth, Dose, DoseErr, depthErr, fmt='s', markersize=1, capsize=capSize, elinewidth=lineWidth, color=targetColorMap[0], label="No target data points") 
