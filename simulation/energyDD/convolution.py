@@ -274,8 +274,8 @@ for index, thickness in enumerate(targetThicknesses):
         lambda x, amp, t, sigma: fft_convolution_onesided(interpolate, amp, t, sigma, x),
         depthTarget[index],
         DoseTarget[index],
-        p0=[1, 6, 0.3],
-        bounds=((0.999, 0, 1e-3), (2, 30, 2.0)),
+        p0=[1, 6, 0.03],
+        bounds=((0.999, 0, 1e-10), (2, 10, 1)),
         maxfev=100000,
     ))
 
