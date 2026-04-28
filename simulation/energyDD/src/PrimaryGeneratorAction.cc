@@ -77,8 +77,8 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event* anEvent)
   else if(particle->GetParticleName() == "proton"){
 
     fParticleGun->SetParticleDefinition(particle);
-    // G4double energy = 221.6*MeV;
-    G4double energy = 90*MeV;
+    G4double energy = 221.6*MeV;
+    // G4double energy = 90*MeV;
     //G4double energy = 0.662*MeV;
     // fParticleGun->SetParticleEnergy(G4RandGauss::shoot(energy, energy*0.001));
     fParticleGun->SetParticleEnergy(energy);

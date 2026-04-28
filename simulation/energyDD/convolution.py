@@ -207,7 +207,7 @@ Dose = dataFile["dose"]
 DoseErr = dataFile["dose_err"]
 unfoldedEntries = dataFile["dose"][0]
 
-targetThicknesses = [10, 20, 30, 40, 50]
+targetThicknesses = [200]
 resolution = []
 
 if(bhetero):

@@ -572,7 +572,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   G4double dBeamSpot = 0.1*mm;
   G4int nx, ny, nz;
   G4double cubeSizeX, cubeSizeY, cubeSizeZ;
-  if (ftarget == 1){ //heterogenous
+  if (ftarget == 2){ //heterogenous
       auto waterVisAttr = new G4VisAttributes(G4Colour(0.0, 0.0, 1.0)); // Blue
       waterVisAttr->SetVisibility(true);
       waterVisAttr->SetForceSolid(true);
@@ -603,7 +603,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
 
       auto* parameterisation = new HeteroParameterisation(nx, ny, nz,
         cubeSizeX, cubeSizeY, cubeSizeZ,
-        water, water,
+        water, Air,
         waterVisAttr, airVisAttr);
     
       int nVoxels = nx * ny * nz;
@@ -620,7 +620,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
       logicalTracker->SetVisAttributes(waterVisAttr);
       new G4PVPlacement(nullptr, G4ThreeVector(0, 0, 4*mm), logicalTracker, "physTracker", logicalworld, false, 0);
   } 
-  if(ftarget == 2){ //homogeneous
+  if(ftarget == 1){ //homogeneous
     solidHomo =  new G4Box("solidHomo", 50*cm, 50*cm, targetThickness/2);
     logicalHomo = new G4LogicalVolume(solidHomo, water, "logicalHomo");    
     physHomo = new G4PVPlacement(nullptr, G4ThreeVector(0.,0., targetThickness/2+5*mm), logicalHomo,"physHomo", logicalworld, false, 0, fCheckOverlaps);
