@@ -207,7 +207,7 @@ Dose = dataFile["dose"]
 DoseErr = dataFile["dose_err"]
 unfoldedEntries = dataFile["dose"][0]
 
-targetThicknesses = [200]
+targetThicknesses = [10, 20, 30, 40, 50]
 resolution = []
 
 if(bhetero):
@@ -220,11 +220,14 @@ if(bhetero):
         DoseTargetErr.append(dataFile["dose_err"])
         unfoldedEntriesTarget.append(dataFile["dose"][0])
 
-print(depthTarget)
-print(depthTargetErr)
-print(DoseTarget)
-print(DoseTargetErr)
-
+        print(f"Before shift: {depthTarget[-1]}")
+        tempdepth = []
+        for index, value in enumerate(depthTarget[-1]):
+            # print(f"Depth: {depth}, Thickness: {thickness}, depth + thickness: {depth + thickness}")
+            tempdepth.append(value + thickness/10)
+        depthTarget[-1] = np.array(tempdepth)    
+        print(f"After shift: {depthTarget[-1]}")
+print(f"Depth: {depthTarget}")
 if(targetSelect == 1):
     for thickness in targetThicknesses:
         dataFile = np.load(f"{dataset}/{targetFile}/input/depthdose{nLayers}_{targetThickness}.npz")

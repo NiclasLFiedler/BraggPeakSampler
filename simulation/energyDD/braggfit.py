@@ -288,6 +288,11 @@ if(bhetero):
     sigmaTarget = dataFile["sigma"]
     mean_errTarget = dataFile["mean_err"]
     sigma_errTarget = dataFile["sigma_err"]
+    tempdepth = []
+    for index, value in enumerate(depthTarget):
+        # print(f"Depth: {depth}, Thickness: {thickness}, depth + thickness: {depth + thickness}")
+        tempdepth.append(value + targetThickness/10)
+    depthTarget = np.array(tempdepth)   
 
 targetThicknesses = [50, 100, 150, 200]
 if(targetSelect == 1):

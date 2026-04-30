@@ -6,9 +6,9 @@
       "detectorID": 0,
       "comment": "beamtime",
       "datasetSelect": 2,
-      "detectorType": "pbwo4",
+      "detectorType": "h2o",
       "beamEnergy": 90,
-      "nLayers": 2000,
+      "nLayers": 350,
       "crystalSize": [
         30,
         30,
@@ -29,7 +29,7 @@
       "coincidenceTime": 50,
       "coincidenceLayer": 1,
       "discardIndex": 50,
-      "targetThickness": 200
+      "targetThickness": 10
     },
     {
       "detectorID": 1,
