@@ -421,13 +421,28 @@ CMakeFiles/idealDD.dir/src/DetectorConstruction.cc.o: \
  /usr/local/include/Geant4/G4Allocator.hh \
  /usr/local/include/Geant4/G4ThreeVector.hh \
  /usr/local/include/Geant4/tls.hh \
- /home/niclas/BraggPeakSampler/simulation/energyDD/include/SiPMSD.hh \
- /usr/local/include/Geant4/G4Material.hh \
+ /usr/local/include/Geant4/G4EmCalculator.hh \
+ /usr/local/include/Geant4/G4VAtomDeexcitation.hh \
+ /usr/local/include/Geant4/G4EmParameters.hh \
+ /usr/local/include/Geant4/G4MscStepLimitType.hh \
+ /usr/local/include/Geant4/G4NuclearFormfactorType.hh \
+ /usr/local/include/Geant4/G4DNAModelSubType.hh \
+ /usr/local/include/Geant4/G4EmFluoDirectory.hh \
+ /usr/local/include/Geant4/G4EmSaturation.hh \
+ /usr/local/include/Geant4/G4ChemTimeStepModel.hh \
+ /usr/local/include/Geant4/G4AtomicShell.hh \
+ /usr/local/include/Geant4/G4AtomicShellEnumerator.hh \
+ /usr/local/include/Geant4/G4ProductionCutsTable.hh \
+ /usr/local/include/Geant4/G4MaterialCutsCouple.hh \
+ /usr/local/include/Geant4/G4ProductionCuts.hh \
+ /usr/local/include/Geant4/G4MCCIndexConversionTable.hh \
  /usr/local/include/Geant4/G4NistManager.hh \
  /usr/local/include/Geant4/G4ICRU90StoppingData.hh \
  /usr/local/include/Geant4/G4NistElementBuilder.hh \
  /usr/local/include/Geant4/G4NistMaterialBuilder.hh \
  /usr/local/include/Geant4/G4Pow.hh /usr/local/include/Geant4/G4Exp.hh \
+ /home/niclas/BraggPeakSampler/simulation/energyDD/include/SiPMSD.hh \
+ /usr/local/include/Geant4/G4Material.hh \
  /usr/local/include/Geant4/G4SDManager.hh \
  /usr/local/include/Geant4/G4HCtable.hh \
  /usr/local/include/Geant4/G4SDStructure.hh \
@@ -575,21 +590,6 @@ CMakeFiles/idealDD.dir/src/DetectorConstruction.cc.o: \
  /usr/local/include/Geant4/G4VScoreWriter.hh \
  /usr/local/include/Geant4/G4ScoringBox.hh \
  /usr/local/include/Geant4/G4MultiFunctionalDetector.hh \
- /usr/local/include/Geant4/G4EmCalculator.hh \
- /usr/local/include/Geant4/G4VAtomDeexcitation.hh \
- /usr/local/include/Geant4/G4EmParameters.hh \
- /usr/local/include/Geant4/G4MscStepLimitType.hh \
- /usr/local/include/Geant4/G4NuclearFormfactorType.hh \
- /usr/local/include/Geant4/G4DNAModelSubType.hh \
- /usr/local/include/Geant4/G4EmFluoDirectory.hh \
- /usr/local/include/Geant4/G4EmSaturation.hh \
- /usr/local/include/Geant4/G4ChemTimeStepModel.hh \
- /usr/local/include/Geant4/G4AtomicShell.hh \
- /usr/local/include/Geant4/G4AtomicShellEnumerator.hh \
- /usr/local/include/Geant4/G4ProductionCutsTable.hh \
- /usr/local/include/Geant4/G4MaterialCutsCouple.hh \
- /usr/local/include/Geant4/G4ProductionCuts.hh \
- /usr/local/include/Geant4/G4MCCIndexConversionTable.hh \
  /usr/local/include/Geant4/G4Proton.hh \
  /usr/local/include/Geant4/G4Ions.hh /usr/include/nlohmann/json.hpp \
  /usr/include/c++/13/iterator /usr/include/c++/13/bits/stream_iterator.h \

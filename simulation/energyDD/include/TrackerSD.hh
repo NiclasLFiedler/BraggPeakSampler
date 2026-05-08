@@ -3,8 +3,11 @@
 
 #include "G4VSensitiveDetector.hh"
 #include "TrackerHit.hh"
-
+#include "G4EmCalculator.hh"
+#include "G4NistManager.hh"
 #include <vector>
+#include <map>
+
 
 class G4Step;
 class G4HCofThisEvent;
@@ -26,11 +29,12 @@ class TrackerSD : public G4VSensitiveDetector
     const std::vector<G4double>& GetEdep() const { return fEdep; }
 
     G4int fLayers = 0;
-
+    std::map<G4int, G4double> fWetAccum;
   private:
     G4int hitsCount = 0;
     TrackerHitsCollection* fHitsCollection = nullptr;
     std::vector<G4double> fEdep;
+    G4EmCalculator* fEmCalc = nullptr;  // lazy init
     
 };
 

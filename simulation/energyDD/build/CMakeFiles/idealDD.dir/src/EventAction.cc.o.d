@@ -621,6 +621,26 @@ CMakeFiles/idealDD.dir/src/EventAction.cc.o: \
  /home/niclas/BraggPeakSampler/simulation/energyDD/include/SiPMSD.hh \
  /usr/local/include/Geant4/G4VSensitiveDetector.hh \
  /home/niclas/BraggPeakSampler/simulation/energyDD/include/TrackerSD.hh \
+ /usr/local/include/Geant4/G4EmCalculator.hh \
+ /usr/local/include/Geant4/G4VAtomDeexcitation.hh \
+ /usr/local/include/Geant4/G4EmParameters.hh \
+ /usr/local/include/Geant4/G4MscStepLimitType.hh \
+ /usr/local/include/Geant4/G4NuclearFormfactorType.hh \
+ /usr/local/include/Geant4/G4DNAModelSubType.hh \
+ /usr/local/include/Geant4/G4EmFluoDirectory.hh \
+ /usr/local/include/Geant4/G4EmSaturation.hh \
+ /usr/local/include/Geant4/G4ChemTimeStepModel.hh \
+ /usr/local/include/Geant4/G4AtomicShell.hh \
+ /usr/local/include/Geant4/G4AtomicShellEnumerator.hh \
+ /usr/local/include/Geant4/G4ProductionCutsTable.hh \
+ /usr/local/include/Geant4/G4MaterialCutsCouple.hh \
+ /usr/local/include/Geant4/G4ProductionCuts.hh \
+ /usr/local/include/Geant4/G4MCCIndexConversionTable.hh \
+ /usr/local/include/Geant4/G4NistManager.hh \
+ /usr/local/include/Geant4/G4ICRU90StoppingData.hh \
+ /usr/local/include/Geant4/G4NistElementBuilder.hh \
+ /usr/local/include/Geant4/G4NistMaterialBuilder.hh \
+ /usr/local/include/Geant4/G4Pow.hh /usr/local/include/Geant4/G4Exp.hh \
  /usr/local/include/Geant4/G4SystemOfUnits.hh \
  /home/niclas/BraggPeakSampler/simulation/energyDD/src/HeteroParametrisation.cc \
  /usr/local/include/Geant4/G4VPVParameterisation.hh \

@@ -16,6 +16,7 @@
 #include "G4ScoringBox.hh"
 #include "G4MultiFunctionalDetector.hh"
 #include "Randomize.hh"
+#include <map>
 
 void EventAction::BeginOfEventAction(const G4Event*)
 {
@@ -36,12 +37,18 @@ void EventAction::EndOfEventAction(const G4Event* event)
   TrackerSD* trackerSD = (TrackerSD*)SDmanager->FindSensitiveDetector("TrackerDetectorSD");
 
   std::vector<G4double> fEdep = trackerSD->GetEdep();
-
+  std::map<G4int, G4double> fWetAccum = trackerSD->fWetAccum;
+  G4double wetAccumValue = 0;
   for(int i = 0; i < fEdep.size(); i++) {
-    if(fEdep.at(i) > 0) {
+    if(fWetAccum[i] != 0) {
+      wetAccumValue = fWetAccum[i];
+    }
+    // std::cout << "wetAccumValue: " << wetAccumValue << " mm" << G4endl;
+    if(fEdep.at(i) >= 0) {
       analysisManager->FillNtupleIColumn(0, eventID);
       analysisManager->FillNtupleIColumn(1, i);
       analysisManager->FillNtupleDColumn(2, fEdep.at(i)/MeV);
+      analysisManager->FillNtupleDColumn(3, wetAccumValue/mm);
       analysisManager->AddNtupleRow(0);
     }
   }

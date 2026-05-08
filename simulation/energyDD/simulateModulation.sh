@@ -3,8 +3,8 @@
 JSON_IN="../../analysis/config.json"
 JSON_OUT="../../analysis/config_tmp.json"
 
-TARGET_SELECT_LIST=(0 2 2 2 2 2)
-TARGET_THICKNESS_LIST=(0 10 20 30 40 50)
+TARGET_SELECT_LIST=(0 2)
+TARGET_THICKNESS_LIST=(0 200)
 RESOLUTION=(350)
 
 for (( j=0; j<${#RESOLUTION[@]}; j++ )); do
