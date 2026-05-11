@@ -77,12 +77,14 @@ mean_wet_err_per_layer = {}
 for layer, wet_values in wet_per_layer.items():
     wet_values = np.array(wet_values)
 
-    counts, bins = np.histogram(wet_values, bins=1000)
+    counts, bins = np.histogram(wet_values, bins=2000)
     bin_centers  = 0.5 * (bins[1:] + bins[:-1])
 
-    max_idx      = np.argmax(counts)
+    max_idx      = np.argmax(counts[30:])
+    max_idx += 30
+    
     peak_pos     = bin_centers[max_idx] 
-    fit_mask     = (bin_centers > peak_pos * 0.9) & (bin_centers < peak_pos * 1.1)
+    fit_mask     = (bin_centers > peak_pos * 0.7) & (bin_centers < peak_pos * 1.3)
     x_fit, y_fit = bin_centers[fit_mask], counts[fit_mask]
 
 
@@ -93,7 +95,7 @@ for layer, wet_values in wet_per_layer.items():
         continue
 
     try:
-        p0   = [np.max(y_fit), peak_pos, np.std(wet_values)]
+        p0   = [counts[max_idx], peak_pos, np.std(wet_values)]
         popt, pcov = curve_fit(gaussian, x_fit, y_fit, p0=p0, maxfev=1000000)
         mean_wet_per_layer[layer]     = popt[1]           # mu of Gaussian
         mean_wet_err_per_layer[layer] = np.sqrt(pcov[1,1])  # uncertainty on mu
@@ -114,9 +116,9 @@ for layer, wet_values in wet_per_layer.items():
         plt.close()
 for index, value in enumerate(mean_wet_per_layer):
     if index == 0:
-        depthWET.append(mean_wet_per_layer[value]/2)
+        depthWET.append(mean_wet_per_layer[value]/20)
     else:
-        depthWET.append(depthWET[-1]+mean_wet_per_layer[value]/2)
+        depthWET.append(depthWET[-1]+mean_wet_per_layer[value]/20)
 # Convert to arrays sorted by layer
 mean_wet     = np.array([mean_wet_per_layer[l]     for l in layers])
 mean_wet_err = np.array([mean_wet_err_per_layer[l] for l in layers])
@@ -203,7 +205,6 @@ plt.legend()
 plt.show()
 # plt.close()
 
-# --- Save ---
 save_kwargs = dict(
     depth      = depth,
     depthWET  = depthWET,       

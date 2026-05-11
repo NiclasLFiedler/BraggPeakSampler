@@ -1,7 +1,7 @@
 CMakeFiles/idealDD.dir/src/DetectorParameterisationColour.cc.o: \
- /home/niclas/BraggPeakSampler/simulation/energyDD/src/DetectorParameterisationColour.cc \
+ /home/user/BraggPeakSampler/simulation/energyDD/src/DetectorParameterisationColour.cc \
  /usr/include/stdc-predef.h \
- /home/niclas/BraggPeakSampler/simulation/energyDD/include/DetectorParameterisationColour.hh \
+ /home/user/BraggPeakSampler/simulation/energyDD/include/DetectorParameterisationColour.hh \
  /usr/local/include/Geant4/G4PhantomParameterisation.hh \
  /usr/include/c++/13/vector /usr/include/c++/13/bits/requires_hosted.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/c++config.h \

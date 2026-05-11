@@ -201,33 +201,30 @@ targetColorMap = ["#1f77b4", "#4e79a7", "#76b7b2", "#bab0ac", "#f28e2b", "#e1575
 dataFile = np.load(f"{dataset}/{file}/input/depthdose{nLayers}.npz")
 print(f"File: {dataFile}")
 
-depth = dataFile["depth"]
+depth = dataFile["depthWET"]
 depthErr = dataFile["depth_err"]
 Dose = dataFile["dose"]
 DoseErr = dataFile["dose_err"]
 unfoldedEntries = dataFile["dose"][0]
 
-targetThicknesses = [200]
+targetThicknesses = [100]
 resolution = []
 
 if(bhetero):
     for thickness in targetThicknesses:
         dataFile = np.load(f"{dataset}/{targetFile}/input/depthdose{nLayers}_{thickness}.npz")
         print(f"Hetero File: {dataFile}")
-        depthTarget.append(dataFile["depth"])
+        depthTarget.append(dataFile["depthWET"])
         depthTargetErr.append(dataFile["depth_err"])
         DoseTarget.append(dataFile["dose"])
         DoseTargetErr.append(dataFile["dose_err"])
         unfoldedEntriesTarget.append(dataFile["dose"][0])
 
-        print(f"Before shift: {depthTarget[-1]}")
         tempdepth = []
         for index, value in enumerate(depthTarget[-1]):
-            # print(f"Depth: {depth}, Thickness: {thickness}, depth + thickness: {depth + thickness}")
             tempdepth.append(value + thickness/10)
         depthTarget[-1] = np.array(tempdepth)    
-        print(f"After shift: {depthTarget[-1]}")
-print(f"Depth: {depthTarget}")
+
 if(targetSelect == 1):
     for thickness in targetThicknesses:
         dataFile = np.load(f"{dataset}/{targetFile}/input/depthdose{nLayers}_{targetThickness}.npz")
@@ -263,8 +260,6 @@ def interpolate(z):
     result = np.where(np.isnan(result), 0.0, result)  # zero outside data range
     result = np.clip(result, 0.0, None)               # no negative values
     return result
-
-
 
 # f = interpolate(z)
 # # popt, pcov =  curve_fit(lambda x, amp, mean, stddev: right_sided_convolution(f, lambda x2: gaussian(x2, amp, mean, stddev), x), depthTarget, DoseTarget, p0 = [1, 6, 0.3], bounds=((0.999, 0, 0), (10, 10, 0.5)), maxfev=100000)

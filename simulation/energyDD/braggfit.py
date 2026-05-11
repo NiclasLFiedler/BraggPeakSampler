@@ -265,7 +265,7 @@ unfoldedEntriesTarget = []
 unfoldedEntriesTargetTemp = []
 
 dataFile = np.load(f"{dataset}/{file}/input/depthdose{nLayers}.npz")
-depth = dataFile["depth"] 
+depth = dataFile["depthWET"] 
 depthErr = dataFile["depth_err"] 
 dose = dataFile["dose"] 
 doseErr = dataFile["dose_err"] 
@@ -278,7 +278,7 @@ sigma_err = dataFile["sigma_err"]
 
 if(bhetero):
     dataFile = np.load(f"{dataset}/{targetFile}/input/depthdose{nLayers}_{targetThickness}.npz")
-    depthTarget = dataFile["depth"] 
+    depthTarget = dataFile["depthWET"] 
     depthTargetErr = dataFile["depth_err"] 
     doseTarget = dataFile["dose"] 
     doseTargetErr = dataFile["dose_err"] 
@@ -291,7 +291,7 @@ if(bhetero):
     tempdepth = []
     for index, value in enumerate(depthTarget):
         # print(f"Depth: {depth}, Thickness: {thickness}, depth + thickness: {depth + thickness}")
-        tempdepth.append(value + targetThickness/10)
+        tempdepth.append(value)# + targetThickness/10)
     depthTarget = np.array(tempdepth)   
 
 targetThicknesses = [50, 100, 150, 200]

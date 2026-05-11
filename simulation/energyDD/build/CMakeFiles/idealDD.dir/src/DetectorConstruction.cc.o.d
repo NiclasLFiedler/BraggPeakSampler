@@ -1,7 +1,7 @@
 CMakeFiles/idealDD.dir/src/DetectorConstruction.cc.o: \
- /home/niclas/BraggPeakSampler/simulation/energyDD/src/DetectorConstruction.cc \
+ /home/user/BraggPeakSampler/simulation/energyDD/src/DetectorConstruction.cc \
  /usr/include/stdc-predef.h \
- /home/niclas/BraggPeakSampler/simulation/energyDD/include/DetectorConstruction.hh \
+ /home/user/BraggPeakSampler/simulation/energyDD/include/DetectorConstruction.hh \
  /usr/local/include/Geant4/globals.hh /usr/local/include/Geant4/G4ios.hh \
  /usr/local/include/Geant4/G4Types.hh \
  /usr/local/include/Geant4/G4GlobalConfig.hh /usr/include/c++/13/complex \
@@ -323,7 +323,7 @@ CMakeFiles/idealDD.dir/src/DetectorConstruction.cc.o: \
  /usr/include/c++/13/bits/this_thread_sleep.h \
  /usr/local/include/Geant4/G4VPhysicalVolume.icc \
  /usr/local/include/Geant4/G4LogicalBorderSurface.icc \
- /home/niclas/BraggPeakSampler/simulation/energyDD/include/G4STL.hh \
+ /home/user/BraggPeakSampler/simulation/energyDD/include/G4STL.hh \
  /usr/local/include/Geant4/G4SystemOfUnits.hh \
  /usr/local/include/Geant4/G4PhantomParameterisation.hh \
  /usr/local/include/Geant4/G4VPVParameterisation.hh \
@@ -352,7 +352,7 @@ CMakeFiles/idealDD.dir/src/DetectorConstruction.cc.o: \
  /usr/local/include/Geant4/G4PhantomParameterisation.icc \
  /usr/local/include/Geant4/G4PVParameterised.hh \
  /usr/local/include/Geant4/G4PVReplica.hh \
- /home/niclas/BraggPeakSampler/simulation/energyDD/include/DetectorMessenger.hh \
+ /home/user/BraggPeakSampler/simulation/energyDD/include/DetectorMessenger.hh \
  /usr/local/include/Geant4/G4UImessenger.hh \
  /usr/local/include/Geant4/G4UIdirectory.hh \
  /usr/local/include/Geant4/G4UIcommand.hh \
@@ -361,7 +361,7 @@ CMakeFiles/idealDD.dir/src/DetectorConstruction.cc.o: \
  /usr/local/include/Geant4/G4UIcmdWithAString.hh \
  /usr/local/include/Geant4/G4UIcmdWithADoubleAndUnit.hh \
  /usr/local/include/Geant4/G4UIcmdWithABool.hh \
- /home/niclas/BraggPeakSampler/simulation/energyDD/include/TrackerSD.hh \
+ /home/user/BraggPeakSampler/simulation/energyDD/include/TrackerSD.hh \
  /usr/local/include/Geant4/G4VSensitiveDetector.hh \
  /usr/local/include/Geant4/G4CollectionNameVector.hh \
  /usr/local/include/Geant4/G4HCofThisEvent.hh \
@@ -415,7 +415,7 @@ CMakeFiles/idealDD.dir/src/DetectorConstruction.cc.o: \
  /usr/local/include/Geant4/G4VReadOutGeometry.hh \
  /usr/local/include/Geant4/G4SensitiveVolumeList.hh \
  /usr/local/include/Geant4/G4VSDFilter.hh \
- /home/niclas/BraggPeakSampler/simulation/energyDD/include/TrackerHit.hh \
+ /home/user/BraggPeakSampler/simulation/energyDD/include/TrackerHit.hh \
  /usr/local/include/Geant4/G4VHit.hh \
  /usr/local/include/Geant4/G4THitsCollection.hh \
  /usr/local/include/Geant4/G4Allocator.hh \
@@ -441,7 +441,7 @@ CMakeFiles/idealDD.dir/src/DetectorConstruction.cc.o: \
  /usr/local/include/Geant4/G4NistElementBuilder.hh \
  /usr/local/include/Geant4/G4NistMaterialBuilder.hh \
  /usr/local/include/Geant4/G4Pow.hh /usr/local/include/Geant4/G4Exp.hh \
- /home/niclas/BraggPeakSampler/simulation/energyDD/include/SiPMSD.hh \
+ /home/user/BraggPeakSampler/simulation/energyDD/include/SiPMSD.hh \
  /usr/local/include/Geant4/G4Material.hh \
  /usr/local/include/Geant4/G4SDManager.hh \
  /usr/local/include/Geant4/G4HCtable.hh \
@@ -525,8 +525,8 @@ CMakeFiles/idealDD.dir/src/DetectorConstruction.cc.o: \
  /usr/local/include/Geant4/G4VisAttributes.icc \
  /usr/local/include/Geant4/G4Colour.hh \
  /usr/local/include/Geant4/G4RotationMatrix.hh \
- /home/niclas/BraggPeakSampler/simulation/energyDD/include/DetectorParameterisationColour.hh \
- /home/niclas/BraggPeakSampler/simulation/energyDD/src/HeteroParametrisation.cc \
+ /home/user/BraggPeakSampler/simulation/energyDD/include/DetectorParameterisationColour.hh \
+ /home/user/BraggPeakSampler/simulation/energyDD/src/HeteroParametrisation.cc \
  /usr/local/include/Geant4/G4VPVParameterisation.hh \
  /usr/local/include/Geant4/G4VPhysicalVolume.hh \
  /usr/local/include/Geant4/Randomize.hh \
