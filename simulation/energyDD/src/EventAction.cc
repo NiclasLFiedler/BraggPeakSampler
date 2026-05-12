@@ -40,9 +40,9 @@ void EventAction::EndOfEventAction(const G4Event* event)
   std::map<G4int, G4double> fWetAccum = trackerSD->fWetAccum;
   G4double wetAccumValue = 0;
   for(int i = 0; i < fEdep.size(); i++) {
-    if(fWetAccum[i] != 0) {
-      wetAccumValue = fWetAccum[i];
-    }
+    wetAccumValue = fWetAccum[i];
+    // if(fWetAccum[i] != 0) {
+    // }
     // std::cout << "wetAccumValue: " << wetAccumValue << " mm" << G4endl;
     if(fEdep.at(i) >= 0) {
       analysisManager->FillNtupleIColumn(0, eventID);

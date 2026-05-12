@@ -222,7 +222,7 @@ if(bhetero):
 
         tempdepth = []
         for index, value in enumerate(depthTarget[-1]):
-            tempdepth.append(value + thickness/10)
+            tempdepth.append(value)# + thickness/10)
         depthTarget[-1] = np.array(tempdepth)    
 
 if(targetSelect == 1):
@@ -250,7 +250,7 @@ start_time = time.time()
 z = np.linspace(0, crystalSize[2], 4001)
 
 f_pchip = interp1d(depth, Dose, kind='linear', fill_value="extrapolate")
-f_pchip = interp1d(depth, Dose, kind='cubic', fill_value="extrapolate")
+# f_pchip = interp1d(depth, Dose, kind='cubic', fill_value="extrapolate")
 # f_pchip = PchipInterpolator(depth, Dose, extrapolate=False)
 # f_pchip = Akima1DInterpolator(depth, Dose)
 
@@ -261,18 +261,20 @@ def interpolate(z):
     result = np.clip(result, 0.0, None)               # no negative values
     return result
 
-# f = interpolate(z)
-# # popt, pcov =  curve_fit(lambda x, amp, mean, stddev: right_sided_convolution(f, lambda x2: gaussian(x2, amp, mean, stddev), x), depthTarget, DoseTarget, p0 = [1, 6, 0.3], bounds=((0.999, 0, 0), (10, 10, 0.5)), maxfev=100000)
+f = interpolate(z)
+
+# popt, pcov =  curve_fit(lambda x, amp, mean, stddev: right_sided_convolution(interpolate, lambda x2: gaussian(x2, amp, mean, stddev), x), depthTarget[0], DoseTarget[0], p0 = [1, 6, 0.3], bounds=((0.999, 0, 0), (10, 10, 0.5)), maxfev=100000)
 
 fitParamsRaw = []
 fitParams = []
 
 for index, thickness in enumerate(targetThicknesses):
+    print("loop")
     fitParams.append(curve_fit(
         lambda x, amp, t, sigma: fft_convolution_onesided(interpolate, amp, t, sigma, x),
         depthTarget[index],
         DoseTarget[index],
-        p0=[1, 6, 0.03],
+        p0=[1, 6, 0.3],
         bounds=((0.999, 0, 1e-10), (2, 10, 1)),
         maxfev=100000,
     ))

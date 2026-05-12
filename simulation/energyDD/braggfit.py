@@ -266,6 +266,7 @@ unfoldedEntriesTargetTemp = []
 
 dataFile = np.load(f"{dataset}/{file}/input/depthdose{nLayers}.npz")
 depth = dataFile["depthWET"] 
+print(depth)
 depthErr = dataFile["depth_err"] 
 dose = dataFile["dose"] 
 doseErr = dataFile["dose_err"] 
