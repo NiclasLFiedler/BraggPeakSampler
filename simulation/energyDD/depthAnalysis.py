@@ -154,7 +154,8 @@ plt.close()
 
 save_kwargs = dict(
     depth      = depth,
-    depthWET  = depthWET,       
+    depthWET  = depthWET,
+    depthWET_err  = (abs(depthWET[1] - depthWET[0])) / np.sqrt(12),
     depth_err  = (abs(depth[1] - depth[0])) / np.sqrt(12),
     dose       = energy,
     dose_err   = np.sqrt(energy),
