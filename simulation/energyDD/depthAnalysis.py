@@ -64,7 +64,7 @@ for event in tree:
     wet_per_layer[layer].append(wetAccum)
 
 layers = np.array(sorted(energy_per_layer.keys()))
-depth  = (layers + 0.5) * detectorZ / nLayers
+depth  = (layers + 0.5) * detectorZ / (nLayers)
 energy = np.array([energy_per_layer[l]  for l in layers])
 energy2 = np.array([energy_per_layer2[l] for l in layers])
 

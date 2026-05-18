@@ -201,8 +201,13 @@ targetColorMap = ["#1f77b4", "#4e79a7", "#76b7b2", "#bab0ac", "#f28e2b", "#e1575
 dataFile = np.load(f"{dataset}/{file}/input/depthdose{nLayers}.npz")
 print(f"File: {dataFile}")
 
-depth = dataFile["depthWET"]
-depthErr = dataFile["depthWET_err"]
+boolWET = False
+
+depth = dataFile["depth"]
+depthErr = dataFile["depth_err"]
+if boolWET:
+    depth = dataFile["depthWET"]
+    depthErr = dataFile["depthWET_err"]
 Dose = dataFile["dose"]
 DoseErr = dataFile["dose_err"]
 unfoldedEntries = dataFile["dose"][0]
@@ -214,8 +219,11 @@ if(bhetero):
     for thickness in targetThicknesses:
         dataFile = np.load(f"{dataset}/{targetFile}/input/depthdose{nLayers}_{thickness}.npz")
         print(f"Hetero File: {dataFile}")
-        depthTarget.append(dataFile["depthWET"])
-        depthTargetErr.append(dataFile["depthWET_err"])
+        depthTarget.append(dataFile["depth"])
+        depthTargetErr.append(dataFile["depth_err"])
+        if boolWET:
+            depthTarget.append(dataFile["depthWET"])
+            depthTargetErr.append(dataFile["depthWET_err"])
         DoseTarget.append(dataFile["dose"])
         DoseTargetErr.append(dataFile["dose_err"])
         unfoldedEntriesTarget.append(dataFile["dose"][0])
@@ -247,7 +255,7 @@ else:
     
 start_time = time.time()
 
-z = np.linspace(0, crystalSize[2]/10, 4001)
+z = np.linspace(0, crystalSize[2], 4001)
 
 f_pchip = interp1d(depth, Dose, kind='linear', fill_value="extrapolate")
 # f_pchip = interp1d(depth, Dose, kind='cubic', fill_value="extrapolate")

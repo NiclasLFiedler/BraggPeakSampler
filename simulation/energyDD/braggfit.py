@@ -265,9 +265,13 @@ unfoldedEntriesTarget = []
 unfoldedEntriesTargetTemp = []
 
 dataFile = np.load(f"{dataset}/{file}/input/depthdose{nLayers}.npz")
-depth = dataFile["depthWET"] 
-print(depth)
-depthErr = dataFile["depth_err"] 
+boolWET = True
+
+depth = dataFile["depth"]
+depthErr = dataFile["depth_err"]
+if boolWET:
+    depth = dataFile["depthWET"]
+    depthErr = dataFile["depthWET_err"]
 dose = dataFile["dose"] 
 doseErr = dataFile["dose_err"] 
 unfoldedEntries = dataFile["dose"][0]
@@ -279,8 +283,11 @@ sigma_err = dataFile["sigma_err"]
 
 if(bhetero):
     dataFile = np.load(f"{dataset}/{targetFile}/input/depthdose{nLayers}_{targetThickness}.npz")
-    depthTarget = dataFile["depthWET"] 
+    depthTarget = dataFile["depth"] 
     depthTargetErr = dataFile["depth_err"] 
+    if boolWET:
+        depthTarget = dataFile["depthWET"] 
+        depthTargetErr = dataFile["depthWET_err"] 
     doseTarget = dataFile["dose"] 
     doseTargetErr = dataFile["dose_err"] 
     unfoldedEntriesTarget = dataFile["dose"][0]
@@ -299,8 +306,8 @@ targetThicknesses = [50, 100, 150, 200]
 if(targetSelect == 1):
     for thickness in targetThicknesses:
         dataFile = np.load(f"{dataset}/{targetFile}/input/depthdose{thickness}.npz")
-        depthTarget.append(dataFile["depth"])
-        depthTargetErr.append(dataFile["depth_err"])
+        depthTarget.append(dataFile["depthWET"])
+        depthTargetErr.append(dataFile["depthWET_err"])
         doseTarget.append(dataFile["dose"]) 
         doseTargetErr.append(dataFile["dose_err"])
         unfoldedEntriesTarget.append(dataFile["dose"][0])
@@ -411,10 +418,10 @@ elif(targetSelect == 1):
 else:
     ax1.errorbar(depth, dose, doseErr, depthErr, fmt='o', markersize=1, capsize=capSize, elinewidth=lineWidth, color="#000000")#, label="No target data") 
 
-print(rf"Phi0: {bestfit_params.Phi0} \pm {bestfit_params.stddev[0]}")
-print(rf"R0: {bestfit_params.R0} \pm {bestfit_params.stddev[1]}")
-print(rf"sigma: {bestfit_params.sigma} \pm {bestfit_params.stddev[2]}")
-print(rf"epsilon: {bestfit_params.epsilon} \pm {bestfit_params.stddev[3]}")
+print(rf"Phi0: {bestfit_params.Phi0:.3f} \pm {bestfit_params.stddev[0]:.3f}")
+print(rf"R0: {bestfit_params.R0:.3f} \pm {bestfit_params.stddev[1]:.3f}")
+print(rf"sigma: {bestfit_params.sigma:.3f} \pm {bestfit_params.stddev[2]:.3f}")
+print(rf"epsilon: {bestfit_params.epsilon:.3f} \pm {bestfit_params.stddev[3]:.3f}")
 
 if(targetSelect > 0):
     ax1.plot(z, bestfit_params.curve, color="black", linewidth = lineWidth, label=fr"No target")# rf"$R_0={bestfit_params.R0:.3f}~cm$, $\sigma={bestfit_params.sigma:.3f}~cm$")
@@ -450,10 +457,10 @@ if(bhetero):
 
     print()
     print("Heteogeneous Target")
-    print(rf"Phi0: {convParams.Phi0} \pm {convParams.stddev[0]}")
-    print(rf"R0: {convParams.R0} \pm {convParams.stddev[1]}")
-    print(rf"sigma: {convParams.sigma} \pm {convParams.stddev[2]}")
-    print(rf"epsilon: {convParams.epsilon} \pm {convParams.stddev[3]}")
+    print(rf"Phi0: {convParams.Phi0:.3f} \pm {convParams.stddev[0]:.3f}")
+    print(rf"R0: {convParams.R0:.3f} \pm {convParams.stddev[1]:.3f}")
+    print(rf"sigma: {convParams.sigma:.3f} \pm {convParams.stddev[2]:.3f}")
+    print(rf"epsilon: {convParams.epsilon:.3f} \pm {convParams.stddev[3]:.3f}")
 
     params_list = []
     for i in range(nbOfFitsHetero):
