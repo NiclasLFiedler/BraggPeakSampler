@@ -169,6 +169,6 @@ save_kwargs = dict(
 )
 
 if targetSelect == 0:
-    np.savez(f"{datapath}/input/depthdose{nLayers}.npz", **save_kwargs)
+    np.savez(f"{datapath}/input/depthdose_{detectorType}_{nLayers}.npz", **save_kwargs)
 else:
-    np.savez(f"{datapath}/input/depthdose{nLayers}_{targetThickness}.npz", **save_kwargs)
+    np.savez(f"{datapath}/input/depthdose_{detectorType}_{nLayers}_{targetThickness}.npz", **save_kwargs)
