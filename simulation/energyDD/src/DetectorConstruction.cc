@@ -189,7 +189,7 @@ void DetectorConstruction::DefineMaterials()
   lungTissue->AddElement(elZn, 0.000010);
 
   water = nistManager->FindOrBuildMaterial("G4_WATER"); 
-  water->GetIonisation()->SetMeanExcitationEnergy(78*eV);
+  // water->GetIonisation()->SetMeanExcitationEnergy(78*eV);
 
   G4Material *SiO2 = new G4Material("SiO2", 2.65*g/cm3, 2);
   SiO2->AddElement(elSi, 1);
@@ -557,7 +557,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
 
   G4Box* solidPhantom = new G4Box("solidPhantom", phantomX/2, phantomY/2, phantomZ/2);
   G4LogicalVolume* logicPhantom = new G4LogicalVolume(solidPhantom, detMaterial, "logPhantom");
-  new G4PVPlacement(nullptr, G4ThreeVector(0,0,-phantomZ), logicPhantom, "physPhantom", logicalworld, false, 0);
+  new G4PVPlacement(nullptr, G4ThreeVector(0,0,-phantomZ+3*cm), logicPhantom, "physPhantom", logicalworld, false, 0);
 
   G4Box* solidLayer = new G4Box("solidLayer", phantomX/2, phantomY/2, detSizeZ/2);
   G4LogicalVolume* logicLayer = new G4LogicalVolume(solidLayer, detMaterial, "logLayer");
@@ -626,7 +626,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   if(ftarget == 2){                         //homogeneous
     solidHomo =  new G4Box("solidHomo", 50*cm, 50*cm, targetThickness/2);
     logicalHomo = new G4LogicalVolume(solidHomo, water, "logicalHomo");    
-    physHomo = new G4PVPlacement(nullptr, G4ThreeVector(0.,0., targetThickness/2+5*mm), logicalHomo,"physHomo", logicalworld, false, 0, fCheckOverlaps);
+    physHomo = new G4PVPlacement(nullptr, G4ThreeVector(0.,0., targetThickness/2+3*mm), logicalHomo,"physHomo", logicalworld, false, 0, fCheckOverlaps);
 
     G4VisAttributes* visHomo = new G4VisAttributes(G4Colour(0.0, 1.0, 1.0, 0.5)); // Red for the detector
     visHomo->SetVisibility(true);

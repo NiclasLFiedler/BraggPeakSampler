@@ -71,7 +71,7 @@ for (( m=0; m<${#DETECTOR_MATERIALS[@]}; m++ )); do
     run_simulation "$MAT" "$SIZE" 0 0
 
     # --- thickness sweep: 10 → 300 in steps of 10 (targetSelect=0) ---
-    for (( t=10; t<=270; t+=10 )); do
+    for (( t=10; t<=300; t+=10 )); do
         echo ""
         echo "--- Thickness sweep: $t mm ---"
         run_simulation "$MAT" "$SIZE" 2 "$t"
