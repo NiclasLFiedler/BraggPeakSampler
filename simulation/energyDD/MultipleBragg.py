@@ -341,7 +341,9 @@ for material in materials:
 
     R0 = quantities['R80D']
     print("Expected range from R80D fit: ", range_energy_relationship(235, a_pwo, p_pwo))
-    sigmaMono = (beta*R0**0.935)
+    sigmaMono = (beta*31**0.935)
+    print("Expected sigma from monoenergetic beam: ", sigmaMono)
+    exit()
     sigmaE0   = 0.01*beamEnergy
     sigma     = np.sqrt(sigmaMono**2+sigmaE0**2*a_h2o**2*p_h2o**2*beamEnergy**(2*p_h2o-2))
     #─────────────────────────────────────────────────────────
