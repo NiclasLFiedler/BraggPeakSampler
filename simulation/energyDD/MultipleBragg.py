@@ -180,6 +180,57 @@ def characterize_z_D_curve(z, D):
 
     return results
 
+def rangeEnergy(E, alpha, p):
+    return alpha*E**p
+
+def Energyrange(R, alpha, p):
+    return (R/alpha)**(1/p)
+
+def S_Energy(E, alpha, p):
+    return 1/(alpha*p)*E**(1-p)
+
+def S_Range(R, alpha, p):
+    return 1/(alpha**(1/p)*p)*R**(1/p-1)
+
+def stragglingWidth(TargetThickness, initialEnergy):
+    TargetThickness = np.array(TargetThickness)
+    print(TargetThickness)
+    alpha_h2o = 2.585e-2
+    alpha_prime_h2o = 0.087/10
+    p_h2o = 1.738
+
+    alpha_pbwo4 = 7.275e-3
+    alpha_prime_pbwo4 = 0.537/10
+    p_pbwo4 = 1.690
+
+    c1 = (alpha_prime_h2o*p_h2o**3*alpha_h2o**(2/p_h2o))/(3*p_h2o-2)
+    c2 = (alpha_prime_pbwo4*p_pbwo4**3*alpha_pbwo4**(2/p_pbwo4))/(3*p_pbwo4-2)
+    
+    print(f"C1: {c1}, C2: {c2}")
+    print(f"Sqrt C1: {np.sqrt(c1)}, C2: {np.sqrt(c2)}")
+    R_h2o = rangeEnergy(initialEnergy, alpha_h2o, p_h2o)
+    R_pbwo4 = rangeEnergy(initialEnergy, alpha_pbwo4, p_pbwo4)
+
+    print(f"Ranges: R_h2o = {R_h2o} cm, R_pbwo4 = {R_pbwo4} cm")
+
+    SToPWO = S_Energy(initialEnergy, alpha_h2o, p_h2o)/S_Energy(initialEnergy, alpha_pbwo4, p_pbwo4)
+    SToH2O = S_Energy(initialEnergy, alpha_pbwo4, p_pbwo4)/S_Energy(initialEnergy, alpha_h2o, p_h2o)
+
+    print(f"Stopping power ratios: SToPWO = {SToPWO}, SToH2O = {SToH2O}")
+
+    h2oVar = c1*((R_h2o)**(3-2/p_h2o)-(R_h2o-TargetThickness)**(3-2/p_h2o))
+    pbwo4Var = c2*((R_pbwo4-TargetThickness*SToPWO)**(3-2/p_pbwo4))*SToH2O
+
+    print(f"Variance contributions: h2oVar = {h2oVar}, pbwo4Var = {pbwo4Var}")
+
+    sigma2 = h2oVar + pbwo4Var
+
+    sigma = np.sqrt(np.array(sigma2))*1/10
+
+    print(sigma)
+    return sigma
+
+
 with open("../../analysis/config.json", "r") as file:
     fullConfig = json.load(file)
 
@@ -341,9 +392,9 @@ for material in materials:
 
     R0 = quantities['R80D']
     print("Expected range from R80D fit: ", range_energy_relationship(235, a_pwo, p_pwo))
-    sigmaMono = (beta*31**0.935)
+    sigmaMono = (0.012*31**0.935)
     print("Expected sigma from monoenergetic beam: ", sigmaMono)
-    exit()
+    # exit()
     sigmaE0   = 0.01*beamEnergy
     sigma     = np.sqrt(sigmaMono**2+sigmaE0**2*a_h2o**2*p_h2o**2*beamEnergy**(2*p_h2o-2))
     #─────────────────────────────────────────────────────────
@@ -431,11 +482,16 @@ for material in materials:
     plt.show()
     # plt.close()
 
+initialEnergy = Energyrange(popt_notarget.R0, a_h2o, p_h2o)
+print(f"Initial energy calculated from R0: {initialEnergy} MeV")
+sigma = stragglingWidth([0]+targetThicknesses, initialEnergy)
+
 sigmaDiff = np.array(sigmasH2O)/np.array(sigmasPWO)
 plt.figure(figsize=(16, 12))
 plt.plot([0]+targetThicknesses, sigmasH2O, label="H2O", marker='o')
 plt.plot([0]+targetThicknesses, sigmasPWO, label="PWO", marker='s')
 plt.plot([0]+targetThicknesses, sigmaDiff, label="Ratio", marker='^')
+plt.plot([0]+targetThicknesses, sigma, label="Calculated Straggling Width", marker='x')
 plt.xlabel("Target Thickness (mm)")
 plt.ylabel("Sigma (cm)")
 plt.title("Sigma vs Target Thickness")
