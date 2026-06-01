@@ -218,17 +218,23 @@ def stragglingWidth(TargetThickness, initialEnergy):
 
     print(f"Stopping power ratios: SToPWO = {SToPWO}, SToH2O = {SToH2O}")
 
-    h2oVar = c1*((R_h2o)**(3-2/p_h2o)-(R_h2o-TargetThickness)**(3-2/p_h2o))
-    pbwo4Var = c2*((R_pbwo4-TargetThickness*SToPWO)**(3-2/p_pbwo4))*SToH2O
+    # h2oVar = c1*((R_h2o)**(3-2/p_h2o)-(R_h2o-TargetThickness)**(3-2/p_h2o))
+    # pbwo4Var = c2*((R_pbwo4-TargetThickness*SToPWO)**(3-2/p_pbwo4))*SToH2O
 
-    print(f"Variance contributions: h2oVar = {h2oVar}, pbwo4Var = {pbwo4Var}")
+    h2oVar = c1*((TargetThickness)**(3-2/p_h2o))
+    pbwo4Var = c2*((R_pbwo4)**(3-2/p_pbwo4)-(TargetThickness*SToPWO)**(3-2/p_pbwo4))*SToH2O*SToH2O
+
+    fullvarh2o = c1*((R_h2o)**(3-2/p_h2o))
+    fullvarpwo = c2*((R_pbwo4)**(3-2/p_pbwo4))*SToH2O*SToH2O
+    print(f"Fullsigma: {np.sqrt(fullvarh2o)/10}, PWO {np.sqrt(fullvarpwo)/10}")
+    print(f"Variance contributions: h2oVar = {h2oVar}, pbwo4Var = {pbwo4Var*SToH2O}")
 
     sigma2 = h2oVar + pbwo4Var
 
     sigma = np.sqrt(np.array(sigma2))*1/10
 
     print(sigma)
-    return sigma
+    return sigma, h2oVar, pbwo4Var
 
 
 with open("../../analysis/config.json", "r") as file:
@@ -329,7 +335,7 @@ for material in materials:
     targetColorMap = ["#1f77b4", "#4e79a7", "#76b7b2", "#bab0ac", "#f28e2b", "#e15759", "#9c755f"]
 
     targetThicknesses = []
-    for thick in range(10, 260, 10):
+    for thick in range(10, 250, 10):
         targetThicknesses.append(thick)
     
     for thickness in targetThicknesses:
@@ -484,7 +490,16 @@ for material in materials:
 
 initialEnergy = Energyrange(popt_notarget.R0, a_h2o, p_h2o)
 print(f"Initial energy calculated from R0: {initialEnergy} MeV")
-sigma = stragglingWidth([0]+targetThicknesses, initialEnergy)
+sigma, h2ovar, pwovar = stragglingWidth([0]+targetThicknesses, initialEnergy)
+
+plt.figure(figsize=(16, 12))
+plt.plot([0]+targetThicknesses, sigma, label="sigma", marker='o')
+plt.plot([0]+targetThicknesses, h2ovar, label="H2Ovar", marker='s')
+plt.plot([0]+targetThicknesses, pwovar, label="pwovar", marker='^')
+plt.legend()
+plt.grid()
+plt.show()
+
 
 sigmaDiff = np.array(sigmasH2O)/np.array(sigmasPWO)
 plt.figure(figsize=(16, 12))

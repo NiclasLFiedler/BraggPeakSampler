@@ -115,9 +115,10 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event* anEvent)
     G4double y1 = G4RandGauss::shoot(0.0, sigma_film_y);      
     G4ThreeVector beamPosNozzle = G4ThreeVector(x0+PosNozzle.x(), y0+PosNozzle.y(), PosNozzle.z());
     G4ThreeVector beamPosIsocentre = G4ThreeVector(x1+Pos_Isocentre.x(), y1+Pos_Isocentre.y(), Pos_Isocentre.z());
-    //beamPosNozzle = G4ThreeVector(0, 0, PosNozzle.z());
-    //beamPosIsocentre = G4ThreeVector(0, 0, 0);
-    beamPosIsocentre = G4ThreeVector(x0+PosNozzle.x(), y0+PosNozzle.y(), Pos_Isocentre.z());
+    
+    beamPosNozzle = G4ThreeVector(0, 0, PosNozzle.z());
+    beamPosIsocentre = G4ThreeVector(0, 0, 0);
+    
     fParticleGun->SetParticleMomentumDirection(beamPosIsocentre-beamPosNozzle);    
     beamPos = beamPosNozzle;
   }
