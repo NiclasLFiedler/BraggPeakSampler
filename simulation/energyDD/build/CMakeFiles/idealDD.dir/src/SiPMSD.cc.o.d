@@ -1,7 +1,7 @@
 CMakeFiles/idealDD.dir/src/SiPMSD.cc.o: \
- /home/user/BraggPeakSampler/simulation/energyDD/src/SiPMSD.cc \
+ /home/niclas/BraggPeakSampler/simulation/energyDD/src/SiPMSD.cc \
  /usr/include/stdc-predef.h \
- /home/user/BraggPeakSampler/simulation/energyDD/include/SiPMSD.hh \
+ /home/niclas/BraggPeakSampler/simulation/energyDD/include/SiPMSD.hh \
  /usr/local/include/Geant4/G4VSensitiveDetector.hh \
  /usr/local/include/Geant4/G4CollectionNameVector.hh \
  /usr/local/include/Geant4/globals.hh /usr/local/include/Geant4/G4ios.hh \
@@ -352,7 +352,7 @@ CMakeFiles/idealDD.dir/src/SiPMSD.cc.o: \
  /usr/local/include/Geant4/G4VReadOutGeometry.hh \
  /usr/local/include/Geant4/G4SensitiveVolumeList.hh \
  /usr/local/include/Geant4/G4VSDFilter.hh \
- /home/user/BraggPeakSampler/simulation/energyDD/include/TrackerHit.hh \
+ /home/niclas/BraggPeakSampler/simulation/energyDD/include/TrackerHit.hh \
  /usr/local/include/Geant4/G4VHit.hh \
  /usr/local/include/Geant4/G4THitsCollection.hh \
  /usr/local/include/Geant4/G4Allocator.hh \

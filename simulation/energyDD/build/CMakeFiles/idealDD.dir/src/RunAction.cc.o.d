@@ -1,7 +1,7 @@
 CMakeFiles/idealDD.dir/src/RunAction.cc.o: \
- /home/user/BraggPeakSampler/simulation/energyDD/src/RunAction.cc \
+ /home/niclas/BraggPeakSampler/simulation/energyDD/src/RunAction.cc \
  /usr/include/stdc-predef.h \
- /home/user/BraggPeakSampler/simulation/energyDD/include/RunAction.hh \
+ /home/niclas/BraggPeakSampler/simulation/energyDD/include/RunAction.hh \
  /usr/local/include/Geant4/G4UserRunAction.hh \
  /usr/local/include/Geant4/G4Types.hh \
  /usr/local/include/Geant4/G4GlobalConfig.hh /usr/include/c++/13/complex \
