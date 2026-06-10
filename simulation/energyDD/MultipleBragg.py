@@ -201,7 +201,7 @@ def stragglingWidth(TargetThickness, initialEnergy):
 
     alpha_pbwo4 = 7.275e-3
     alpha_prime_pbwo4 = 0.537/10
-    p_pbwo4 = 1.690
+    p_pbwo4 = 1.77
 
     c1 = (alpha_prime_h2o*p_h2o**3*alpha_h2o**(2/p_h2o))/(3*p_h2o-2)
     c2 = (alpha_prime_pbwo4*p_pbwo4**3*alpha_pbwo4**(2/p_pbwo4))/(3*p_pbwo4-2)
@@ -221,11 +221,14 @@ def stragglingWidth(TargetThickness, initialEnergy):
     # h2oVar = c1*((R_h2o)**(3-2/p_h2o)-(R_h2o-TargetThickness)**(3-2/p_h2o))
     # pbwo4Var = c2*((R_pbwo4-TargetThickness*SToPWO)**(3-2/p_pbwo4))*SToH2O
 
+    onlyh2oVar = c1*((TargetThickness)**(3-2/p_h2o))
+    onlypbwo4Var = c2*((TargetThickness*SToPWO)**(3-2/p_pbwo4))*SToH2O*SToH2O
+    
     h2oVar = c1*((TargetThickness)**(3-2/p_h2o))
-    pbwo4Var = c2*((R_pbwo4)**(3-2/p_pbwo4)-(TargetThickness*SToPWO)**(3-2/p_pbwo4))*SToH2O*SToH2O
-
+    pbwo4Var = c2*((R_pbwo4)**(3-2/p_pbwo4)-(TargetThickness*SToPWO)**(3-2/p_pbwo4))*SToH2O**2
+    
     fullvarh2o = c1*((R_h2o)**(3-2/p_h2o))
-    fullvarpwo = c2*((R_pbwo4)**(3-2/p_pbwo4))*SToH2O*SToH2O
+    fullvarpwo = c2*((R_pbwo4)**(3-2/p_pbwo4))*SToH2O**2
     print(f"Fullsigma: {np.sqrt(fullvarh2o)/10}, PWO {np.sqrt(fullvarpwo)/10}")
     print(f"Variance contributions: h2oVar = {h2oVar}, pbwo4Var = {pbwo4Var*SToH2O}")
 
@@ -234,8 +237,36 @@ def stragglingWidth(TargetThickness, initialEnergy):
     sigma = np.sqrt(np.array(sigma2))*1/10
 
     print(sigma)
-    return sigma, h2oVar, pbwo4Var
+    return sigma, np.sqrt(onlyh2oVar)*1/10, np.sqrt(onlypbwo4Var)*1/10
 
+def straggling(z):
+
+    alpha_h2o = 2.585e-2
+    alpha_prime_h2o = 0.087/10
+    p_h2o = 1.738
+
+    alpha_pbwo4 = 7.275e-3
+    alpha_prime_pbwo4 = 0.537/10
+    p_pbwo4 = 1.690
+
+    R_h2o = rangeEnergy(initialEnergy, alpha_h2o, p_h2o)
+    R_pbwo4 = rangeEnergy(initialEnergy, alpha_pbwo4, p_pbwo4)
+
+    SToPWO = S_Energy(initialEnergy, alpha_h2o, p_h2o)/S_Energy(initialEnergy, alpha_pbwo4, p_pbwo4)
+    SToH2O = S_Energy(initialEnergy, alpha_pbwo4, p_pbwo4)/S_Energy(initialEnergy, alpha_h2o, p_h2o)
+
+    c1 = (alpha_prime_h2o*(1/(p_h2o*alpha_h2o**(1/p_h2o))*(R_h2o-z)**(1/p_h2o-1))**(-2))
+    c2 = (alpha_prime_pbwo4*(1/(p_pbwo4*alpha_pbwo4**(1/p_pbwo4))*(R_pbwo4-z*SToPWO)**(1/p_pbwo4-1))**(-2))*SToH2O
+    
+    print(f"C1: {c1}, C2: {c2}")
+    print(f"Sqrt C1: {np.sqrt(c1)}, C2: {np.sqrt(c2)}")
+
+
+    print(f"Ranges: R_h2o = {R_h2o} cm, R_pbwo4 = {R_pbwo4} cm")
+
+
+
+    return c1, c2
 
 with open("../../analysis/config.json", "r") as file:
     fullConfig = json.load(file)
@@ -335,9 +366,39 @@ for material in materials:
     targetColorMap = ["#1f77b4", "#4e79a7", "#76b7b2", "#bab0ac", "#f28e2b", "#e15759", "#9c755f"]
 
     targetThicknesses = []
-    for thick in range(10, 250, 10):
+    for thick in range(0, 315, 5):
         targetThicknesses.append(thick)
     
+
+    initialEnergy = Energyrange(31, a_h2o, p_h2o)
+    print(f"Initial energy calculated from R0: {initialEnergy} MeV")
+    sigma, h2ovar, pwovar = stragglingWidth([0]+targetThicknesses, initialEnergy)
+    
+    c1, c2 = straggling(np.array([0]+targetThicknesses))
+
+    plt.figure(figsize=(12, 8))
+    plt.plot([0]+targetThicknesses, c1, label="c1", marker='o')
+    plt.plot([0]+targetThicknesses, c2, label="c2", marker='s')
+    plt.legend()
+    plt.grid()
+    plt.show()
+    plt.close()
+
+    plt.figure(figsize=(12, 8))
+    plt.plot([0]+targetThicknesses, sigma, label="sigma", marker='o')
+    plt.plot([0]+targetThicknesses, h2ovar, label="H2Ovar", marker='s')
+    plt.plot([0]+targetThicknesses, pwovar, label="pwovar", marker='^')
+    plt.legend()
+    plt.grid()
+    plt.show()
+    plt.close()
+    
+    # exit()
+
+    targetThicknesses = []
+    for thick in range(10, 200, 10):
+        targetThicknesses.append(thick)
+
     for thickness in targetThicknesses:
         dataFile = np.load(f"{dataset}/{targetFile}/input/depthdose_{material}_{nLayers}_{thickness}.npz")
         if boolWET:
@@ -485,8 +546,8 @@ for material in materials:
     fig.tight_layout()
 
     plt.savefig(f"{dataset}/{targetFile}/output/pdf/braggfit.pdf", format='pdf', bbox_inches='tight')
-    plt.show()
-    # plt.close()
+    # plt.show()
+    plt.close()
 
 initialEnergy = Energyrange(popt_notarget.R0, a_h2o, p_h2o)
 print(f"Initial energy calculated from R0: {initialEnergy} MeV")
