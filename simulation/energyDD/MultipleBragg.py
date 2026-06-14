@@ -198,10 +198,13 @@ def stragglingWidth(TargetThickness, initialEnergy):
     alpha_h2o = 2.585e-2
     alpha_prime_h2o = 0.087/10
     p_h2o = 1.738
-
+    p_h2o = 1.77
+    alpha_h2o = 2.2e-2
+    
     alpha_pbwo4 = 7.275e-3
     alpha_prime_pbwo4 = 0.537/10
-    p_pbwo4 = 1.77
+    p_pbwo4 = 1.69
+    
 
     c1 = (alpha_prime_h2o*p_h2o**3*alpha_h2o**(2/p_h2o))/(3*p_h2o-2)
     c2 = (alpha_prime_pbwo4*p_pbwo4**3*alpha_pbwo4**(2/p_pbwo4))/(3*p_pbwo4-2)
@@ -222,7 +225,7 @@ def stragglingWidth(TargetThickness, initialEnergy):
     # pbwo4Var = c2*((R_pbwo4-TargetThickness*SToPWO)**(3-2/p_pbwo4))*SToH2O
 
     onlyh2oVar = c1*((TargetThickness)**(3-2/p_h2o))
-    onlypbwo4Var = c2*((TargetThickness*SToPWO)**(3-2/p_pbwo4))*SToH2O*SToH2O
+    onlypbwo4Var = c2*((TargetThickness*SToPWO)**(3-2/p_pbwo4))*SToH2O**2
     
     h2oVar = c1*((TargetThickness)**(3-2/p_h2o))
     pbwo4Var = c2*((R_pbwo4)**(3-2/p_pbwo4)-(TargetThickness*SToPWO)**(3-2/p_pbwo4))*SToH2O**2
