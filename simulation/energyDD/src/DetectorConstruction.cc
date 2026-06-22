@@ -557,7 +557,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
 
   G4Box* solidPhantom = new G4Box("solidPhantom", phantomX/2, phantomY/2, phantomZ/2);
   G4LogicalVolume* logicPhantom = new G4LogicalVolume(solidPhantom, detMaterial, "logPhantom");
-  new G4PVPlacement(nullptr, G4ThreeVector(0,0,-phantomZ+3*cm), logicPhantom, "physPhantom", logicalworld, false, 0);
+  new G4PVPlacement(nullptr, G4ThreeVector(0,0,-phantomZ/2-0.5*cm), logicPhantom, "physPhantom", logicalworld, false, 0);
 
   G4Box* solidLayer = new G4Box("solidLayer", phantomX/2, phantomY/2, detSizeZ/2);
   G4LogicalVolume* logicLayer = new G4LogicalVolume(solidLayer, detMaterial, "logLayer");

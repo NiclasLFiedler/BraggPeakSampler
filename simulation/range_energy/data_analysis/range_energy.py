@@ -200,7 +200,7 @@ def analyse_range_energy(data : RangeEnergyRelationship, comparison_data: RangeE
     # Show the plot
     plt.grid(True)
     # plt.savefig(f"{path}/rangeenergy.svg", format="svg", bbox_inches="tight")
-    plt.savefig(f"{path}    /rangeenergy.pdf", format="pdf", bbox_inches="tight")
+    plt.savefig(f"{path}/rangeenergy.pdf", format="pdf", bbox_inches="tight")
     plt.show()
 
 
@@ -223,7 +223,7 @@ def main():
     datawater = RangeEnergyRelationship()
     
     energies = [3, 5, 10, 15, 20, 30, 40, 50, 60, 70, 80, 90, 100, 125, 150, 175, 200, 225, 250]
-    
+    energies = [3, 5, 10, 15, 20, 30, 40, 50, 60, 70, 80, 90, 100, 125, 150, 175, 200, 225]
     
     rho = []
     rho_h2o = 0.997

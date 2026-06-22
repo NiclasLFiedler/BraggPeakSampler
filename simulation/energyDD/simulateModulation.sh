@@ -6,7 +6,7 @@ JSON_OUT="../../analysis/config_tmp.json"
 DETECTOR_MATERIALS=("pbwo4" "h2o")
 DETECTOR_SIZES=(8 40)
 
-RESOLUTION=300
+RESOLUTION=50
 DETECTOR_SELECT=0
 # ── helper: apply jq patch, run simulation, analyse ──────────────────────────
 run_simulation() {
@@ -71,7 +71,7 @@ for (( m=0; m<${#DETECTOR_MATERIALS[@]}; m++ )); do
     run_simulation "$MAT" "$SIZE" 0 0
 
     # --- thickness sweep: 10 → 300 in steps of 10 (targetSelect=0) ---
-    for (( t=10; t<=250; t+=10 )); do
+    for (( t=10; t<=290; t+=5 )); do
         echo ""
         echo "--- Thickness sweep: $t mm ---"
         run_simulation "$MAT" "$SIZE" 2 "$t"

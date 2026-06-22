@@ -319,6 +319,33 @@ sigmasH2O = []
 
 materials = ["pbwo4", "h2o"]
 
+targetThicknesses = []
+for thick in range(0, 315, 5):
+    targetThicknesses.append(thick)
+
+initialEnergy = Energyrange(31, a_h2o, p_h2o)
+print(f"Initial energy calculated from R0: {initialEnergy} MeV")
+sigma, h2ovar, pwovar = stragglingWidth([0]+targetThicknesses, initialEnergy)
+
+c1, c2 = straggling(np.array([0]+targetThicknesses))
+plt.figure(figsize=(12, 8))
+plt.plot([0]+targetThicknesses, c1, label="c1", marker='o')
+plt.plot([0]+targetThicknesses, c2, label="c2", marker='s')
+plt.legend()
+plt.grid()
+plt.show()
+plt.close()
+plt.figure(figsize=(12, 8))
+plt.plot([0]+targetThicknesses, sigma, label="sigma", marker='o')
+plt.plot([0]+targetThicknesses, h2ovar, label="H2Ovar", marker='s')
+plt.plot([0]+targetThicknesses, pwovar, label="pwovar", marker='^')
+plt.legend()
+plt.grid()
+plt.show()
+plt.close()
+
+# exit()
+
 for material in materials:
     depth = []
     depthTarget = []
@@ -369,37 +396,7 @@ for material in materials:
     targetColorMap = ["#1f77b4", "#4e79a7", "#76b7b2", "#bab0ac", "#f28e2b", "#e15759", "#9c755f"]
 
     targetThicknesses = []
-    for thick in range(0, 315, 5):
-        targetThicknesses.append(thick)
-    
-
-    initialEnergy = Energyrange(31, a_h2o, p_h2o)
-    print(f"Initial energy calculated from R0: {initialEnergy} MeV")
-    sigma, h2ovar, pwovar = stragglingWidth([0]+targetThicknesses, initialEnergy)
-    
-    c1, c2 = straggling(np.array([0]+targetThicknesses))
-
-    plt.figure(figsize=(12, 8))
-    plt.plot([0]+targetThicknesses, c1, label="c1", marker='o')
-    plt.plot([0]+targetThicknesses, c2, label="c2", marker='s')
-    plt.legend()
-    plt.grid()
-    plt.show()
-    plt.close()
-
-    plt.figure(figsize=(12, 8))
-    plt.plot([0]+targetThicknesses, sigma, label="sigma", marker='o')
-    plt.plot([0]+targetThicknesses, h2ovar, label="H2Ovar", marker='s')
-    plt.plot([0]+targetThicknesses, pwovar, label="pwovar", marker='^')
-    plt.legend()
-    plt.grid()
-    plt.show()
-    plt.close()
-    
-    # exit()
-
-    targetThicknesses = []
-    for thick in range(10, 200, 10):
+    for thick in range(10, 240, 5):
         targetThicknesses.append(thick)
 
     for thickness in targetThicknesses:
@@ -549,7 +546,7 @@ for material in materials:
     fig.tight_layout()
 
     plt.savefig(f"{dataset}/{targetFile}/output/pdf/braggfit.pdf", format='pdf', bbox_inches='tight')
-    # plt.show()
+    plt.show()
     plt.close()
 
 initialEnergy = Energyrange(popt_notarget.R0, a_h2o, p_h2o)
@@ -562,10 +559,11 @@ plt.plot([0]+targetThicknesses, h2ovar, label="H2Ovar", marker='s')
 plt.plot([0]+targetThicknesses, pwovar, label="pwovar", marker='^')
 plt.legend()
 plt.grid()
-plt.show()
+# plt.show()
+plt.close()
 
 
-sigmaDiff = np.array(sigmasH2O)/np.array(sigmasPWO)
+sigmaDiff = np.array(sigmasH2O)-np.array(sigmasPWO)
 plt.figure(figsize=(16, 12))
 plt.plot([0]+targetThicknesses, sigmasH2O, label="H2O", marker='o')
 plt.plot([0]+targetThicknesses, sigmasPWO, label="PWO", marker='s')
