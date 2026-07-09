@@ -39,6 +39,8 @@ void EventAction::EndOfEventAction(const G4Event* event)
   std::vector<G4double> fEdep = trackerSD->GetEdep();
   std::map<G4int, G4double> fWetAccum = trackerSD->fWetAccum;
   G4double wetAccumValue = 0;
+  G4double eTot = 0;
+
   for(int i = 0; i < fEdep.size(); i++) {
     wetAccumValue = fWetAccum[i];
     // if(fWetAccum[i] != 0) {

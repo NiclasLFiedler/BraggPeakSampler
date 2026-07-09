@@ -1,8 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import json
+from scipy.stats import norm
 import ROOT
 from scipy.optimize import curve_fit
+from collections import defaultdict
 
 def gaussian(x, A, mu, sigma):
     return A * np.exp(-(x - mu)**2 / (2 * sigma**2))
@@ -43,10 +45,9 @@ datapath = f"data/{in_data[targetSelect]}"
 file = ROOT.TFile("data/temp/data.root")
 tree = file.Get("vtree")
 
-energy_per_layer  = {}
-energy_per_layer2 = {}
-energy_per_event  = {}
-wet_per_layer     = {}
+energy_per_event = defaultdict(float)
+hits = []
+
 
 for event in tree:
     eventid  = event.event
@@ -54,19 +55,67 @@ for event in tree:
     edep     = event.EDep
     wetAccum = event.WetAccum
     
-    energy_per_layer[layer]  = energy_per_layer.get(layer, 0.0) + edep
-    energy_per_layer2[layer] = energy_per_layer2.get(layer, 0.0) + edep
-    energy_per_event[eventid] = energy_per_event.get(eventid, 0.0) + edep
+    energy_per_event[eventid] += edep
+    hits.append((eventid, layer, edep, wetAccum))
 
-    
-    if layer not in wet_per_layer:
-        wet_per_layer[layer] = []
-    wet_per_layer[layer].append(wetAccum)
+energies = np.array(list(energy_per_event.values()))
+
+hist, bins = np.histogram(energies, bins=2000)
+centers = 0.5*(bins[1:] + bins[:-1])
+
+def gauss(x, A, mu, sigma):
+    return A*np.exp(-(x-mu)**2/(2*sigma**2))
+
+fit_threshold = 5.0   # MeV
+
+fit_energies = energies[energies > fit_threshold]
+
+hist, bins = np.histogram(fit_energies, bins=500)
+centers = 0.5*(bins[:-1] + bins[1:])
+peak_bin = np.argmax(hist[5:]) + 5
+
+peak_energy = centers[peak_bin]
+p0 = [hist.max(), peak_energy, fit_energies.std()/10]
+
+print(p0)
+try:
+    pars, _ = curve_fit(gauss, centers, hist, p0=p0, maxfev=10000)
+    A, mu, sigma = pars
+except:
+    plt.hist(energies, bins=2000)
+    plt.xlabel("Total deposited energy [MeV]")
+    plt.ylabel("Counts")
+    plt.show()
+
+plt.hist(energies, bins=2000)
+plt.plot(centers, gauss(centers, *pars), 'r-', linewidth=2)
+plt.xlabel("Total deposited energy [MeV]")
+plt.ylabel("Counts")
+# plt.show()
+plt.close()
+
+cut = mu - 4*sigma
+if mu-cut < 4:
+    cut = mu-4
+print("Cut value for total deposited energy:", cut)
+
+selected_events = {
+    eventid
+    for eventid, energy in energy_per_event.items()
+    if energy > cut
+}
+
+energy_per_layer = defaultdict(float)
+wet_per_layer = defaultdict(list)
+
+for eventid, layer, edep, wetAccum in hits:
+    if eventid in selected_events:
+        energy_per_layer[layer] += edep
+        wet_per_layer[layer].append(wetAccum)
 
 layers = np.array(sorted(energy_per_layer.keys()))
 depth  = (layers + 0.5) * detectorZ / (nLayers)
 energy = np.array([energy_per_layer[l]  for l in layers])
-energy2 = np.array([energy_per_layer2[l] for l in layers])
 
 depthWET = []
 mean_wet_per_layer     = {}

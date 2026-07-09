@@ -104,7 +104,7 @@ def cyl_gauss(a,x):
 def depth_dose_distribution(z, Phi0, R0, sigma, epsilon): 
     beta =  0.012
     gamma = 0.6
-
+    beta = 0
     return Phi0*sigma**(1/p_h2o)*special.gamma(1/p_h2o)/(np.sqrt(2*np.pi)*p_h2o*a_h2o**(1/p_h2o)*(1+beta*R0))*(sigma**(-1)*cyl_gauss(-1/p_h2o,(z-R0)/sigma)+(beta/p_h2o + gamma*beta + epsilon/R0)*cyl_gauss(-1/p_h2o-1,(z-R0)/sigma))
 
 def depth_dose_distribution_ionization(z, Phi0, R0, sigma, epsilon): 
@@ -341,7 +341,7 @@ plt.plot([0]+targetThicknesses, h2ovar, label="H2Ovar", marker='s')
 plt.plot([0]+targetThicknesses, pwovar, label="pwovar", marker='^')
 plt.legend()
 plt.grid()
-plt.show()
+# plt.show()
 plt.close()
 
 # exit()
@@ -396,7 +396,7 @@ for material in materials:
     targetColorMap = ["#1f77b4", "#4e79a7", "#76b7b2", "#bab0ac", "#f28e2b", "#e15759", "#9c755f"]
 
     targetThicknesses = []
-    for thick in range(10, 240, 5):
+    for thick in range(10, 260, 10):
         targetThicknesses.append(thick)
 
     for thickness in targetThicknesses:
@@ -562,13 +562,15 @@ plt.grid()
 # plt.show()
 plt.close()
 
-
-sigmaDiff = np.array(sigmasH2O)-np.array(sigmasPWO)
+_, calch2ovar, _ = stragglingWidth(300, initialEnergy)
+calcDiff = np.array(sigma)/np.array(calch2ovar)
+sigmaDiff = np.array(sigmasPWO)/np.array(sigmasH2O)
 plt.figure(figsize=(16, 12))
 plt.plot([0]+targetThicknesses, sigmasH2O, label="H2O", marker='o')
 plt.plot([0]+targetThicknesses, sigmasPWO, label="PWO", marker='s')
 plt.plot([0]+targetThicknesses, sigmaDiff, label="Ratio", marker='^')
 plt.plot([0]+targetThicknesses, sigma, label="Calculated Straggling Width", marker='x')
+plt.plot([0]+targetThicknesses, calcDiff, label="Calculated Ratio", marker='x')
 plt.xlabel("Target Thickness (mm)")
 plt.ylabel("Sigma (cm)")
 plt.title("Sigma vs Target Thickness")
