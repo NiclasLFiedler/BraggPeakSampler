@@ -37,10 +37,14 @@ void EventAction::EndOfEventAction(const G4Event* event)
   TrackerSD* trackerSD = (TrackerSD*)SDmanager->FindSensitiveDetector("TrackerDetectorSD");
 
   std::vector<G4double> fEdep = trackerSD->GetEdep();
+  G4double fEtot = trackerSD->GetEtot();
   std::map<G4int, G4double> fWetAccum = trackerSD->fWetAccum;
   G4double wetAccumValue = 0;
   G4double eTot = 0;
-
+  // if(fEtot > 10){
+    // trackerSD->ClearHits();
+    // return;  
+  // }
   for(int i = 0; i < fEdep.size(); i++) {
     wetAccumValue = fWetAccum[i];
     // if(fWetAccum[i] != 0) {

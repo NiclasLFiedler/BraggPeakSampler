@@ -10,7 +10,7 @@ RunAction::RunAction()
   G4RootAnalysisManager* analysisManager = G4RootAnalysisManager::Instance();
   //analysisManager->SetNtupleMerging(true);
   analysisManager->SetNtupleFileName("../data/temp/data.root");
-  analysisManager->CreateNtuple("vtree", "track, NDet and EDep and WetAccum");
+  analysisManager->CreateNtuple("vtree", "track, NDet, EDep and WetAccum");
   analysisManager->CreateNtupleIColumn(0, "event");	
   analysisManager->CreateNtupleIColumn(0, "NDet");
   analysisManager->CreateNtupleDColumn(0, "EDep");

@@ -46,7 +46,6 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
   G4double momentum = aStep->GetTrack()->GetMomentum().mag();  // in MeV/c
   G4double energy = aStep->GetPreStepPoint()->GetTotalEnergy();
   G4double eKin = aStep->GetPreStepPoint()->GetKineticEnergy();
-  G4double beta = momentum / energy;
   G4double StepLength = aStep->GetStepLength();
   G4double dEdX = eDep/StepLength;
   
@@ -55,7 +54,6 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
   newHit->SetEdep(eDep);
   newHit->SetPos(PPos);
   newHit->SetdEdX(dEdX);
-  newHit->Setbeta(beta);
   newHit->SetEtot(energy);
   newHit->SetStepLength(StepLength);
 

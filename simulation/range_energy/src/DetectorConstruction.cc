@@ -86,11 +86,10 @@ void DetectorConstruction::DefineMaterials()
   // Air defined using NIST Manager
   worldMat = nistManager->FindOrBuildMaterial("G4_AIR"); 
 
-  // detMaterial = nistManager->FindOrBuildMaterial("G4_PbWO4");
-  // detMaterial->GetIonisation()->SetBirksConstant(0.008694); // mm/MeV
+  detMaterial = nistManager->FindOrBuildMaterial("G4_PbWO4");
+  detMaterial->GetIonisation()->SetMeanExcitationEnergy(600.7*eV);
   
-  detMaterial = nistManager->FindOrBuildMaterial("G4_WATER");
-  detMaterial->GetIonisation()->SetBirksConstant(0.052*mm/MeV);
+  // detMaterial = nistManager->FindOrBuildMaterial("G4_WATER");
 
   G4Material *SiO2 = new G4Material("SiO2", 2.65*g/cm3, 2);
   SiO2->AddElement(elSi, 1);
@@ -205,8 +204,6 @@ void DetectorConstruction::DefineMaterials()
   PMMA->AddElement(elH, 8);
   PMMA->AddElement(elO, 2);
 
-  detMaterial = Teflon;
-
   G4cout <<"Mean excitation Energy: " << detMaterial->GetIonisation()->GetMeanExcitationEnergy() << G4endl;
   G4cout <<"Density: " << detMaterial->GetDensity()/(g/cm3) << G4endl;
   G4cout <<"Radiation length: " << detMaterial->GetRadlen()/cm << G4endl;
@@ -221,9 +218,9 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   G4double worldZ = 500*cm;
   G4double worldY = 500*cm;
 
-  G4double detSizeZ = 2000*mm; //det size in x
-  G4double detSizeX = 2000*mm; //det size in y
-  G4double detSizeY = 2000*mm; //det size in z
+  G4double detSizeX = 200*cm; //det size in y
+  G4double detSizeZ = 200*cm; //det size in x
+  G4double detSizeY = 200*cm; //det size in z
 
 
   // Definitions of Solids, Logical Volumes, Physical Volumes
@@ -263,7 +260,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   logicaldetector->SetUserLimits(userLimits);
 
   physdetector = new G4PVPlacement(nullptr,  // no rotation
-    G4ThreeVector(0.,0., detSizeZ/2+1*um),              // at (x,y,z)
+    G4ThreeVector(0.,0., detSizeZ/2),              // at (x,y,z)
     // G4ThreeVector(0.,0.,detSizeZ*i),  
     logicaldetector,            // its logical volume
     "physdetector",           // its name

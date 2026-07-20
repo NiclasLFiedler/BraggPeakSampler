@@ -14,4 +14,6 @@
 /vis/scene/endOfEventAction accumulate 10
 /gun/particle proton
 #/gun/particle mu-
-/vis/ogl/set/displayListLimit 5000000
+/vis/ogl/set/displayListLimit 500000
+/process/inactivate protonInelastic proton
+/process/inactivate msc

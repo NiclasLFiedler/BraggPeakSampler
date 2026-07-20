@@ -27,6 +27,7 @@ class TrackerSD : public G4VSensitiveDetector
     void Reset() { hitsCount = 0; }
     void AddEdep(G4int layerID, G4double edep);
     const std::vector<G4double>& GetEdep() const { return fEdep; }
+    G4double GetEtot() const { return fEtot; }
 
     G4int fLayers = 0;
     std::map<G4int, G4double> fWetAccum;
@@ -34,6 +35,7 @@ class TrackerSD : public G4VSensitiveDetector
     G4int hitsCount = 0;
     TrackerHitsCollection* fHitsCollection = nullptr;
     std::vector<G4double> fEdep;
+    G4double fEtot;
     G4EmCalculator* fEmCalc = nullptr;  // lazy init
     
 };

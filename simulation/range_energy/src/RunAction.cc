@@ -18,7 +18,6 @@ RunAction::RunAction()
   analysisManager->CreateNtupleDColumn("pos");	 
   analysisManager->CreateNtupleDColumn("eDep");
   analysisManager->CreateNtupleDColumn("dEdX");
-  analysisManager->CreateNtupleDColumn("beta");
   analysisManager->CreateNtupleDColumn("trackid");
   analysisManager->CreateNtupleDColumn("eKin");
   analysisManager->CreateNtupleDColumn("eTot");

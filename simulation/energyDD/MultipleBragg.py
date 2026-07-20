@@ -20,12 +20,10 @@ import json
 
 #plt.style.use(['science','notebook','grid']) 
 
-a_h2o=2.585e-3
-p_h2o=1.738
-a_pwo=7.275e-4
-p_pwo=1.690
-a_dsb = 1.030e-3
-p_dsb = 1.713
+a_h2o=2.369e-3
+p_h2o=1.757
+a_pwo=6.741e-4
+p_pwo=1.707
 
 class fit_params:
     def __init__(self, Phi0=0, R0=0, sigma=0, epsilon=0, curve=[], stddev = []) -> None:
@@ -195,16 +193,21 @@ def S_Range(R, alpha, p):
 def stragglingWidth(TargetThickness, initialEnergy):
     TargetThickness = np.array(TargetThickness)
     print(TargetThickness)
-    alpha_h2o = 2.585e-2
     alpha_prime_h2o = 0.087/10
-    p_h2o = 1.738
-    p_h2o = 1.77
-    alpha_h2o = 2.2e-2
-    
-    alpha_pbwo4 = 7.275e-3
     alpha_prime_pbwo4 = 0.537/10
-    p_pbwo4 = 1.69
     
+    # alpha_h2o = 2.585e-2
+    # p_h2o = 1.738
+    
+    # alpha_pbwo4 = 7.275e-3
+    # p_pbwo4 = 1.69
+    
+    alpha_h2o = 2.369e-2*19
+    p_h2o = 1.757
+
+    alpha_pbwo4 = 6.741e-3
+    p_pbwo4 = 1.707
+
 
     c1 = (alpha_prime_h2o*p_h2o**3*alpha_h2o**(2/p_h2o))/(3*p_h2o-2)
     c2 = (alpha_prime_pbwo4*p_pbwo4**3*alpha_pbwo4**(2/p_pbwo4))/(3*p_pbwo4-2)
@@ -215,20 +218,19 @@ def stragglingWidth(TargetThickness, initialEnergy):
     R_pbwo4 = rangeEnergy(initialEnergy, alpha_pbwo4, p_pbwo4)
 
     print(f"Ranges: R_h2o = {R_h2o} cm, R_pbwo4 = {R_pbwo4} cm")
-
     SToPWO = S_Energy(initialEnergy, alpha_h2o, p_h2o)/S_Energy(initialEnergy, alpha_pbwo4, p_pbwo4)
+    initialEnergy = Energyrange(R_h2o-TargetThickness, alpha_h2o, p_h2o)
     SToH2O = S_Energy(initialEnergy, alpha_pbwo4, p_pbwo4)/S_Energy(initialEnergy, alpha_h2o, p_h2o)
 
     print(f"Stopping power ratios: SToPWO = {SToPWO}, SToH2O = {SToH2O}")
 
-    # h2oVar = c1*((R_h2o)**(3-2/p_h2o)-(R_h2o-TargetThickness)**(3-2/p_h2o))
-    # pbwo4Var = c2*((R_pbwo4-TargetThickness*SToPWO)**(3-2/p_pbwo4))*SToH2O
 
     onlyh2oVar = c1*((TargetThickness)**(3-2/p_h2o))
     onlypbwo4Var = c2*((TargetThickness*SToPWO)**(3-2/p_pbwo4))*SToH2O**2
     
-    h2oVar = c1*((TargetThickness)**(3-2/p_h2o))
-    pbwo4Var = c2*((R_pbwo4)**(3-2/p_pbwo4)-(TargetThickness*SToPWO)**(3-2/p_pbwo4))*SToH2O**2
+    h2oVar  = c1 * ( R_h2o**(3-2/p_h2o) - (R_h2o - TargetThickness)**(3-2/p_h2o) )
+    pbwo4Var = c2 * ( (R_pbwo4 - TargetThickness*SToPWO)**(3-2/p_pbwo4) ) * SToH2O**2
+    
     
     fullvarh2o = c1*((R_h2o)**(3-2/p_h2o))
     fullvarpwo = c2*((R_pbwo4)**(3-2/p_pbwo4))*SToH2O**2
@@ -237,20 +239,27 @@ def stragglingWidth(TargetThickness, initialEnergy):
 
     sigma2 = h2oVar + pbwo4Var
 
-    sigma = np.sqrt(np.array(sigma2))*1/10
+    sigma = np.sqrt(np.array(sigma2))*1/10  
 
     print(sigma)
-    return sigma, np.sqrt(onlyh2oVar)*1/10, np.sqrt(onlypbwo4Var)*1/10
+    return sigma, np.sqrt(h2oVar)*1/10, np.sqrt(pbwo4Var)*1/10
 
 def straggling(z):
-
-    alpha_h2o = 2.585e-2
     alpha_prime_h2o = 0.087/10
-    p_h2o = 1.738
-
-    alpha_pbwo4 = 7.275e-3
     alpha_prime_pbwo4 = 0.537/10
-    p_pbwo4 = 1.690
+    
+    # alpha_h2o = 2.585e-2
+    # p_h2o = 1.738
+    
+    # alpha_pbwo4 = 7.275e-3
+    # p_pbwo4 = 1.69
+    
+    alpha_h2o = 2.369e-2
+    p_h2o = 1.757
+
+    alpha_pbwo4 = 6.741e-3
+    p_pbwo4 = 1.707
+
 
     R_h2o = rangeEnergy(initialEnergy, alpha_h2o, p_h2o)
     R_pbwo4 = rangeEnergy(initialEnergy, alpha_pbwo4, p_pbwo4)
@@ -316,8 +325,11 @@ capSize = 3
 
 sigmasPWO = []
 sigmasH2O = []
+sigmasPWOmcs = []
+sigmasH2Omcs = []
 
-materials = ["pbwo4", "h2o"]
+
+materials = ["pbwo4", "h2o", "pbwo4mcs", "h2omcs"]
 
 targetThicknesses = []
 for thick in range(0, 315, 5):
@@ -377,7 +389,7 @@ for material in materials:
     unfoldedEntriesTargetTemp = []
     dataFile = np.load(f"{dataset}/{file}/input/depthdose_{material}_{nLayers}.npz")
     boolWET = True
-    if material == "h2o":
+    if material == "h2o" or material == "h2omcs":
         boolWET = True
     depth = dataFile["depth"]
     depthErr = dataFile["depth_err"]
@@ -396,7 +408,7 @@ for material in materials:
     targetColorMap = ["#1f77b4", "#4e79a7", "#76b7b2", "#bab0ac", "#f28e2b", "#e15759", "#9c755f"]
 
     targetThicknesses = []
-    for thick in range(10, 260, 10):
+    for thick in range(5, 290, 5):
         targetThicknesses.append(thick)
 
     for thickness in targetThicknesses:
@@ -416,33 +428,12 @@ for material in materials:
         mean_errTarget.append(dataFile["mean_err"])
         sigma_errTarget.append(dataFile["sigma_err"])
 
-
-        # alpha = 0.02585
-        # p = 1.738
-        # t = mean-meanTarget
-        # sigmat = np.sqrt(sigmaTarget**2-sigma**2)
-        # pmod = sigmat**2/t
-        # print("─────────────────────────────────────────────────────────")
-        # print(f"Energy based pmod calculation")
-        # print(f"t = {t} cm")
-        # print(f"sigmat = {sigmat} cm")
-        # print(f"pmod = {pmod} um")
-
-        # t_E = alpha*(mean**p- meanTarget**p)
-        # print(f"t (from Energy): {t_E} cm")
-        # print("─────────────────────────────────────────────────────────")
-
     plt.rcParams.update({'font.size': 32})
     fig, ax1 = plt.subplots(figsize=(16, 12))
 
     start_time = time.time()
 
     z = np.linspace(0, 40, 4001)
-    if material == "h2o":
-        z = np.linspace(0, 40, 4001)
-    else:
-        z = np.linspace(0, 40, 4001)
-
 
     #─────────────────────────────────────────────────────────
     # Initial Guess calculation
@@ -484,8 +475,15 @@ for material in materials:
     
     if material == "h2o":
         sigmasH2O.append(popt_notarget.sigma)
-    else:
+    elif material == "h2omcs":
+        sigmasH2Omcs.append(popt_notarget.sigma)
+    elif material == "pbwo4":
         sigmasPWO.append(popt_notarget.sigma)
+    elif material == "pbwo4mcs":
+        sigmasPWOmcs.append(popt_notarget.sigma)
+    else:
+        print("Unknown material:", material)
+        exit()
 
     ax1.plot(z, popt_notarget.curve, color="black", linewidth = lineWidth, label=fr"No target")# rf"$R_0={popt_notarget.R0:.3f}~cm$, $\sigma={popt_notarget.sigma:.3f}~cm$")
 
@@ -532,8 +530,16 @@ for material in materials:
         print("─────────────────────────────────────────────────────────")
         if material == "h2o":
             sigmasH2O.append(popt_hetero.sigma)
-        else:
+        elif material == "h2omcs":
+            sigmasH2Omcs.append(popt_hetero.sigma)
+        elif material == "pbwo4":
             sigmasPWO.append(popt_hetero.sigma)
+        elif material == "pbwo4mcs":
+            sigmasPWOmcs.append(popt_hetero.sigma)
+        else:
+            print("Unknown material:", material)
+            exit()
+
     end_time = time.time()
 
     elapsed_time = end_time - start_time
@@ -546,30 +552,66 @@ for material in materials:
     fig.tight_layout()
 
     plt.savefig(f"{dataset}/{targetFile}/output/pdf/braggfit.pdf", format='pdf', bbox_inches='tight')
-    plt.show()
+    # plt.show()
     plt.close()
 
+sigmasPWO = np.array(sigmasPWO)
+sigmasH2O = np.array(sigmasH2O)
+sigmasPWOmcs = np.array(sigmasPWOmcs)
+sigmasH2Omcs = np.array(sigmasH2Omcs)
+
+print(f"Sigmas PWO: {sigmasPWO}")
+print(f"Sigmas H2O: {sigmasH2O}")
+print(f"Sigmas PWO MCS: {sigmasPWOmcs}")
+print(f"Sigmas H2O MCS: {sigmasH2Omcs}")
+
 initialEnergy = Energyrange(popt_notarget.R0, a_h2o, p_h2o)
-print(f"Initial energy calculated from R0: {initialEnergy} MeV")
 sigma, h2ovar, pwovar = stragglingWidth([0]+targetThicknesses, initialEnergy)
+
+print(f"Calculated straggling width: {sigma}")
+print(f"Calculated H2O variance: {h2ovar}")
+print(f"Calculated PWO variance: {pwovar}")
+
+_, calch2ovar, _ = stragglingWidth(300, initialEnergy)
+calcDiff = np.array(sigma)/np.array(calch2ovar)
+sigmaDiff = np.array(sigmasPWO)/np.array(sigmasH2O)
+sigmaDiffmcs = np.array(sigmasPWOmcs)/np.array(sigmasH2Omcs)
+
+sigmaMCSH2O = np.sqrt(-sigmasH2O**2+sigmasH2Omcs**2)
+sigmaMCSPWO = np.sqrt(-sigmasPWO**2+sigmasPWOmcs**2)
+
+h2ovarCorr = np.sqrt(np.array(h2ovar)**2+np.array(sigmaMCSH2O)**2)
+pwovarCorr = np.sqrt(np.array(pwovar)**2+np.array(sigmaMCSPWO)**2)
+sigmaCorr = np.sqrt(np.array(h2ovarCorr)**2+np.array(pwovarCorr)**2)
+
+print("─────────────────────────────────────────────────────────")
+print(f"Calculated straggling width with MCS: {sigmaCorr}")
+print(f"Calculated H2O variance with MCS: {h2ovarCorr}")
+print(f"Calculated PWO variance with MCS: {pwovarCorr}")
 
 plt.figure(figsize=(16, 12))
 plt.plot([0]+targetThicknesses, sigma, label="sigma", marker='o')
 plt.plot([0]+targetThicknesses, h2ovar, label="H2Ovar", marker='s')
 plt.plot([0]+targetThicknesses, pwovar, label="pwovar", marker='^')
+plt.plot([0]+targetThicknesses, sigmaCorr, label="sigmaCorr", marker='o')
+plt.plot([0]+targetThicknesses, h2ovarCorr, label="H2OvarCorr", marker='s')
+plt.plot([0]+targetThicknesses, pwovarCorr, label="pwovarCorr", marker='^')
+
 plt.legend()
 plt.grid()
-# plt.show()
+plt.show()
 plt.close()
 
-_, calch2ovar, _ = stragglingWidth(300, initialEnergy)
-calcDiff = np.array(sigma)/np.array(calch2ovar)
-sigmaDiff = np.array(sigmasPWO)/np.array(sigmasH2O)
 plt.figure(figsize=(16, 12))
 plt.plot([0]+targetThicknesses, sigmasH2O, label="H2O", marker='o')
+plt.plot([0]+targetThicknesses, sigmasH2Omcs, label="H2O MCS", marker='^')
 plt.plot([0]+targetThicknesses, sigmasPWO, label="PWO", marker='s')
+plt.plot([0]+targetThicknesses, sigmasPWOmcs, label="PWO MCS", marker='s')
 plt.plot([0]+targetThicknesses, sigmaDiff, label="Ratio", marker='^')
+plt.plot([0]+targetThicknesses, sigmaDiffmcs, label="Ratio MCS", marker='^')
+
 plt.plot([0]+targetThicknesses, sigma, label="Calculated Straggling Width", marker='x')
+plt.plot([0]+targetThicknesses, sigmaCorr, label="Calculated Straggling Width with MCS", marker='x')
 plt.plot([0]+targetThicknesses, calcDiff, label="Calculated Ratio", marker='x')
 plt.xlabel("Target Thickness (mm)")
 plt.ylabel("Sigma (cm)")

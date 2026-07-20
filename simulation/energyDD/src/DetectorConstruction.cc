@@ -424,8 +424,8 @@ void DetectorConstruction::DefineMaterials()
     G4cout << "Setting Materialproperties" << G4endl;
     detMaterial = nistManager->FindOrBuildMaterial("G4_PbWO4");
     detMaterial->GetIonisation()->SetMeanExcitationEnergy(600.7*eV);
-    detMaterial->GetIonisation()->SetBirksConstant(0.008694);
-    detMaterial->SetMaterialPropertiesTable(pbwo4MPT);
+    // detMaterial->GetIonisation()->SetBirksConstant(0.008694);
+    // detMaterial->SetMaterialPropertiesTable(pbwo4MPT);
   }
   else if(detectorType == "dsb"){
     detMaterial = DSB_Gd;
@@ -547,8 +547,8 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   logicalworld = new G4LogicalVolume(solidworld, worldMat, "logicalWorld");
   physworld = new G4PVPlacement(nullptr, G4ThreeVector(), logicalworld, "physworld", nullptr, false, 0, fCheckOverlaps);  
   
-  G4double phantomX = 3.0 * cm;
-  G4double phantomY = 3.0 * cm;
+  G4double phantomX = 200 * cm;
+  G4double phantomY = 200 * cm;
   G4double phantomZ = detSizeZ/mm*cm;
   if(detectorType == "pbwo4"){
     phantomZ = 8*cm;

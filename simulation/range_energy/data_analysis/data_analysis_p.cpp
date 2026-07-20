@@ -319,12 +319,13 @@ struct particle {
     }
 
     void CalculateRange(){
-        range = 0;
-        for(const auto& StepLengthChannel : StepLength){
-            for(const double& step : StepLengthChannel){
-                range += step;
-            }
-        }
+        // range = 0;
+        // // for(const auto& StepLengthChannel : StepLength){
+            // // for(const double& step : StepLengthChannel){
+                // // range += step;
+            // // }
+        // }
+        range = fprojZ.at(fnbofdetectors-1).back();
         return;
     }
 
@@ -623,7 +624,6 @@ void data_analysis_p(int energy = 0){
 	datatree->SetBranchAddress("eDep", &EDep);	
     datatree->SetBranchAddress("pos", &Pos);
     datatree->SetBranchAddress("dEdX", &dEdX);
-    datatree->SetBranchAddress("beta", &beta);
     datatree->SetBranchAddress("trackid", &TrackID);
     datatree->SetBranchAddress("eKin", &eKin);
     datatree->SetBranchAddress("eTot", &eTot);
@@ -666,7 +666,6 @@ void data_analysis_p(int energy = 0){
             proton.SetStepLength(0, StepLength);
             proton.SetdEdX(0, roundEnergy(dEdX));
             proton.SetprojZ(0, Pos);
-            proton.Setbeta(0, beta);
             proton.SeteKin(0, eKin);
         }
         prevEvent = event; 

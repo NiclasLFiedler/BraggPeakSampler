@@ -52,7 +52,7 @@ hits = []
 for event in tree:
     eventid  = event.event
     layer    = event.NDet
-    edep     = event.EDep
+    edep     = event.EDep 
     wetAccum = event.WetAccum
     
     energy_per_event[eventid] += edep
@@ -60,44 +60,49 @@ for event in tree:
 
 energies = np.array(list(energy_per_event.values()))
 
-hist, bins = np.histogram(energies, bins=2000)
+hist, bins = np.histogram(energies, bins=200)
 centers = 0.5*(bins[1:] + bins[:-1])
 
 def gauss(x, A, mu, sigma):
     return A*np.exp(-(x-mu)**2/(2*sigma**2))
 
-fit_threshold = 5.0   # MeV
+# fit_threshold = 5.0   # MeV
 
-fit_energies = energies[energies > fit_threshold]
+# fit_energies = energies[energies > fit_threshold]
 
-hist, bins = np.histogram(fit_energies, bins=500)
-centers = 0.5*(bins[:-1] + bins[1:])
-peak_bin = np.argmax(hist[5:]) + 5
+# hist, bins = np.histogram(fit_energies, bins=200)
 
-peak_energy = centers[peak_bin]
-p0 = [hist.max(), peak_energy, fit_energies.std()/10]
+# centers = 0.5*(bins[:-1] + bins[1:])
 
-print(p0)
-try:
-    pars, _ = curve_fit(gauss, centers, hist, p0=p0, maxfev=10000)
-    A, mu, sigma = pars
-except:
-    plt.hist(energies, bins=2000)
-    plt.xlabel("Total deposited energy [MeV]")
-    plt.ylabel("Counts")
-    plt.show()
+# peak_bin = np.argmax(hist)
 
-plt.hist(energies, bins=2000)
-plt.plot(centers, gauss(centers, *pars), 'r-', linewidth=2)
-plt.xlabel("Total deposited energy [MeV]")
-plt.ylabel("Counts")
+# peak_energy = centers[peak_bin]
+# p0 = [hist.max(), peak_energy, fit_energies.std()/20]
+
+# print(p0)
+# try:
+#     pars, _ = curve_fit(gauss, centers, hist, p0=p0, maxfev=1000000)
+#     A, mu, sigma = pars
+# except:
+#     print("Curve fitting failed. Using initial parameters.")
+#     plt.hist(energies, bins=200)
+#     plt.xlabel("Total deposited energy [MeV]")
+#     plt.ylabel("Counts")
+#     plt.show()
+
+# plt.hist(energies, bins=200)
+# plt.plot(centers, gauss(centers, *pars), 'r-', linewidth=2)
+# plt.xlabel("Total deposited energy [MeV]")
+# plt.ylabel("Counts")
 # plt.show()
-plt.close()
+# plt.close()
 
-cut = mu - 4*sigma
-if mu-cut < 4:
-    cut = mu-4
-print("Cut value for total deposited energy:", cut)
+# cut = mu - 2*sigma
+# if mu-cut < 2:
+#     cut = mu-2
+# print("Cut value for total deposited energy:", cut)
+
+cut = 5
 
 selected_events = {
     eventid
@@ -218,6 +223,6 @@ save_kwargs = dict(
 )
 
 if targetSelect == 0:
-    np.savez(f"{datapath}/input/depthdose_{detectorType}_{nLayers}.npz", **save_kwargs)
+    np.savez(f"{datapath}/input/depthdose_{detectorType}mcs_{nLayers}.npz", **save_kwargs)
 else:
-    np.savez(f"{datapath}/input/depthdose_{detectorType}_{nLayers}_{targetThickness}.npz", **save_kwargs)
+    np.savez(f"{datapath}/input/depthdose_{detectorType}mcs_{nLayers}_{targetThickness}.npz", **save_kwargs)

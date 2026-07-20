@@ -14,6 +14,7 @@ TrackerSD::TrackerSD(const G4String& name, const G4String& hitsCollectionName, G
   collectionName.insert(hitsCollectionName);
   fLayers = layers;
   fEdep.resize(fLayers, 0.0);
+  fEtot = 0.0;
   if (!fEmCalc) fEmCalc = new G4EmCalculator();
 }
 
@@ -55,6 +56,7 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep, G4TouchableHistory*)
     G4double wet_step = (dedx_mat / dedx_water) * stepLength;
 
     fWetAccum[layerID] += wet_step; 
+    fEtot = kineticE;
   }
 
   if (eDep >= 0) {
@@ -77,6 +79,7 @@ void TrackerSD::EndOfEvent(G4HCofThisEvent*)
 void TrackerSD::ClearHits()
 {
   fEdep = std::vector<G4double>(fLayers, 0);
+  fEtot = 0;
   fWetAccum.clear();
   return;
 }

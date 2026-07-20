@@ -94,8 +94,8 @@ def get_range_energy(energy, path, enable_output=False, enable_plot=False):
         plt.legend()
         plt.grid(True)
         plt.savefig(f'{path}/range_fit_{energy}.pdf', format="pdf", bbox_inches="tight")
-        plt.close()
-        #plt.show()
+        # plt.close()
+        plt.show()
     
     return (energy, mean, abs(sigma))
 
@@ -250,8 +250,8 @@ def main():
     for index, energy in enumerate(energies):
         if(index == len(energies)-cutoff):
             break
-        data.add_data(*get_range_energy(energy, "pbwo4", enable_output=False, enable_plot=False))
-        data2.add_data(*get_range_energy(energy, "ptfe", enable_output=False, enable_plot=False))
+        data.add_data(*get_range_energy(energy, "pbwo4proj", enable_output=False, enable_plot=False))
+        data2.add_data(*get_range_energy(energy, "h2oproj", enable_output=False, enable_plot=False))
         datawater.add_data(*get_range_energy(energy, "h2o", enable_output=False, enable_plot=False))
 
 

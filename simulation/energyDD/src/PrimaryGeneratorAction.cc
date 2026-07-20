@@ -121,17 +121,6 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event* anEvent)
     fParticleGun->SetParticleMomentumDirection(beamPosIsocentre-beamPosNozzle);    
     beamPos = beamPosNozzle;
   }
-  else if(particle->GetParticleName() == "mu-"){
-    fParticleGun->SetParticleEnergy(3*GeV);
-    beamX = beamX/2*(1 - 2*G4UniformRand());
-    beamZ  = beamZ/2*(1 - 2*G4UniformRand());
-    beamPos = G4ThreeVector(beamX, beamY-1*um, beamZ);
-
-    G4double theata = pow(cos(M_PI/2*G4UniformRand()), 2);
-    G4double phi = 2*M_PI*(1-2*G4UniformRand());
-    fParticleGun->SetParticleMomentumDirection(G4ThreeVector(sin(theata)*sin(phi),-cos(theata), sin(theata)*cos(phi)));
-    // fParticleGun->SetParticleMomentumDirection(G4ThreeVector(0,-1,0));
-  }
 
   // Apply beam position and direction
   fParticleGun->SetParticlePosition(beamPos);

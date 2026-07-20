@@ -10,6 +10,9 @@
 #include "G4OpticalPhysics.hh"
 #include "QGSP_BIC_HP.hh"
 
+#include "G4EmStandardPhysics_option4.hh"
+
+#include "G4PhysListFactory.hh"
 #include "Randomize.hh"
 
 #include "G4VisExecutive.hh"
@@ -34,19 +37,16 @@ int main(int argc,char** argv)
   // Set mandatory initialization classes
   //
   runManager->SetUserInitialization(new B2a::DetectorConstruction());
-
-  auto physicsList = new QBBC();
-  //auto physicsList = new QGSP_BIC_HP();
+  
+  G4PhysListFactory factory;
+  // auto physicsList = new QBBC();
+  auto physicsList = factory.GetReferencePhysList("QGSP_BIC_EMY");
+  // physicsList->ReplacePhysics(new G4EmStandardPhysics_option4());
+  
   G4StepLimiterPhysics* stepLimitPhys = new G4StepLimiterPhysics();
   stepLimitPhys->SetApplyToAll(true); // activates step limit for ALL particles
   physicsList->RegisterPhysics(stepLimitPhys);
-  G4OpticalPhysics* opticalPhysics = new G4OpticalPhysics();
-	auto opticalParams = G4OpticalParameters::Instance();
-	//opticalParams->SetScintByParticleType(true);
-	//opticalParams->SetScintTrackSecondariesFirst(true);
-  //physicsList->RegisterPhysics(opticalPhysics);
-  //G4EmStandardPhysics_option4* emstandard_option4 = new G4EmStandardPhysics_option4();	
-	//physicsList->RegisterPhysics(emstandard_option4);
+
 
 
   runManager->SetUserInitialization(physicsList);

@@ -274,12 +274,15 @@ struct particle {
     }
 
     void CalculateRange(){
-        range = 0;
-        for(const auto& StepLengthChannel : StepLength){
-            for(const double& step : StepLengthChannel){
-                range += step;
-            }
-        }
+        // range = 0;
+        // for(const auto& StepLengthChannel : StepLength){
+        //     for(const double& step : StepLengthChannel){
+        //         range += step;
+        //     }
+        // }
+        
+        range = fprojZ.at(fnbofdetectors-1).back();
+        
         return;
     }
 

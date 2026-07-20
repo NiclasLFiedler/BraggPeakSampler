@@ -1,5 +1,7 @@
 /run/numberOfThreads 16
 /run/initialize
 /run/verbose 1
+#/process/inactivate msc
+#/process/inactivate protonInelastic proton
 /gun/particle proton
-/run/beamOn 60000
+/run/beamOn 30000
