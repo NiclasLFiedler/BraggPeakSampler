@@ -202,7 +202,7 @@ def stragglingWidth(TargetThickness, initialEnergy):
     # alpha_pbwo4 = 7.275e-3
     # p_pbwo4 = 1.69
     
-    alpha_h2o = 2.369e-2*19
+    alpha_h2o = 2.369e-2
     p_h2o = 1.757
 
     alpha_pbwo4 = 6.741e-3
