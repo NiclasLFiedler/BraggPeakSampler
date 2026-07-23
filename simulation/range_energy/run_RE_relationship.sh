@@ -4,7 +4,8 @@ cd build
 make -j8
 
 # List of beam energies
-beam_energies=("3" "5" "10" "15" "20" "30" "40" "50" "60" "70" "80" "90" "100" "125" "150" "175" "200" "225" "250")
+# beam_energies=("3" "5" "10" "15" "20" "30" "40" "50" "60" "70" "80" "90" "100" "125" "150" "175" "200" "225" "250")
+beam_energies=("220")
 # Loop over each energy
 for energy in "${beam_energies[@]}"; do
     # Modify the beam energy in your macro file or set it directly
@@ -18,7 +19,7 @@ for energy in "${beam_energies[@]}"; do
     cd ../data_analysis
     ./merge_p.sh
     mv "raw_data_p.root" $output_file
-    mv $output_file "pbwo4proj"
+    mv $output_file "h2oproj"
     
     cd ../build
     echo "Simulation with $energy MeV completed. Output saved"

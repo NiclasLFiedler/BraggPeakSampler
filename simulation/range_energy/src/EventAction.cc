@@ -47,6 +47,7 @@ void EventAction::EndOfEventAction(const G4Event* event)
       G4double eKin = (*hitsCollection)[i]->GetEkin();
       G4double StepLength = (*hitsCollection)[i]->GetStepLength();
       G4ThreeVector Pos = (*hitsCollection)[i]->GetPos();
+      G4double Theta = (*hitsCollection)[i]->GetTheta();
 
       analysisManager->FillNtupleIColumn(0, eventID);	
       analysisManager->FillNtupleDColumn(1, Pos.z());
@@ -56,6 +57,7 @@ void EventAction::EndOfEventAction(const G4Event* event)
       analysisManager->FillNtupleDColumn(5, eKin);
       analysisManager->FillNtupleDColumn(6, eTot);
       analysisManager->FillNtupleDColumn(7, StepLength);
+      analysisManager->FillNtupleDColumn(8, Theta);
       
  	    analysisManager->AddNtupleRow();
     }

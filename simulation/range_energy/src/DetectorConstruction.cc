@@ -86,10 +86,10 @@ void DetectorConstruction::DefineMaterials()
   // Air defined using NIST Manager
   worldMat = nistManager->FindOrBuildMaterial("G4_AIR"); 
 
-  detMaterial = nistManager->FindOrBuildMaterial("G4_PbWO4");
-  detMaterial->GetIonisation()->SetMeanExcitationEnergy(600.7*eV);
+  // detMaterial = nistManager->FindOrBuildMaterial("G4_PbWO4");
+  // detMaterial->GetIonisation()->SetMeanExcitationEnergy(600.7*eV);
   
-  // detMaterial = nistManager->FindOrBuildMaterial("G4_WATER");
+  detMaterial = nistManager->FindOrBuildMaterial("G4_WATER");
 
   G4Material *SiO2 = new G4Material("SiO2", 2.65*g/cm3, 2);
   SiO2->AddElement(elSi, 1);

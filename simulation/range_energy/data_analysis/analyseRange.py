@@ -44,7 +44,7 @@ materials = ["pbwo4proj", "h2oproj"]
 # materials = ["pbwo4", "h2o"]
 
 energies = [20, 30, 40, 50, 60, 70, 80, 90, 100, 125, 150, 175, 200]
-
+energies = [220]
 useMaterial = 1
 material = materials[useMaterial]
 
@@ -56,12 +56,71 @@ for file in files:
     tree = uproot.open(file)["braggsampler"]
 
     df = tree.arrays(
-        ["event","pos","eDep", "dEdX", "trackid","eKin","eTot", "StepLength"],
+        ["event","pos","eDep", "dEdX", "theta", "trackid","eKin","eTot", "StepLength"],
         library="pd"
     )
 
     # only primary proton
     df = df[df.trackid == 1]
+    
+    depth_bin_width = 0.1  # mm
+
+    max_depth = df.pos.max()
+
+    depth_bins = np.arange(0, max_depth + depth_bin_width, depth_bin_width)
+
+    theta_hist = []
+    depth_centers = []
+    
+    theta_per_depth = [[] for _ in range(len(depth_bins)-1)]
+
+    for event, g in df.groupby("event"):
+        
+        g = g.sort_values("pos")
+
+        bins = np.digitize(g.pos.values, depth_bins)-1
+
+        # keep only the last theta per depth bin
+        unique_bins = np.unique(bins)
+
+        for b in unique_bins:
+
+            if 0 <= b < len(theta_per_depth):
+                theta_per_depth[b].append(
+                    g.theta.values[bins == b][-1]
+                )
+
+
+    theta_hist = []
+    depth_bin_width = 0.1  # mm
+
+    depth_bins = np.arange(
+        0,
+        df.pos.max()+depth_bin_width,
+        depth_bin_width
+    )
+
+    # assign each step to a depth bin
+    depth_index = np.digitize(df.pos.values, depth_bins)-1
+
+    # collect RMS theta in each bin
+    theta_hist = []
+    depth_centers = []
+
+    for i in range(len(depth_bins)-1):
+
+        theta_values = df.theta.values[depth_index == i]
+
+        if len(theta_values) > 0:
+            theta_hist.append(
+                np.sqrt(np.mean(theta_values**2))
+            )
+        else:
+            theta_hist.append(np.nan)
+
+        depth_centers.append(
+            (depth_bins[i]+depth_bins[i+1])/2
+        )
     
     ranges = []
     ranges_path = []
@@ -97,6 +156,19 @@ for file in files:
     # plt.ylabel("Counts")
     # plt.legend()
     # plt.show()
+
+plt.figure(figsize=(8,5))
+
+plt.plot(
+    depth_centers,
+    np.array(theta_hist)*1000
+)
+
+plt.xlabel("Depth [mm]")
+plt.ylabel(r"$\theta_x$ RMS [mrad]")
+plt.grid()
+
+plt.show()
 
 CSDAranges=  [x[0] for x in meanRanges]
 popt, pcov = curve_fit(range_energy_relationship, energies, CSDAranges, maxfev = 1000000)

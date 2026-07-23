@@ -65,6 +65,8 @@ class TrackerHit : public G4VHit
     void SetEtot      (G4double eTot){ feTot = eTot; };
     void SetStepLength      (G4double StepLength){ fStepLength = StepLength; };
     void SetTrackID   (G4double TrackID){ fTrackID = TrackID; };
+    void SetTheta   (G4double theta){ fTheta = theta; };
+
     // Get methods
     G4double GetEdep() const     { return fEdep; };
     G4double GetEkin() const     { return feKin; };
@@ -74,7 +76,8 @@ class TrackerHit : public G4VHit
     G4double GetStepLength() const     { return fStepLength; };
     G4double GetTrackID() const     { return fTrackID; };
     G4ThreeVector GetPos() const { return fPos; };
-    
+    G4double GetTheta() const { return fTheta; };
+
     inline void* operator new(size_t);
     inline void  operator delete(void*);
 
@@ -91,6 +94,7 @@ class TrackerHit : public G4VHit
     G4double      fStepLength = 0.;
     G4ThreeVector fPos;
     G4double      fTrackID = 0.;
+    G4double      fTheta = 0.;
 };
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......

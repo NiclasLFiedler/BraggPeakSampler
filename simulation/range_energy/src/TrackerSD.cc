@@ -48,6 +48,8 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
   G4double eKin = aStep->GetPreStepPoint()->GetKineticEnergy();
   G4double StepLength = aStep->GetStepLength();
   G4double dEdX = eDep/StepLength;
+  G4ThreeVector momentumDirection = aStep->GetTrack()->GetMomentumDirection();
+  double theta = std::atan2(momentumDirection.x(), momentumDirection.z());
   
   newHit->SetTrackID(aStep->GetTrack()->GetTrackID());
   newHit->SetEkin(eKin);
@@ -56,7 +58,7 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
   newHit->SetdEdX(dEdX);
   newHit->SetEtot(energy);
   newHit->SetStepLength(StepLength);
-
+  newHit->SetTheta(theta);
   fHitsCollection->insert( newHit );
   
   return true;

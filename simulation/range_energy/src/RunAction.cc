@@ -13,7 +13,7 @@ RunAction::RunAction()
   G4RootAnalysisManager* analysisManager = G4RootAnalysisManager::Instance();
 
   analysisManager->SetFileName("../data_analysis/data.root");
-  analysisManager->CreateNtuple("braggsampler", "event, pos, eDep, dEdX, beta, trackid, eKin and eTot");
+  analysisManager->CreateNtuple("braggsampler", "event, pos, eDep, dEdX, theta, trackid, eKin and eTot");
   analysisManager->CreateNtupleIColumn("event");	
   analysisManager->CreateNtupleDColumn("pos");	 
   analysisManager->CreateNtupleDColumn("eDep");
@@ -22,6 +22,7 @@ RunAction::RunAction()
   analysisManager->CreateNtupleDColumn("eKin");
   analysisManager->CreateNtupleDColumn("eTot");
   analysisManager->CreateNtupleDColumn("StepLength");
+  analysisManager->CreateNtupleDColumn("theta");
 
   analysisManager->FinishNtuple();
 }
