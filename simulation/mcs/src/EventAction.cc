@@ -5,7 +5,7 @@
 #include "G4TrajectoryContainer.hh"
 #include "G4Trajectory.hh"
 #include "G4ios.hh"
-
+#include "TrackerSD.hh"
 #include "G4SystemOfUnits.hh"
 
 namespace B2
@@ -31,7 +31,7 @@ void EventAction::EndOfEventAction(const G4Event* event)
   }
   G4SDManager* SDmanager = G4SDManager::GetSDMpointer();
   G4int hitsCollectionID = SDmanager->GetCollectionID("TrackerHitsCollection");
-  TrackerSD* trackerSD = (TrackerSD*)SDmanager->FindSensitiveDetector("logicaldetector");
+  TrackerSD* trackerSD = (TrackerSD*)SDmanager->FindSensitiveDetector("TrackerDetectorSD");
 
 
   TrackerHitsCollection* hitsCollection(0);
@@ -43,27 +43,24 @@ void EventAction::EndOfEventAction(const G4Event* event)
     G4int n_hit = hitsCollection->entries();
     for (G4int i = 0; i < n_hit; i++){
 	    G4double partEdep = (*hitsCollection)[i]->GetEdep();
-      G4double dEdX = (*hitsCollection)[i]->GetdEdX();
       G4double eTot = (*hitsCollection)[i]->GetEtot();
       G4double TrackID = (*hitsCollection)[i]->GetTrackID();
       G4double eKin = (*hitsCollection)[i]->GetEkin();
-      G4double StepLength = (*hitsCollection)[i]->GetStepLength();
       G4ThreeVector Pos = (*hitsCollection)[i]->GetPos();
       G4double Theta = (*hitsCollection)[i]->GetTheta();
 
       analysisManager->FillNtupleIColumn(0, eventID);	
-      analysisManager->FillNtupleDColumn(1, Pos.z());
-	    analysisManager->FillNtupleDColumn(2, partEdep/MeV);
-      analysisManager->FillNtupleDColumn(3, dEdX);
-      analysisManager->FillNtupleDColumn(4, TrackID);
-      analysisManager->FillNtupleDColumn(5, eKin);
-      analysisManager->FillNtupleDColumn(6, eTot);
-      analysisManager->FillNtupleDColumn(7, StepLength);
-      analysisManager->FillNtupleDColumn(8, Theta);
+      analysisManager->FillNtupleDColumn(1, TrackID);
+      analysisManager->FillNtupleDColumn(2, Pos.z());
+	    analysisManager->FillNtupleDColumn(3, partEdep/MeV);
+      analysisManager->FillNtupleDColumn(4, eKin);
+      analysisManager->FillNtupleDColumn(5, eTot);
+      analysisManager->FillNtupleDColumn(6, Theta);
       
  	    analysisManager->AddNtupleRow();
     }
   }
+  trackerSD->ClearHits();
 }
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 }

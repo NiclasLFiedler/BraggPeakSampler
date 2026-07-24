@@ -42,34 +42,25 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
 	
   G4double eDep = aStep->GetTotalEnergyDeposit();
   G4ThreeVector PPos = aStep->GetPostStepPoint()->GetPosition();
-  // Get the particle's momentum and mass
-  G4double momentum = aStep->GetTrack()->GetMomentum().mag();  // in MeV/c
   G4double energy = aStep->GetPreStepPoint()->GetTotalEnergy();
   G4double eKin = aStep->GetPreStepPoint()->GetKineticEnergy();
-  G4double StepLength = aStep->GetStepLength();
-  G4double dEdX = eDep/StepLength;
   G4ThreeVector momentumDirection = aStep->GetTrack()->GetMomentumDirection();
-  double theta = std::atan2(momentumDirection.x(), momentumDirection.z());
   
-  G4double depth = step->GetPostStepPoint()->GetPosition().z();
-  G4ThreeVector momentum = step->GetPostStepPoint()->GetMomentum();
-  G4double angle = /* calculate from momentum direction */
+  G4double depth = aStep->GetPostStepPoint()->GetPosition().z();
+  G4ThreeVector momentum = aStep->GetPostStepPoint()->GetMomentum();
+  G4double angle = std::atan2(momentumDirection.x(), momentumDirection.z());
   
-  if (fabs(depth - fNextDepthBoundary) < 0.001*cm) {
-      fOutputFile << depth << "," << angle << endl;
-      fNextDepthBoundary += 0.1*cm;  // Match your 0.01 cm steps
+  if (fabs(depth - fNextDepthBoundary) < 0.001) {
+      fNextDepthBoundary += 0.1;      
+      newHit->SetTrackID(aStep->GetTrack()->GetTrackID());
+      newHit->SetEkin(eKin);
+      newHit->SetEdep(eDep);
+      newHit->SetPos(PPos);
+      newHit->SetEtot(energy);
+      newHit->SetTheta(angle);
+      fHitsCollection->insert( newHit );
   }
-
-  newHit->SetTrackID(aStep->GetTrack()->GetTrackID());
-  newHit->SetEkin(eKin);
-  newHit->SetEdep(eDep);
-  newHit->SetPos(PPos);
-  newHit->SetdEdX(dEdX);
-  newHit->SetEtot(energy);
-  newHit->SetStepLength(StepLength);
-  newHit->SetTheta(theta);
-  fHitsCollection->insert( newHit );
-  
+      
   return true;
 }
 

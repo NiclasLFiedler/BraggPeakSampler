@@ -63,7 +63,7 @@ for file in files:
     # only primary proton
     df = df[df.trackid == 1]
     
-    depth_bin_width = 0.1  # mm
+    depth_bin_width = 5  # mm
 
     max_depth = df.pos.max()
 
