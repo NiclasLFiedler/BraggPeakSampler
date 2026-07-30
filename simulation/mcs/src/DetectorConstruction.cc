@@ -219,7 +219,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   G4double worldY = 500*cm;
 
   G4double detSizeX = 200*cm; //det size in y
-  G4double detSizeZ = 200*cm; //det size in x
+  G4double detSizeZ = 35*cm; //det size in x
   G4double detSizeY = 200*cm; //det size in z
 
 

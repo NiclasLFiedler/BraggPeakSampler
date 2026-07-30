@@ -19,7 +19,7 @@ for energy in "${beam_energies[@]}"; do
     cd ../data_analysis
     ./merge_p.sh
     mv "raw_data_p.root" $output_file
-    mv $output_file "h2oproj"
+    mv $output_file "h2oproj.root"
     
     cd ../build
     echo "Simulation with $energy MeV completed. Output saved"

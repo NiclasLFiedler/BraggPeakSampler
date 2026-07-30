@@ -17,10 +17,11 @@ RunAction::RunAction()
   analysisManager->CreateNtupleIColumn("event");	
   analysisManager->CreateNtupleDColumn("trackid");
   analysisManager->CreateNtupleDColumn("pos");	 
-  analysisManager->CreateNtupleDColumn("eDep");
-  analysisManager->CreateNtupleDColumn("eKin");
-  analysisManager->CreateNtupleDColumn("eTot");
-  analysisManager->CreateNtupleDColumn("theta");
+  // analysisManager->CreateNtupleDColumn("eDep");
+  // analysisManager->CreateNtupleDColumn("eKin");
+  // analysisManager->CreateNtupleDColumn("eTot");
+  analysisManager->CreateNtupleDColumn("thetaX");
+  analysisManager->CreateNtupleDColumn("thetaY");
 
   analysisManager->FinishNtuple();
 }

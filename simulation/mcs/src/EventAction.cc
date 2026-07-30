@@ -47,15 +47,17 @@ void EventAction::EndOfEventAction(const G4Event* event)
       G4double TrackID = (*hitsCollection)[i]->GetTrackID();
       G4double eKin = (*hitsCollection)[i]->GetEkin();
       G4ThreeVector Pos = (*hitsCollection)[i]->GetPos();
-      G4double Theta = (*hitsCollection)[i]->GetTheta();
+      G4double ThetaX = (*hitsCollection)[i]->GetThetaX();
+      G4double ThetaY = (*hitsCollection)[i]->GetThetaY();
 
       analysisManager->FillNtupleIColumn(0, eventID);	
       analysisManager->FillNtupleDColumn(1, TrackID);
       analysisManager->FillNtupleDColumn(2, Pos.z());
-	    analysisManager->FillNtupleDColumn(3, partEdep/MeV);
-      analysisManager->FillNtupleDColumn(4, eKin);
-      analysisManager->FillNtupleDColumn(5, eTot);
-      analysisManager->FillNtupleDColumn(6, Theta);
+	    // analysisManager->FillNtupleDColumn(3, partEdep/MeV);
+      // analysisManager->FillNtupleDColumn(4, eKin);
+      // analysisManager->FillNtupleDColumn(5, eTot);
+      analysisManager->FillNtupleDColumn(3, ThetaX);
+      analysisManager->FillNtupleDColumn(4, ThetaY);
       
  	    analysisManager->AddNtupleRow();
     }

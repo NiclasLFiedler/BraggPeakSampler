@@ -38,27 +38,30 @@ void TrackerSD::Initialize(G4HCofThisEvent* hce)
 G4bool TrackerSD::ProcessHits(G4Step* aStep,
                                      G4TouchableHistory*)
 {
-  auto newHit = new TrackerHit();
-	
-  G4double eDep = aStep->GetTotalEnergyDeposit();
-  G4ThreeVector PPos = aStep->GetPostStepPoint()->GetPosition();
-  G4double energy = aStep->GetPreStepPoint()->GetTotalEnergy();
-  G4double eKin = aStep->GetPreStepPoint()->GetKineticEnergy();
-  G4ThreeVector momentumDirection = aStep->GetTrack()->GetMomentumDirection();
   
-  G4double depth = aStep->GetPostStepPoint()->GetPosition().z();
-  G4ThreeVector momentum = aStep->GetPostStepPoint()->GetMomentum();
-  G4double angle = std::atan2(momentumDirection.x(), momentumDirection.z());
-  
-  if (fabs(depth - fNextDepthBoundary) < 0.001) {
-      fNextDepthBoundary += 0.1;      
-      newHit->SetTrackID(aStep->GetTrack()->GetTrackID());
-      newHit->SetEkin(eKin);
-      newHit->SetEdep(eDep);
-      newHit->SetPos(PPos);
-      newHit->SetEtot(energy);
-      newHit->SetTheta(angle);
-      fHitsCollection->insert( newHit );
+  G4double trackid = aStep->GetTrack()->GetTrackID();
+  if (trackid == 1){
+    auto newHit = new TrackerHit();
+    
+    G4double eDep = aStep->GetTotalEnergyDeposit();
+    G4ThreeVector PPos = aStep->GetPostStepPoint()->GetPosition();
+    G4double energy = aStep->GetPreStepPoint()->GetTotalEnergy();
+    G4double eKin = aStep->GetPreStepPoint()->GetKineticEnergy();
+    G4ThreeVector dir = aStep->GetTrack()->GetMomentumDirection();
+    G4double depth = PPos.z();
+
+    G4double thetaX = dir.x()/dir.z();
+    G4double thetaY = dir.y()/dir.z();
+
+    newHit->SetTrackID(trackid);
+    newHit->SetEkin(eKin);
+    newHit->SetEdep(eDep);
+    newHit->SetPos(PPos);
+    newHit->SetEtot(energy);
+    newHit->SetThetaX(thetaX);
+    newHit->SetThetaY(thetaY);
+    fHitsCollection->insert( newHit );
+    fNextDepthBoundary += 1;      
   }
       
   return true;
