@@ -221,14 +221,6 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   G4double detSizeX = 200*cm; //det size in y
   G4double detSizeZ = 35*cm; //det size in x
   G4double detSizeY = 200*cm; //det size in z
-
-
-  // Definitions of Solids, Logical Volumes, Physical Volumes
-
-  // World
-  //G4UserLimits* userLimits = new G4UserLimits();
-  //userLimits->SetMaxAllowedStep(1*mm);
-  //logicaldetector->SetUserLimits(userLimits);
   
   solidworld = new G4Box("solidworld",              // its name
     worldX / 2, worldY / 2, worldZ / 2);               // its size
@@ -256,7 +248,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   logicaldetector = new G4LogicalVolume(soliddetector, detMaterial, "logicaldetector");
 
   G4UserLimits* userLimits = new G4UserLimits();
-  //userLimits->SetMaxAllowedStep(0.1*mm);
+  userLimits->SetMaxAllowedStep(0.5*mm);
   logicaldetector->SetUserLimits(userLimits);
 
   physdetector = new G4PVPlacement(nullptr,  // no rotation
