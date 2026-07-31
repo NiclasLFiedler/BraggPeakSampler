@@ -58,7 +58,8 @@ class TrackerSD : public G4VSensitiveDetector
     void   Initialize(G4HCofThisEvent* hitCollection) override;
     G4bool ProcessHits(G4Step* step, G4TouchableHistory* history) override;
     void   EndOfEvent(G4HCofThisEvent* hitCollection) override;
-    void ClearHits() {fNextDepthBoundary = 0;};
+    void ClearHits() {fNextDepthBoundary = 0; fStopped = 0;};
+    G4double fStopped = 0.0;
   private:
     TrackerHitsCollection* fHitsCollection = nullptr;
     G4double fNextDepthBoundary = 0.0;

@@ -1,7 +1,10 @@
 import uproot
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
 
+def gaussian(x, A, mu, sigma):
+    return A * np.exp(-(x - mu)**2 / (2 * sigma**2))
 # --------------------------------------------------
 # Load ROOT file
 # --------------------------------------------------
@@ -20,7 +23,7 @@ thetaY = np.degrees(np.arctan(thetaY))
 # Define depth bins
 # --------------------------------------------------
 
-bin_width = 0.5  # mm
+bin_width = 2 # mm
 bins = np.arange(0, np.max(depth) + bin_width, bin_width)
 centers = 0.5 * (bins[:-1] + bins[1:])
 
@@ -91,6 +94,30 @@ sigmaY = np.array([
     for a in anglesY
 ])
 
+sigmaXfit = []
+
+for angle in anglesX:
+    hist, bin_edges = np.histogram(angle, bins=100)
+    bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
+
+    # Initial parameter guesses
+    A0 = hist.max()
+    mu0 = np.mean(angle)
+    sigma0 = np.std(angle)
+
+    # Perform fit
+    popt, pcov = curve_fit(
+        gaussian,
+        bin_centers,
+        hist,
+        p0=[A0, mu0, sigma0], maxfev =100000
+    )
+
+    A_fit, mu_fit, sigma_fit = popt
+    sigma_err = np.sqrt(np.diag(pcov))[2]
+    sigmaXfit.append(sigma_fit)
+
+
 # --------------------------------------------------
 # Plot 1: RMS vs Depth
 # --------------------------------------------------
@@ -98,9 +125,9 @@ sigmaY = np.array([
 # ==========================================
 # 1. Physical Constants & Parameters
 # ==========================================
-E0 = 210  # Initial kinetic energy in MeV
+E0 = 134  # Initial kinetic energy in MeV
 m_p = 938.272  # Proton rest mass in MeV/c^2
-X0 = 36.08  # Radiation length of water in cm
+X0 = 36.08   # Radiation length of water in cm
 
 # Empirical water range parameters (Bortfeld model)
 alpha = 0.02369  # Range coefficient (cm / MeV^1.77)
@@ -129,7 +156,7 @@ beta_p = (E_k * (E_k + 2 * m_p)) / (E_k + m_p)
 # 4. True Integral Highland (Thick Target)
 # ==========================================
 # Uncorrected scattering integrand f(x') = (13.6 / beta_p)^2 / X0
-integrand = (13.6 / beta_p) ** 2 / X0
+integrand = (14.1 / beta_p) ** 2 / X0
 
 # Numerical integration along the path: \int_0^x f(x') dx'
 uncorrected_variance = np.cumsum(integrand * dx)
@@ -150,7 +177,7 @@ theta_iH_deg = np.degrees(theta_iH_rad)
 # ==========================================
 # Applies the log factor locally per dx step (step-size dependent)
 log_step = 1 + 0.038 * np.log(dx / X0)
-theta_step = (13.6 / beta_p) * np.sqrt(dx / X0) * log_step
+theta_step = (14.1 / beta_p) * np.sqrt(dx / X0) * log_step
 theta_naive_deg = np.degrees(np.sqrt(np.cumsum(theta_step**2)))
 
 sigma_r = depths[-1]/10*(1-np.cos(theta_iH_deg[-1])) 
@@ -166,6 +193,7 @@ plt.figure(figsize=(8, 5))
 plt.plot(depths, theta_iH_deg, color="navy", linewidth=2.5, label="True Integral Highland (Thick Target)")
 plt.plot(centers, sigmaX, label=r'$\sigma(\theta_x)$')
 plt.plot(centers, sigmaY, label=r'$\sigma(\theta_y)$')
+plt.plot(centers, sigmaXfit, "o", label="Fitted RMS")
 
 plt.xlabel("Depth (mm)")
 plt.ylabel("RMS projected angle (mrad)")

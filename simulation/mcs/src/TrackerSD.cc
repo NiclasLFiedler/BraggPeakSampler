@@ -61,6 +61,9 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
     newHit->SetThetaX(thetaX);
     newHit->SetThetaY(thetaY);
     fHitsCollection->insert( newHit );
+    if(eKin < 0.5){
+      fStopped = 1;
+    }
     fNextDepthBoundary += 1;      
   }
       

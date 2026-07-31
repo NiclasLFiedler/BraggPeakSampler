@@ -39,6 +39,11 @@ void EventAction::EndOfEventAction(const G4Event* event)
   if (hitsCollectionID>=0) hitsCollection = (TrackerHitsCollection*)(event->GetHCofThisEvent()->GetHC(hitsCollectionID));
   else G4cout << "Collection `hitsCollection' not found!" << G4endl;
  
+  if(trackerSD->fStopped == 0){
+    trackerSD->ClearHits();
+    return;
+  }
+
   if(hitsCollection){
     G4int n_hit = hitsCollection->entries();
     for (G4int i = 0; i < n_hit; i++){
@@ -63,6 +68,7 @@ void EventAction::EndOfEventAction(const G4Event* event)
     }
   }
   trackerSD->ClearHits();
+  return;
 }
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 }

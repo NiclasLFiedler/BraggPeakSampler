@@ -248,7 +248,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   logicaldetector = new G4LogicalVolume(soliddetector, detMaterial, "logicaldetector");
 
   G4UserLimits* userLimits = new G4UserLimits();
-  userLimits->SetMaxAllowedStep(0.5*mm);
+  userLimits->SetMaxAllowedStep(2*mm);
   logicaldetector->SetUserLimits(userLimits);
 
   physdetector = new G4PVPlacement(nullptr,  // no rotation
