@@ -1,4 +1,4 @@
-/run/numberOfThreads 16
+/run/numberOfThreads 8
 /run/initialize
 /vis/open OGL
 /vis/viewer/set/viewpointVector 1 1 1
@@ -14,6 +14,4 @@
 /vis/scene/endOfEventAction accumulate 10
 /gun/particle proton
 #/gun/particle mu-
-/vis/ogl/set/displayListLimit 500000
-/process/inactivate protonInelastic proton
-/process/inactivate msc
+/vis/ogl/set/displayListLimit 5000000

@@ -573,10 +573,9 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
       nx = 150;
       ny = nx;
       nz = static_cast<int>(std::round(heteroThickness/cubeSizeZ));
-      // nz = 1;
+      nz = 1;
       G4double tickness_real = nz * cubeSizeZ;
       G4double pmod_real = static_cast<double>(0.76923)*1000*tickness_real/nz;
-      // G4double pmod_real = static_cast<double>(0.5)*1000*tickness_real/nz;
       std::cout << "pmod_real: " << pmod_real << std::endl;
       std::cout << "tickness_real: " << tickness_real << std::endl;
       auto voxelSolid = new G4Box("Voxel", cubeSizeX/2, cubeSizeY/2, cubeSizeZ/2);
