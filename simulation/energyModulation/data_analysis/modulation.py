@@ -72,7 +72,7 @@ def main():
     # Read ROOT file
     print("Reading ROOT file...")
     try:
-        file = uproot.open("./data/data_200.root")
+        file = uproot.open("./data/data_150.root")
         tree = file["braggsampler"]
         
         # Extract data
