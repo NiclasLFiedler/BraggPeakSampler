@@ -10,24 +10,28 @@ DETECTOR_SELECT=0
 # ── helper: apply jq patch, run simulation, analyse ──────────────────────────
 run_simulation() {
     local mat="$1"
-    local target_select="$2"
-    local target_thickness="$3"
+    local modulation="$2"
+    local target_select="$3"
+    local target_thickness="$4"
 
     echo "========================================"
     echo "  detectorType     = $mat"
     echo "  detectorSelect   = $DETECTOR_SELECT"
     echo "  targetSelect     = $target_select"
     echo "  targetThickness  = $target_thickness"
+    echo "  modulation       = $modulation"
     echo "========================================"
 
     jq \
         --argjson ds  "$DETECTOR_SELECT" \
         --argjson ts  "$target_select" \
         --argjson tt  "$target_thickness" \
+        --argjson mod "$modulation" \
         --arg     mat "$mat" \
         '
         .detectorSelect = $ds
         | .targetSelect = $ts
+        | .pmod = $mod
         | (.detectors[] | select(.detectorID == 0) | .detectorType)    = $mat
         | (.detectors[] | select(.detectorID == 0) | .targetThickness) = $tt
         ' \
@@ -63,13 +67,15 @@ for (( m=0; m<${#DETECTOR_MATERIALS[@]}; m++ )); do
     # --- no-target run (targetSelect=0, targetThickness=0) ---
     echo ""
     echo "--- No-target run ---"
-    run_simulation "$MAT" 0 0
+    run_simulation "$MAT" 0 0 0
 
     # --- thickness sweep: 10 → 300 in steps of 10 (targetSelect=0) ---
-    for (( t=50; t<=200; t+=50 )); do
-        echo ""
-        echo "--- Thickness sweep: $t mm ---"
-        run_simulation "$MAT" 2 "$t"
+    for (( t=100; t<=200; t+=100 )); do
+        for (( mod=100; mod<=800; mod+=100 )); do
+            echo ""
+            echo "--- Thickness sweep: $t mm --- mod = $mod ---"
+            run_simulation "$MAT" "$mod" 2 "$t"
+        done
     done
 done
 
