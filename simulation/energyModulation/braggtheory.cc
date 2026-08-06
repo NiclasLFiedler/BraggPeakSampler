@@ -37,43 +37,39 @@ int main(int argc,char** argv)
   // Set mandatory initialization classes
   //
   runManager->SetUserInitialization(new B2a::DetectorConstruction());
-  
   G4PhysListFactory factory;
   // auto physicsList = new QBBC();
   auto physicsList = factory.GetReferencePhysList("QGSP_BIC_EMY");
   physicsList->ReplacePhysics(new G4EmStandardPhysics_option4());
-  
   G4StepLimiterPhysics* stepLimitPhys = new G4StepLimiterPhysics();
   stepLimitPhys->SetApplyToAll(true); // activates step limit for ALL particles
   physicsList->RegisterPhysics(stepLimitPhys);
 
 
-
   runManager->SetUserInitialization(physicsList);
-
   // Set user action classes
   runManager->SetUserInitialization(new B2::ActionInitialization());
-
+  
   // Initialize visualization with the default graphics system
   auto visManager = new G4VisExecutive();
-
+  
   visManager->Initialize();
-
+  
   // Get the pointer to the User Interface manager
   auto UImanager = G4UImanager::GetUIpointer();
-
+  
   // Process macro or start UI session
   //
-    if(ui){
-        UImanager->ApplyCommand("/control/execute vis.mac");
-        ui->SessionStart();
-    }
-    else
-    {
-        G4String command = "/control/execute ";
-        G4String fileName = argv[1];
-        UImanager->ApplyCommand(command+fileName);
-    }
+  if(ui){
+    UImanager->ApplyCommand("/control/execute vis.mac");
+    ui->SessionStart();
+  }
+  else
+  {
+    G4String command = "/control/execute ";
+    G4String fileName = argv[1];
+    UImanager->ApplyCommand(command+fileName);
+  }
 
   // Job termination
   delete visManager;

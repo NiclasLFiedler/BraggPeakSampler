@@ -138,33 +138,31 @@ void DetectorConstruction::DefineMaterials()
   G4Element *elPb = nistManager->FindOrBuildElement("Pb");  // 82
   // Air defined using NIST Manager
   worldMat = nistManager->FindOrBuildMaterial("G4_Galactic"); 
-
   // detMaterial = nistManager->FindOrBuildMaterial("G4_PbWO4");
   // detMaterial->GetIonisation()->SetMeanExcitationEnergy(600.7*eV);
   water = nistManager->FindOrBuildMaterial("G4_WATER");
   air = nistManager->FindOrBuildMaterial("G4_AIR");
-  detMaterial = water;
-
+  
   G4Material *SiO2 = new G4Material("SiO2", 2.65*g/cm3, 2);
   SiO2->AddElement(elSi, 1);
   SiO2->AddElement(elO, 2);
-
+  
   G4Material *BaO = new G4Material("BaO", 5.72*g/cm3, 2);
   BaO->AddElement(elBa, 1);
   BaO->AddElement(elO, 1);
-
+  
   G4Material* Gd2O3 = new G4Material("Gd2O3", 7.41*g/cm3, 2);
   Gd2O3->AddElement(elGd, 2);
   Gd2O3->AddElement(elO, 3);
-
+  
   G4Material* AlF3 = new G4Material("AlF3", 2.88*g/cm3, 2);
   AlF3->AddElement(elAl, 1);
   AlF3->AddElement(elF, 3);
-
+  
   G4Material* Ce2O3 = new G4Material("Ce2O3", 6.2*g/cm3, 2);
   Ce2O3->AddElement(elCe, 2);
   Ce2O3->AddElement(elO, 3);
-
+  
   G4Material* DSB_Gd = new G4Material("DSB_Gd", 4.3*g/cm3, 5);
   // DSB_Gd->AddMaterial(SiO2, 54.81*perCent);
   // DSB_Gd->AddMaterial(BaO, 18.70*perCent);
@@ -177,12 +175,12 @@ void DetectorConstruction::DefineMaterials()
   DSB_Gd->AddMaterial(AlF3, 1.9*perCent);
   DSB_Gd->AddMaterial(Gd2O3, 38.5*perCent);
   DSB_Gd->AddMaterial(Ce2O3, 2*perCent);
-
+  
   G4Material* DSB = new G4Material("DSB", 3.8*g/cm3, 3);
   DSB->AddElement(elBa, 1);
   DSB->AddElement(elSi, 2);
   DSB->AddElement(elO, 5);
-
+  
   G4Material* Al2O3 = new G4Material("Al2O3", 3.94*g/cm3, 2);
   Al2O3->AddElement(elAl, 2);
   Al2O3->AddElement(elO, 3);
@@ -191,23 +189,23 @@ void DetectorConstruction::DefineMaterials()
   EJ256->AddElement(elC, 86.925*perCent);
   EJ256->AddElement(elH, 8.075*perCent);
   EJ256->AddElement(elPb, 5*perCent);
-
+  
   EJ256->GetIonisation()->SetMeanExcitationEnergy(64.7*eV);
-
+  
   G4Element* BoronEnriched = new G4Element("BoronEnriched", "B", 2);
   G4Isotope* B10 = new G4Isotope("B10", 5, 10, 10.012937*g/mole);
   G4Isotope* B11 = new G4Isotope("B11", 5, 11, 11.009305*g/mole);
-
+  
   BoronEnriched->AddIsotope(B10, 20.0*perCent);
   BoronEnriched->AddIsotope(B11, 80.0*perCent);
-
+  
   G4Material* EJ254 = new G4Material("EJ254", 1.026*g/cm3, 3); //5% boron loaded
   EJ254->AddElement(elC, 86.925*perCent);
   EJ254->AddElement(elH, 8.075*perCent);
   EJ254->AddElement(BoronEnriched, 5.0*perCent);
-
+  
   EJ254->GetIonisation()->SetMeanExcitationEnergy(64.7*eV);
-
+  
   G4Material* EJ212 = new G4Material("EJ212", 1.023*g/cm3, 2);
   G4double numH = 5.17e+22;
   G4double numC = 4.69e+22;
@@ -218,14 +216,14 @@ void DetectorConstruction::DefineMaterials()
   
   EJ212->GetIonisation()->SetMeanExcitationEnergy(64.7*eV);
   EJ212->GetIonisation()->SetBirksConstant(0.154*mm/MeV);
-
+  
   G4int nEntries = 3;
   G4double PhotonEnergyEJ212[nEntries] = {2.48*eV, 2.88*eV, 3.1*eV};
   G4double RefractiveIndexEJ212[nEntries] = {1.58, 1.58, 1.58};
   G4double ScintillationEJ212[nEntries] = {0.01, 1.0, 0.1};
   G4double ScintillationYield = 10000 / MeV;
   G4double ScintillationFastTime = 2.1 * ns;
-
+  
   G4MaterialPropertiesTable* EJ212_MPT = new G4MaterialPropertiesTable();
   EJ212_MPT->AddProperty("RINDEX", PhotonEnergyEJ212, RefractiveIndexEJ212, nEntries);
   
@@ -235,21 +233,21 @@ void DetectorConstruction::DefineMaterials()
   EJ212_MPT->AddConstProperty("RESOLUTIONSCALE", 1.0);
   EJ212_MPT->AddConstProperty("SCINTILLATIONYIELD1", 1.0);
   EJ212_MPT->AddConstProperty("SCINTILLATIONTIMECONSTANT1", ScintillationFastTime);
-
+  
   EJ212->SetMaterialPropertiesTable(EJ212_MPT);
-
+  
   Teflon = new G4Material("Teflon", 2.2*g/cm3, 2);
   Teflon->AddElement(elC, 2);
   Teflon->AddElement(elF, 4);
-
+  
   PTFEmembrane = new G4Material("PTFEmembrane", 0.35*g/cm3, 2);
   PTFEmembrane->AddElement(elC, 2);
   PTFEmembrane->AddElement(elF, 4);
-
-
+  
+  
   Alu = new G4Material("Alu", 2.71*g/cm3,1);
   Alu->AddElement(elAl,1);
-
+  
   G4double density = 1.19 * g/cm3;
   G4int ncomponents = 3;
   
@@ -257,11 +255,32 @@ void DetectorConstruction::DefineMaterials()
   PMMA->AddElement(elC, 5);
   PMMA->AddElement(elH, 8);
   PMMA->AddElement(elO, 2);
-
+  
+  G4Material *lungTissue = new G4Material("lungTissue", 1.05*g/cm3,13);
+  lungTissue->AddElement(elH, 0.101278);
+  lungTissue->AddElement(elC, 0.102310);
+  lungTissue->AddElement(elN, 0.028650);
+  lungTissue->AddElement(elO, 0.757072);
+  lungTissue->AddElement(elNa, 0.001840);
+  lungTissue->AddElement(elMg, 0.000730);
+  lungTissue->AddElement(elP, 0.000800);
+  lungTissue->AddElement(elS, 0.002250);
+  lungTissue->AddElement(elCl, 0.002660);
+  lungTissue->AddElement(elK, 0.001940);
+  lungTissue->AddElement(elCa, 0.000090);
+  lungTissue->AddElement(elFe, 0.000370);
+  lungTissue->AddElement(elZn, 0.000010);
+  
+  detMaterial = water;
+  
+  heteroMaterial1 = lungTissue;
+  heteroMaterial2 = air;
+  
   G4cout <<"Mean excitation Energy: " << detMaterial->GetIonisation()->GetMeanExcitationEnergy() << G4endl;
   G4cout <<"Density: " << detMaterial->GetDensity()/(g/cm3) << G4endl;
   G4cout <<"Radiation length: " << detMaterial->GetRadlen()/cm << G4endl;
-
+  
+  return;
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
@@ -329,15 +348,17 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
       airVisAttr->SetVisibility(true);
       airVisAttr->SetForceSolid(true);
 
-      cubeSizeXY = 0.5 * mm;
-      cubeSizeZ = static_cast<double>(pmod)/static_cast<double>(0.7875)*0.001;
-      // cubeSizeZ = 129*0.001;
+      cubeSizeXY = 0.2 * mm;
+      G4double rhoLung = 1.05;
+      G4double rhoH2O = 1;
+      G4double probLung = 0.26;
+
+      cubeSizeZ = static_cast<double>(pmod)* rhoH2O/rhoLung * 1/(1-probLung)*um;
       
-      nx = 150;
+      nx = 100;
       ny = nx;
       nz = static_cast<int>(std::round(heteroThickness/cubeSizeZ));
-      nz = 200;
-      
+      // nz = 1;
       auto voxelSolid = new G4Box("Voxel", cubeSizeXY/2, cubeSizeXY/2, cubeSizeZ/2);
 
       std::cout << "pmod: " << pmod << std::endl;
@@ -346,12 +367,12 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
       std::cout << "std::round(heteroThickness/cubeSizeZ) " << std::round(heteroThickness/cubeSizeZ) << G4endl;
 
       auto voxelContainerSolid = new G4Box("VoxelContainer", (nx*cubeSizeXY)/2, (ny*cubeSizeXY)/2, (nz*cubeSizeZ)/2);
-      auto voxelContainerLV = new G4LogicalVolume(voxelContainerSolid, water, "VoxelContainerLV");
+      auto voxelContainerLV = new G4LogicalVolume(voxelContainerSolid, heteroMaterial1, "VoxelContainerLV");
       new G4PVPlacement(nullptr, G4ThreeVector(0,0,-heteroThickness/2-1*mm), voxelContainerLV, "VoxelContainer", logicalworld, false, 0);
 
       auto* parameterisation = new HeteroParameterisation(nx, ny, nz,
         cubeSizeXY, cubeSizeXY, cubeSizeZ,
-        water, air,
+        heteroMaterial1, heteroMaterial2,
         waterVisAttr, airVisAttr);
     
       int nVoxels = nx * ny * nz;
