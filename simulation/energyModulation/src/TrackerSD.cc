@@ -4,6 +4,9 @@
 #include "G4ThreeVector.hh"
 #include "G4SDManager.hh"
 #include "G4ios.hh"
+#include "G4EmCalculator.hh"
+#include "G4ParticleTable.hh"
+#include "G4ParticleDefinition.hh"
 
 namespace B2
 {
@@ -46,11 +49,22 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
     G4double eDep = aStep->GetTotalEnergyDeposit();
     G4double energy = aStep->GetPreStepPoint()->GetTotalEnergy();
     G4double eKin = aStep->GetPreStepPoint()->GetKineticEnergy();
+    
+    G4ParticleDefinition* particle =aStep->GetTrack()->GetDefinition();
+    G4EmCalculator emCalc;
+    G4Material* material = aStep->GetPreStepPoint()->GetMaterial();
+
+    G4double residualRange = emCalc.GetRange(
+    eKin,
+    particle,
+    material
+    );
 
     newHit->SetTrackID(trackid);
     newHit->SetEkin(eKin);
     newHit->SetEdep(eDep);
     newHit->SetEtot(energy);
+    newHit->SetResRange(residualRange);
     fHitsCollection->insert( newHit );
   }
   

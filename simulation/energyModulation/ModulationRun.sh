@@ -47,7 +47,7 @@ run_simulation() {
     ./braggtheory run_p.mac
     cd ../data_analysis
     ./merge_p.sh
-    output_file="data_${target_thickness}.root"
+    output_file="data_${modulation}_${target_thickness}.root"
     mv "raw_data_p.root" $output_file
     mv $output_file data
     cd ..

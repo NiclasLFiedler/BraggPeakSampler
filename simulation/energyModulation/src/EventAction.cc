@@ -46,13 +46,14 @@ void EventAction::EndOfEventAction(const G4Event* event)
 	    G4double partEdep = (*hitsCollection)[i]->GetEdep();
       G4double eTot = (*hitsCollection)[i]->GetEtot();
       G4double eKin = (*hitsCollection)[i]->GetEkin();
+      G4double resRange = (*hitsCollection)[i]->GetResRange();
 
       analysisManager->FillNtupleIColumn(0, eventID);	
       analysisManager->FillNtupleDColumn(1, TrackID);
 	    analysisManager->FillNtupleDColumn(2, partEdep/MeV);
       analysisManager->FillNtupleDColumn(3, eKin/MeV);
       analysisManager->FillNtupleDColumn(4, eTot/MeV);
-      
+      analysisManager->FillNtupleDColumn(5, resRange/mm);
  	    analysisManager->AddNtupleRow();
     }
   }

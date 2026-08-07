@@ -19,7 +19,7 @@ RunAction::RunAction()
   analysisManager->CreateNtupleDColumn("eDep");
   analysisManager->CreateNtupleDColumn("eKin");
   analysisManager->CreateNtupleDColumn("eTot");
-
+  analysisManager->CreateNtupleDColumn("resRange");
   analysisManager->FinishNtuple();
 }
 
