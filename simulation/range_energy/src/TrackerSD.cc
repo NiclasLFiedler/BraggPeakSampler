@@ -50,15 +50,6 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
   G4double dEdX = eDep/StepLength;
   G4ThreeVector momentumDirection = aStep->GetTrack()->GetMomentumDirection();
   double theta = std::atan2(momentumDirection.x(), momentumDirection.z());
-  
-  G4double depth = step->GetPostStepPoint()->GetPosition().z();
-  G4ThreeVector momentum = step->GetPostStepPoint()->GetMomentum();
-  G4double angle = /* calculate from momentum direction */
-  
-  if (fabs(depth - fNextDepthBoundary) < 0.001*cm) {
-      fOutputFile << depth << "," << angle << endl;
-      fNextDepthBoundary += 0.1*cm;  // Match your 0.01 cm steps
-  }
 
   newHit->SetTrackID(aStep->GetTrack()->GetTrackID());
   newHit->SetEkin(eKin);
@@ -67,7 +58,6 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
   newHit->SetdEdX(dEdX);
   newHit->SetEtot(energy);
   newHit->SetStepLength(StepLength);
-  newHit->SetTheta(theta);
   fHitsCollection->insert( newHit );
   
   return true;
