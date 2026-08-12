@@ -46,7 +46,7 @@ def load_and_extract_ranges(filename):
     return np.array(ranges)
 
 
-def fit_and_plot(ranges, energy, output_dir="./results"):
+def fit_and_plot(ranges, energy, output_dir="./results", output=False):
     """
     Fit Gaussian to ranges and create plot.
     
@@ -73,9 +73,9 @@ def fit_and_plot(ranges, energy, output_dir="./results"):
     mean_err, sigma_err = np.sqrt(np.diag(pcov))[1:3]
     
     # Plot
-    fig, ax = plt.subplots(figsize=(9, 6))
-    ax.bar(bin_centers, counts, width=bin_centers[1]-bin_centers[0], 
-           alpha=0.7, edgecolor='black', label='Data')
+    fig, ax = plt.subplots(figsize=(12, 9))
+    ax.step(bin_centers, counts, where='mid', color='blue', linewidth=1.5,
+           alpha=0.7, label='Data')
     
     x_fit = np.linspace(bin_centers.min(), bin_centers.max(), 500)
     ax.plot(x_fit, gaussian(x_fit, *popt), 'r-', linewidth=2, label='Gaussian Fit')
@@ -87,8 +87,9 @@ def fit_and_plot(ranges, energy, output_dir="./results"):
     ax.set_title(f'Projected Range - {energy} MeV', fontsize=13, fontweight='bold')
     ax.legend(fontsize=11)
     ax.grid(True, alpha=0.3)
-    
-    plt.savefig(output_dir / f"range_{energy}MeV.pdf", bbox_inches='tight')
+
+    if output:
+        plt.savefig(output_dir / f"range_{energy}MeV.pdf", bbox_inches='tight', format='pdf')
     plt.close()
     
     print(f"{energy} MeV: Range = {mean:.3f} ± {mean_err:.3f} mm, σ = {sigma:.3f} ± {sigma_err:.3f} mm")
@@ -103,16 +104,16 @@ def fit_and_plot(ranges, energy, output_dir="./results"):
 
 
 def main():
-    # ===== EDIT THIS LIST WITH YOUR FILES =====
-    files_and_energies = [
-        ("h2oproj/raw_data_50.root", 50),
-        ("h2oproj/raw_data_150.root", 150),
-        ("h2oproj/raw_data_200.root", 200),
-        ("h2oproj/raw_data_220.root", 220),
-    ]
-    # ==========================================
+    PDFoutput = False
+    energies = [3, 5, 10, 15, 20, 30, 40, 50, 60, 70, 80, 90, 100, 125, 150, 175, 200, 225, 250]
+
+    name = "h2o"
+
+    files_and_energies = []
+    for energy in energies:
+        files_and_energies.append((f"{name}/range_{energy}.root", energy))
     
-    output_dir = "./h2oproj"
+    output_dir = f"./{name}"
     results = []
     
     for filename, energy in files_and_energies:
@@ -124,7 +125,7 @@ def main():
         ranges = load_and_extract_ranges(filename)
         print(f"  Found {len(ranges)} events")
         
-        result = fit_and_plot(ranges, energy, output_dir)
+        result = fit_and_plot(ranges, energy, output_dir, output=PDFoutput)
         results.append(result)
     
     # Save results
@@ -134,7 +135,7 @@ def main():
     sigmas = np.array([r['sigma'] for r in results])
     sigma_errors = np.array([r['sigma_err'] for r in results])
     
-    output_file = Path(output_dir) / "results.npz"
+    output_file = Path(output_dir) / "ranges.npz"
     np.savez(output_file, 
              energies=energies, 
              ranges=ranges, 
@@ -145,14 +146,15 @@ def main():
     print(f"\nSaved to {output_file}")
     
     # Summary plot
-    fig, ax = plt.subplots(figsize=(9, 6))
+    fig, ax = plt.subplots(figsize=(12, 9))
     ax.errorbar(energies, ranges, yerr=range_errors, fmt='o-', markersize=8,
                capsize=5, linewidth=2)
     ax.set_xlabel('Beam Energy (MeV)', fontsize=12)
     ax.set_ylabel('Projected Range (mm)', fontsize=12)
     ax.set_title('Proton Projected Range vs Energy', fontsize=13, fontweight='bold')
     ax.grid(True, alpha=0.3)
-    plt.savefig(Path(output_dir) / "range_vs_energy.pdf", bbox_inches='tight')
+    if PDFoutput:
+        plt.savefig(Path(output_dir) / "range_vs_energy.pdf", bbox_inches='tight', format='pdf')
     plt.close()
 
 

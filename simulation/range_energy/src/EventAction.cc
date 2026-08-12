@@ -39,16 +39,24 @@ void EventAction::EndOfEventAction(const G4Event* event)
  
   if(hitsCollection){
     G4int n_hit = hitsCollection->entries();
-    for (G4int i = 0; i < n_hit; i++){
-	    G4double partEdep = (*hitsCollection)[i]->GetEdep();
-      G4double dEdX = (*hitsCollection)[i]->GetdEdX();
-      G4double eTot = (*hitsCollection)[i]->GetEtot();
-      G4double TrackID = (*hitsCollection)[i]->GetTrackID();
-      G4double eKin = (*hitsCollection)[i]->GetEkin();
-      G4double StepLength = (*hitsCollection)[i]->GetStepLength();
-      G4ThreeVector Pos = (*hitsCollection)[i]->GetPos();
+    // for (G4int i = 0; i < n_hit; i++){
+	  //   G4double partEdep = (*hitsCollection)[i]->GetEdep();
+    //   G4double dEdX = (*hitsCollection)[i]->GetdEdX();
+    //   G4double eTot = (*hitsCollection)[i]->GetEtot();
+    //   G4double TrackID = (*hitsCollection)[i]->GetTrackID();
+    //   G4double eKin = (*hitsCollection)[i]->GetEkin();
+    //   G4double StepLength = (*hitsCollection)[i]->GetStepLength();
+    //   G4ThreeVector Pos = (*hitsCollection)[i]->GetPos();
       // G4double Theta = (*hitsCollection)[i]->GetTheta();
 
+      G4double partEdep = (*hitsCollection)[n_hit-1]->GetEdep();
+      G4double dEdX = (*hitsCollection)[n_hit-1]->GetdEdX();
+      G4double eTot = (*hitsCollection)[n_hit-1]->GetEtot();
+      G4double TrackID = (*hitsCollection)[n_hit-1]->GetTrackID();
+      G4double eKin = (*hitsCollection)[n_hit-1]->GetEkin();
+      G4double StepLength = (*hitsCollection)[n_hit-1]->GetStepLength();
+      G4ThreeVector Pos = (*hitsCollection)[n_hit-1]->GetPos();
+      
       analysisManager->FillNtupleIColumn(0, eventID);	
       analysisManager->FillNtupleDColumn(1, Pos.z());
 	    analysisManager->FillNtupleDColumn(2, partEdep/MeV);
@@ -60,7 +68,7 @@ void EventAction::EndOfEventAction(const G4Event* event)
       // analysisManager->FillNtupleDColumn(8, Theta);
       
  	    analysisManager->AddNtupleRow();
-    }
+    // }
   }
 }
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......

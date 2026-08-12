@@ -5,268 +5,361 @@ import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 import uproot  # uproot is a great library for reading ROOT files in Python
 matplotlib.use('TkAgg')  # or 'Qt5Agg'
+from copy import deepcopy
+from analysisFunctions import EnergyRangeData, range_energy_relationship, range_energy_sum, load_range_data, gaussian
 
-class RangeEnergyRelationship:
-    def __init__(self):
-        # Initialize empty lists for energy, range, and standard deviation
-        self.energy = []
-        self.range = []
-        self.std_dev = []
+def load_range_data(file_folder, name=None, colors=None, UseSumFit=False):
+    data = np.load(f"{file_folder}/ranges.npz")
 
-    def add_data(self, energy, range_value, std_dev):
-        # Append the values to the corresponding lists
-        self.energy.append(energy)
-        self.range.append(range_value)
-        self.std_dev.append(std_dev)
+    return EnergyRangeData(
+        name=name,
+        colors=colors,
+        energies=data["energies"],
+        ranges=data["ranges"]/10,
+        range_errors=data["range_errors"]/10,
+        sigmas=data["sigmas"],
+        sigma_errors=data["sigma_errors"],
+        useSumFit=UseSumFit
+    )
+
+def fit_range_energy(data: EnergyRangeData, output=False):
+
+    if not data.useSumFit:
+        popt, pcov = curve_fit(
+            range_energy_relationship,
+            data.energies,
+            data.ranges,
+            p0=[0.002, 1.75],
+            maxfev=10000
+        )
+
+        data.alpha, data.p = [popt[0]], popt[1]
+        data.alpha_error, data.p_error = [np.sqrt(np.diag(pcov))[0]], np.sqrt(np.diag(pcov))[1]
+
+        if output:
+            print(f"Fitted parameters for {data.name}:")
+            print(f"alpha = {data.alpha[0]:.6g} ± {data.alpha_error[0]:.6g}")
+            print(f"p     = {data.p:.6f} ± {data.p_error:.6f}")
+    else:
+        popt, pcov = curve_fit(
+            range_energy_sum,
+            data.energies,
+            data.ranges,
+            p0=[6.94656e-3, 8.13116e-4, -1.21068e-6, 1.053e-9],
+            maxfev=10000
+        )
+    
+        data.alpha = popt
+        data.alpha_error = np.sqrt(np.diag(pcov))
+    
+        if output:
+            print(f"Fitted parameters for {data.name}:")
+            print(f"alpha1 = {data.alpha[0]:.6g} ± {data.alpha_error[0]:.6g}")
+            print(f"alpha2 = {data.alpha[1]:.6g} ± {data.alpha_error[1]:.6g}")
+            print(f"alpha3 = {data.alpha[2]:.6g} ± {data.alpha_error[2]:.6g}")
+            print(f"alpha4 = {data.alpha[3]:.6g} ± {data.alpha_error[3]:.6g}")
+
+    calculate_residuals(data)
+
+    if output:
+        print(f"chi2          = {data.chi2:.4f}")
+        print(f"reduced chi2  = {data.reduced_chi2:.4f}")
+        print(f"RMS residual  = {data.rms_residual:.6g} cm")
         
-    def __repr__(self):
-        # Provide a string representation of the stored data for easy visualization
-        return "\n".join(rf"\SI{e:.3f}{{\mega\electronvolt}} & \SI{r:.3f}{{\milli\meter}} $\pm$ \SI{s:.3f}{{\milli\meter}}" 
-                         for e, r, s in zip(self.energy, self.range, self.std_dev))
+    return data
 
-def range_energy_relationship(energy, alpha, p):
-    return alpha * energy**p
+def calculate_residuals(data: EnergyRangeData):
+    if data.useSumFit:
+        fitted_ranges = range_energy_sum(
+            data.energies,
+            data.alpha[0],
+            data.alpha[1],
+            data.alpha[2],
+            data.alpha[3]
+        )
+        n_parameters = 4
+    else:
+        fitted_ranges = range_energy_relationship(
+            data.energies,
+            data.alpha[0],
+            data.p
+        )
+        n_parameters = 2
+    
+    data.residuals = data.ranges - fitted_ranges
+    
+    # Normalized residuals: divide by measurement uncertainty
+    # Assumes range_errors are 1-sigma uncertainties on each measurement
+    data.normalized_residuals = data.residuals / data.range_errors
+    
+    # Chi-squared: sum of squared normalized residuals
+    data.chi2 = np.sum(data.normalized_residuals**2)
+    
+    dof = len(data.energies) - n_parameters
+    data.reduced_chi2 = data.chi2 / dof
+    
+    # RMS residual in physical units
+    data.rms_residual = np.sqrt(np.mean(data.residuals**2))
+    
+    return data
 
-# Define a Gaussian function
-def gaussian(x, mean, sigma, amplitude):
-    return amplitude * np.exp(-0.5 * ((x - mean) / sigma) ** 2)
-
-def get_range_energy(energy, path, enable_output=False, enable_plot=False):
-    # File path to your ROOT file
-    root_file_path = f'{path}/range_{energy}.root'
-    
-    # Open the ROOT file using uproot
-    with uproot.open(root_file_path) as file:
-        tree = file["range"]  # Replace 'range' with your tree name
-    
-        # Extract data from the 'range' branch
-        values = tree["range"].array(library="np")  # Replace 'range' with your branch name
-    
-    # Calculate min and max values
-    min_value = np.min(values)
-    max_value = np.max(values)
-    
-    # Calculate range and determine the number of bins
-    data_range = max_value - min_value
-    if data_range < 4:
-        data_range *= 20
-    if data_range < 50:
-        data_range *= 10
-    n_bins = int(data_range * 10)  # Example: 10 bins per unit range
-    
-    # Create histogram data manually
-    bin_contents, bin_edges = np.histogram(values, bins=n_bins, range=(min_value, max_value))
-    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
-    
-    # Find the peak value
-    max_bin = np.argmax(bin_contents)
-    peak_value = bin_centers[max_bin]
-
-    initial_sigma_guess = np.std(values)
-    # Fit a Gaussian to the histogram data
-    initial_guess = [peak_value, initial_sigma_guess, np.max(bin_contents)]
-    popt, pcov = curve_fit(gaussian, bin_centers, bin_contents, p0=initial_guess, maxfev=1000000)
-    
-    # Extract fit parameters and their standard deviations
-    mean, sigma, amplitude = popt
-    mean_stddev, sigma_stddev, amplitude_stddev = np.sqrt(np.diag(pcov))
-    
-    if enable_output:
-        print(f"-------------Energy: {energy}")
-        print(f"Initial guess: {initial_guess}")
-        print()
-        print(f"Peak value of the histogram: {peak_value:.3e}")
-        print(f"Gaussian fit parameters:")
-        print(f"Mean: {mean:.3e} ± {mean_stddev:.3e}")
-        print(f"Sigma: {sigma:.3e} ± {sigma_stddev:.3e}")
-        print(f"Amplitude: {amplitude:.3e} ± {amplitude_stddev:.3e}")
-        print("--------------------------------------")
-    
-    # Plot the histogram and the Gaussian fit
-    if enable_plot:
-        plt.rcParams.update({'font.size': 15})
-        plt.figure(figsize=(12, 6))
-        plt.hist(bin_centers, bins=n_bins, weights=bin_contents, alpha=0.6, label='Data')
-        plt.plot(bin_centers, gaussian(bin_centers, *popt), 'r-', label=f'Gaussian Fit\n' rf'$\mu$: {mean:.3e} mm ± {mean_stddev:.3e} mm' f'\n' rf'$\sigma$: {sigma:.3e} mm ± {sigma_stddev:.3e} mm')
-        plt.xlabel('Range / mm')
-        plt.ylabel('Counts')
-        plt.title(f'{energy} MeV Proton Range with Gaussian Fit')
-        plt.legend()
-        plt.grid(True)
-        plt.savefig(f'{path}/range_fit_{energy}.pdf', format="pdf", bbox_inches="tight")
-        # plt.close()
-        plt.show()
-    
-    return (energy, mean, abs(sigma))
-
-def analyse_range_energy(data : RangeEnergyRelationship, comparison_data: RangeEnergyRelationship = None, comparison_data2: RangeEnergyRelationship = None,  comparison_data3: RangeEnergyRelationship = None):
-   # Extract energies and ranges from the EnergyRangeData object
-    energies = np.array(data.energy)
-    ranges = np.array(data.range)
-    
-    # Perform curve fitting
-    popt, pcov = curve_fit(range_energy_relationship, energies, ranges, maxfev = 1000000)
-    
-    # popt contains the optimized values for alpha and p
-    alpha, p = popt
-    std_devs = np.sqrt(np.diag(pcov))
-    alpha_stddev, p_stddev = std_devs
-    
-    # Print the fitting parameters with their standard deviations
-    print(f"\nPbwo4 Fitted parameters:")
-    print(f"alpha = {alpha:.3e} ± {alpha_stddev:.3e}")
-    print(f"p = {p:.3e} ± {p_stddev:.3e}")     
-    print(f"Covariance Matrix:{pcov[0][1]}")
-
-    # Generate fitted ranges using the optimized parameters
-    fitted_ranges = range_energy_relationship(energies, *popt)
-    
-    # Plot the original data
+def plotInit():
     plt.rcParams.update({'font.size': 26})
     plt.figure(figsize=(20, 15))
-    plt.errorbar(energies, ranges, yerr=data.std_dev, fmt='o', color=colors["PbWO4"][0], capsize=5)#, label=f'Simulated PbWO4 Data')
-
-    # Plot the fitted curve
-    plt.plot(energies, fitted_ranges, color=colors["PbWO4"][1], linewidth = 3, label=f'PbWO4 Fit: $\\alpha_{{PbWO4}} = {alpha:.3e}$ $\\frac{{mm}}{{MeV^p}}$; $p_{{PbWO4}}$ = {p:.3e}')
- 
-    # If comparison data is provided, plot it
-    if comparison_data:
-        comp_energies = np.array(comparison_data.energy)
-        comp_ranges = np.array(comparison_data.range)
-        
-        comp_energies2 = np.array(comparison_data2.energy)
-        comp_ranges2 = np.array(comparison_data2.range)
-
-        comp_energies3 = np.array(comparison_data3.energy)
-        comp_ranges3 = np.array(comparison_data3.range)
-
-
-        # Perform curve fitting for the comparison data
-        comp_popt, comp_pcov = curve_fit(range_energy_relationship, comp_energies, comp_ranges, maxfev=1000000)
-        comp_popt2, comp_pcov2 = curve_fit(range_energy_relationship, comp_energies2, comp_ranges2, maxfev=1000000)
-        comp_popt3, comp_pcov3 = curve_fit(range_energy_relationship, comp_energies3, comp_ranges3, maxfev=1000000)
-
-
-        comp_alpha, comp_p = comp_popt
-        comp_std_devs = np.sqrt(np.diag(comp_pcov))
-        comp_alpha_stddev, comp_p_stddev = comp_std_devs
-        
-        comp_alpha2, comp_p2 = comp_popt2
-        comp_std_devs2 = np.sqrt(np.diag(comp_pcov2))
-        comp_alpha_stddev2, comp_p_stddev2 = comp_std_devs2
-
-        comp_alpha3, comp_p3 = comp_popt3
-        comp_std_devs3 = np.sqrt(np.diag(comp_pcov3))
-        comp_alpha_stddev3, comp_p_stddev3 = comp_std_devs3
-        
-        
-        print(f"\nPTFE _Fitted parameters:")
-        print(f"alpha = {comp_alpha:.3e} ± {comp_alpha_stddev:.3e}")
-        print(f"p = {comp_p:.3e} ± {comp_p_stddev:.3e}")
-        print(f"Covariance Matrix:{comp_pcov[0][1]}")
-
-        print(f"\nH2O_Fitted parameters:")
-        print(f"alpha = {comp_alpha2:.3e} ± {comp_alpha_stddev2:.3e}")
-        print(f"p = {comp_p2:.3e} ± {comp_p_stddev2:.3e}")
-        print(f"Covariance Matrix:{comp_pcov2[0][1]}")
-
-        print(f"\nAlu_Fitted parameters:")
-        print(f"alpha = {comp_alpha3:.3e} ± {comp_alpha_stddev3:.3e}")
-        print(f"p = {comp_p3:.3e} ± {comp_p_stddev3:.3e}")
-        print(f"Covariance Matrix:{comp_pcov3[0][1]}\n")
-
-
-        # Generate fitted ranges for comparison data
-        comp_fitted_ranges = range_energy_relationship(comp_energies, *comp_popt)
-        comp_fitted_ranges2 = range_energy_relationship(comp_energies2, *comp_popt2)
-        comp_fitted_ranges3 = range_energy_relationship(comp_energies3, *comp_popt3)
-        
-        # Plot the comparison data
-        plt.errorbar(comp_energies, comp_ranges, yerr=comparison_data.std_dev, fmt='o', color=colors["PTFE"][0], capsize=5)#, label='Simulated PTFE Data')
-        plt.plot(comp_energies, comp_fitted_ranges, color=colors["PTFE"][1], linewidth = 3,label=f'PTFE Fit: $\\alpha_{{PTFE}} = {comp_popt[0]:.3e}$ $\\frac{{mm}}{{MeV^p}}$; $p_{{PTFE}}$ = {comp_popt[1]:.3e}')
-
-        plt.errorbar(comp_energies2, comp_ranges2, yerr=comparison_data2.std_dev, fmt='o', color=colors["H2O"][0], capsize=5)#, label='ICRU H2O Data')
-        plt.plot(comp_energies2, comp_fitted_ranges2, color=colors["H2O"][1], linewidth = 3,label=f'H2O Fit : $\\alpha_{{H2O}} = {comp_popt2[0]:.3e}$ $\\frac{{mm}}{{MeV^p}}$; $p_{{H2O}}$ = {comp_popt2[1]:.3e}')
-
-        plt.errorbar(comp_energies3, comp_ranges3, yerr=comparison_data3.std_dev, fmt='o', color=colors["Al"][0], capsize=5)#, label='ICRU Al Data')
-        plt.plot(comp_energies3, comp_fitted_ranges3, color=colors["Al"][1], linewidth = 3, label=f'Al Fit : $\\alpha_{{Al}} = {comp_popt3[0]:.3e}$ $\\frac{{mm}}{{MeV^p}}$; $p_{{Al}}$ = {comp_popt3[1]:.3e}')
-
-    # Add labels, title, and legend
     plt.xlabel('Energy / MeV')
-    plt.ylabel('Range / mm')
-    # plt.title(f'Range Energy: ICRU H2O and Al, Simulated PbWO4 and PTFE')
-    plt.legend()
-
-    # Show the plot
+    plt.ylabel('Range / cm')
     plt.grid(True)
-    # plt.savefig(f"{path}/rangeenergy.svg", format="svg", bbox_inches="tight")
-    plt.savefig(f"{path}/rangeenergy.pdf", format="pdf", bbox_inches="tight")
+    return
+
+def plotEnd(path = None):
+    plt.legend()
+    if path is not None:
+        plt.savefig(f"{path}/rangeenergy.pdf", format="pdf", bbox_inches="tight")
     plt.show()
+    return
 
+def plot_range_energy(data: EnergyRangeData):
 
-targetColorMap = ["#000000","#1f77b4", "#4e79a7", "#76b7b2", "#bab0ac", "#f28e2b", "#e15759", "#9c755f"]
+    fitEnergies = np.linspace(
+        data.energies.min(),
+        data.energies.max() + 20,
+        200
+    )
 
-path = "pbwo4" #h2o pbwo4 air DSB EJ256
-name = "PbWO4" #H2O PbWO4 AIR DSB EJ-256
-icru_el = 0 # 0=h20, 1=air 
+    if data.useSumFit:
+        fitRanges = range_energy_sum(
+            fitEnergies,
+            data.alpha[0],
+            data.alpha[1],
+            data.alpha[2],
+            data.alpha[3]
+        )
+    else:
+        fitRanges = range_energy_relationship(
+            fitEnergies,
+            data.alpha[0],
+            data.p
+        )
 
-colors = {
-    "PbWO4":    (targetColorMap[0], targetColorMap[0]),
-    "PTFE":  (targetColorMap[1], targetColorMap[1]),
-    "H2O":   (targetColorMap[2], targetColorMap[2]),
-    "Al": (targetColorMap[3], targetColorMap[3]),    # points, fit
-}
+    plt.errorbar(
+        data.energies,
+        data.ranges,
+        yerr=data.range_errors,
+        fmt='o',
+        color=data.colors[0],
+        capsize=5
+    )
+
+    if data.useSumFit:
+        plt.plot(
+            fitEnergies,
+            fitRanges,
+            color=data.colors[1],
+            linewidth=2,
+            label=(
+                f'{data.name} Fit: '
+                f'$\\alpha_1 = {data.alpha[0]:.3e}$ '
+                f'$\\alpha_2 = {data.alpha[1]:.3e}$ '
+                f'$\\alpha_3 = {data.alpha[2]:.3e}$ '
+                f'$\\alpha_4 = {data.alpha[3]:.3e}$ '
+            )
+        )
+    else:
+        plt.plot(
+            fitEnergies,
+            fitRanges,
+            color=data.colors[1],
+            linewidth=2,
+            label=(
+                f'{data.name} Fit: '
+                f'$\\alpha_{{{data.name}}} = {data.alpha[0]:.3e}$ '
+                f'$\\frac{{cm}}{{MeV^p}}$; '
+                f'$p_{{{data.name}}}$ = {data.p:.3e}'
+            )
+        )
+    return
+
+def plot_residuals(data: EnergyRangeData):
+    fit_type = "Polynomial" if data.useSumFit else "Power law"
+    plt.errorbar(
+        data.energies,
+        data.residuals,
+        yerr=data.range_errors,
+        fmt='o--',
+        color=data.colors[0],
+        capsize=5
+    )
+
+    plt.axhline(
+        0,
+        color='black',
+        linestyle='--',
+        linewidth=2,
+        label=(
+            f'{data.name} ({fit_type}), '
+            fr'$\chi^2_\nu={data.reduced_chi2:.2f}$, '
+            fr'RMS={data.rms_residual:.2e}\,\mathrm{{cm}}'
+        )
+    )
+    plt.ylabel(r'Residual $R_\mathrm{data}-R_\mathrm{fit}$ / cm')
+
+def plot_normalized_residuals(data: EnergyRangeData):
+
+    fit_type = "Polynomial" if data.useSumFit else "Power law"
+
+    plt.plot(
+        data.energies,
+        data.normalized_residuals,
+        'o--',
+        color=data.colors[0],
+        label=(
+            f'{data.name} ({fit_type}), '
+            fr'$\chi^2_\nu={data.reduced_chi2:.2f}$'
+        )
+    )
+
+    plt.axhline(
+        0,
+        color='black',
+        linestyle='--',
+        linewidth=2
+    )
+
+    plt.axhline(
+        1,
+        color='gray',
+        linestyle=':',
+        linewidth=1.5
+    )
+
+    plt.axhline(
+        -1,
+        color='gray',
+        linestyle=':',
+        linewidth=1.5
+    )
+
+    plt.ylabel(
+        r'Normalized residual '
+        r'$(R_\mathrm{data}-R_\mathrm{fit})/\sigma_R$'
+    )
+
+def save_range_data(data: EnergyRangeData, filename):
+
+    np.savez(
+        filename,
+        name=data.name,
+        energies=data.energies,
+        ranges=data.ranges,
+        range_errors=data.range_errors,
+        sigmas=data.sigmas,
+        sigma_errors=data.sigma_errors,
+
+        alpha=data.alpha,
+        alpha_error=data.alpha_error,
+        p=data.p,
+        p_error=data.p_error,
+
+        useSumFit=data.useSumFit,
+
+        residuals=data.residuals,
+        normalized_residuals=data.normalized_residuals,
+
+        chi2=data.chi2,
+        reduced_chi2=data.reduced_chi2,
+        rms_residual=data.rms_residual
+    )
+
+    print(f"Saved {data.name} to {filename}")
 
 def main():
-    data = RangeEnergyRelationship()
-    data2 = RangeEnergyRelationship()
-    datawater = RangeEnergyRelationship()
-    
-    energies = [3, 5, 10, 15, 20, 30, 40, 50, 60, 70, 80, 90, 100, 125, 150, 175, 200, 225, 250]
-    energies = [3, 5, 10, 15, 20, 30, 40, 50, 60, 70, 80, 90, 100, 125, 150, 175, 200, 225]
-    
-    rho = []
-    rho_h2o = 0.997
+    UseSumFit = True
+
+    targetColorMap = ["#000000","#1f77b4", "#4e79a7", "#76b7b2", "#bab0ac", "#f28e2b", "#e15759", "#9c755f"]
+
+    colors = {
+        "PbWO4":    (targetColorMap[0], targetColorMap[0]),
+        "PTFE":  (targetColorMap[1], targetColorMap[1]),
+        "H2O":   (targetColorMap[2], targetColorMap[2]),
+        "ICRU_ALU": (targetColorMap[3], targetColorMap[3]),
+        "ICRU_AIR": (targetColorMap[4], targetColorMap[4]),
+        "ICRU_H2O": (targetColorMap[5], targetColorMap[5]),
+    }
+
     rho_alu = 2.69890
     rho_h2o_icru = 1.000
     rho_h2o_air=1.2048e-3
-    rho.append(rho_h2o_icru)
-    rho.append(rho_h2o_air)
     
-    ICRU_ranges = []
+    ICRUenergies = [3, 5, 10, 15, 20, 30, 40, 50, 60, 70, 80, 90, 100, 125, 150, 175, 200, 225, 250]
     CSDA_ranges_h20 = [1.499e-2, 3.623e-2, 1.23e-1, 2.539e-1, 4.26e-1, 8.853e-1, 1.489, 2.227, 3.093, 4.080, 5.184, 6.398, 7.718, 1.146e1, 1.577e1, 2.062e1, 2.596e1, 3.174e1, 3.794e1] #g/cm^2
     CSDA_ranges_air= [1.737e-2, 4.173e-2, 1.408e-1, 2.899e-1, 4.855e-1, 1.007, 1.691, 2.528, 3.509, 4.628, 5.876, 7.250, 8.744, 1.297e1, 1.786e1, 2.334e1, 2.937e1, 3.590e1, 4.290e1]
     CSDA_ranges_alu = [2.193e-02, 5.157e-02, 1.697e-01, 3.448e-01, 5.726e-01, 1.175e+00, 1.961e+00, 2.918e+00, 4.037e+00, 5.309e+00, 6.727e+00, 8.284e+00, 9.976e+00, 1.476e+01, 2.026e+01, 2.644e+01, 3.322e+01, 4.057e+01, 4.843e+01]
-    ICRU_ranges.append(CSDA_ranges_h20)
-    ICRU_ranges.append(CSDA_ranges_air)
     
+    ICRU_H2O_data = EnergyRangeData(
+        name="ICRU_H2O",
+        colors = colors["ICRU_H2O"],
+        energies=np.array(ICRUenergies),
+        ranges=np.array(CSDA_ranges_h20) / rho_h2o_icru,
+        range_errors=np.array(CSDA_ranges_h20) / rho_h2o_icru * 0.015,
+        sigmas=np.full(len(ICRUenergies), np.nan),
+        sigma_errors=np.full(len(ICRUenergies), np.nan),
+        useSumFit=UseSumFit
+    )
 
+    ICRU_AIR_data = EnergyRangeData(
+        name="ICRU_AIR",
+        colors = colors["ICRU_AIR"],
+        energies=np.array(ICRUenergies),
+        ranges=np.array(CSDA_ranges_air) / rho_h2o_air,
+        range_errors=np.array(CSDA_ranges_air) / rho_h2o_air * 0.015,
+        sigmas=np.full(len(ICRUenergies), np.nan),
+        sigma_errors=np.full(len(ICRUenergies), np.nan),
+        useSumFit=UseSumFit
+    )
 
+    ICRU_ALU_data = EnergyRangeData(
+        name="ICRU_ALU",
+        colors = colors["ICRU_ALU"],
+        energies=np.array(ICRUenergies),
+        ranges=np.array(CSDA_ranges_alu) / rho_alu,
+        range_errors=np.array(CSDA_ranges_alu) / rho_alu * 0.015,
+        sigmas=np.full(len(ICRUenergies), np.nan),
+        sigma_errors=np.full(len(ICRUenergies), np.nan),
+        useSumFit=UseSumFit
+    )
 
-    icru_h2o= RangeEnergyRelationship()
-    icru_alu= RangeEnergyRelationship()
-    cutoff = 0
-    # get_range_energy(15, enable_output=True, enable_plot=True)
-    for index, energy in enumerate(energies):
-        if(index == len(energies)-cutoff):
-            break
-        data.add_data(*get_range_energy(energy, "pbwo4proj", enable_output=False, enable_plot=False))
-        data2.add_data(*get_range_energy(energy, "h2oproj", enable_output=False, enable_plot=False))
-        datawater.add_data(*get_range_energy(energy, "h2o", enable_output=False, enable_plot=False))
+    h2o_data = load_range_data("h2o", name="H2O", colors=colors["H2O"], UseSumFit=UseSumFit)
+    pbwo4_data = load_range_data("pbwo4", name="PbWO4", colors=colors["PbWO4"], UseSumFit=UseSumFit)
 
+    h2o_data = fit_range_energy(h2o_data)
+    pbwo4_data = fit_range_energy(pbwo4_data)
 
-    for index, energy in enumerate(energies):
-        if(index == len(energies)-cutoff):
-            break
-        icru_h2o.add_data(energies[index], CSDA_ranges_h20[index]/rho_h2o_icru*10, CSDA_ranges_h20[index]/rho_h2o_icru*0.015*10)
-        icru_alu.add_data(energies[index], CSDA_ranges_alu[index]/rho_alu*10, CSDA_ranges_alu[index]/rho_alu*0.015*10)
+    ICRU_H2O_data = fit_range_energy(ICRU_H2O_data, output=True)
+    # ICRU_AIR_data = fit_range_energy(ICRU_AIR_data)
+    ICRU_ALU_data = fit_range_energy(ICRU_ALU_data)
 
-    for index, energy in enumerate(energies):
-        print(f"${energy}$ & \\makecell{{$\\num{{{icru_h2o.range[index]:.2e}}} \pm $\\\\$ \\num{{{icru_h2o.std_dev[index]:.2e}}}$}} & \\makecell{{$\\num{{{datawater.range[index]:.2e}}} \pm $\\\\$ \\num{{{datawater.std_dev[index]:.2e}}}$}} & ${(datawater.range[index]-icru_h2o.range[index])/icru_h2o.range[index]*100:.3f}$ & \\makecell{{$\\num{{{icru_alu.range[index]:.2e}}} \pm $\\\\$ \\num{{{icru_alu.std_dev[index]:.2e}}}$}} & \\makecell{{$\\num{{{data.range[index]:.2e}}} \pm $\\\\$ \\num{{{data.std_dev[index]:.2e}}}$}} & \\makecell{{$\\num{{{data2.range[index]:.2e}}} \pm $\\\\$ \\num{{{data2.std_dev[index]:.2e}}}$}} \\\\" )
+    # ICRU_H2O_data.alpha = [6.94656e-3, 8.13116e-4, -1.21068e-6, 1.053e-9] #paper fit paramas
+    plotInit()
+    plot_range_energy(pbwo4_data)
+    plot_range_energy(h2o_data)
+    plot_range_energy(ICRU_H2O_data)
 
-        #$3$ & $0.1499 \pm 0.002$ & $0.151 \pm 0.002$ & $0.586$ & $0.051 \pm 0.001$ \\
+    pbwo4_data_alt = deepcopy(pbwo4_data)
+    pbwo4_data_alt.useSumFit = not pbwo4_data_alt.useSumFit
+    pbwo4_data_alt.colors = colors["ICRU_AIR"]
+    pbwo4_data_alt = fit_range_energy(pbwo4_data_alt, output=True)
+    plot_range_energy(pbwo4_data_alt)
+    plotEnd("h2o")
 
-    analyse_range_energy(data, data2, icru_h2o, icru_alu)
+    plotInit()
+    plot_residuals(pbwo4_data)
+    plot_residuals(pbwo4_data_alt)
+    plotEnd()
+
+    save_range_data(h2o_data, "h2o_range_energy.npz")
+    save_range_data(pbwo4_data, "pbwo4_range_energy.npz")
+    save_range_data(ICRU_H2O_data, "ICRU_H2O_range_energy.npz")
+    save_range_data(ICRU_ALU_data, "ICRU_ALU_range_energy.npz")
 
 if __name__ == "__main__":
     main()
