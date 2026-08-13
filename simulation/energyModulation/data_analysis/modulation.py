@@ -6,6 +6,9 @@ from scipy import stats
 from scipy.stats import exponnorm
 from scipy.stats import moyal
 from dataclasses import dataclass
+import sys
+sys.path.append("../../range_energy/data_analysis")
+import analysisFunctions
 
 @dataclass
 class TargetParameters:
@@ -104,47 +107,25 @@ def shiftedLandau(x, x0, A, mpv, sigma):
     return x0-landau(x, A, mpv, sigma)
 
 def bortfeld_range(E_MeV):
-    """
-    Calculate range in water for proton kinetic energy using Bortfeld's formula.
-    
-    Parameters:
-    E_MeV : float or array
-        Kinetic energy in MeV
-    
-    Returns:
-    range : float or array
-        Range in cm (in water)
-    
-    Note: This is valid for E >= 1 MeV
-    """
     E = np.asarray(E_MeV)
-    
-    # Bortfeld parameterization for protons in water
-    # Valid range: roughly 1 MeV to 250 MeV
     range_cm = np.zeros_like(E, dtype=float)
-    
     mask_valid = E >= 1.0
-    
-    # For E >= 1 MeV
-    if np.any(mask_valid):
-        E_valid = E[mask_valid] if isinstance(E, np.ndarray) else E
 
-        p = 1.77
-        alpha = 0.0225
-        range_cm = alpha * np.power(E_valid, p)
-        
-        
-        # if E_valid <= 2.5:
-        #     R = 0.56 * E_valid - 0.01
-        # else:
-        #     R = 0.31 * E_valid**1.5 + 0.06
-        
-        # if isinstance(E, np.ndarray):
-        #     range_cm[mask_valid] = R
-        # else:
-        #     range_cm = R
+    data = np.load("../../range_energy/data_analysis/h2o_range_energy.npz")
+    useSumFit = data["useSumFit"]
 
-    
+    if useSumFit:
+        alpha = data["alpha"]
+        if np.any(mask_valid):
+            E_valid = E[mask_valid] if isinstance(E, np.ndarray) else E
+            range_cm = analysisFunctions.range_energy_sum(E_valid, *alpha)
+    else:
+        alpha = data["alpha"]
+        p = data["p"]
+        if np.any(mask_valid):
+            E_valid = E[mask_valid] if isinstance(E, np.ndarray) else E
+            range_cm = analysisFunctions.range_energy_relationship(E_valid, alpha[0], p)
+        
     return range_cm
  
  
@@ -285,7 +266,7 @@ def analyse_data(file_path, enablePrint=False, enablePlot=False):
         file = uproot.open(file_path)
         tree = file["braggsampler"]
         eKin = tree["eKin"].array(library="np")
-        resRange = tree["resRange"].array(library="np")
+        resRange = tree["CSDARange"].array(library="np")
         
         if enablePrint:
             print(f"Successfully read {len(eKin)} events")
@@ -308,7 +289,7 @@ def analyse_data(file_path, enablePrint=False, enablePlot=False):
     # Fit Gaussians to all datasets
     popt_eKin = _fit_gaussian_to_data(eKin, bounds_upper=[np.inf, 500, np.inf])
     popt_range = _fit_gaussian_to_data(range_cm, bounds_upper=[np.inf, 500, np.inf])
-    popt_resRange = _fit_gaussian_to_data(resRange)
+    popt_resRange = _fit_gaussian_to_data(resRange, bounds_upper=[np.inf, 500, np.inf])
     
     fitParameters = [popt_eKin, popt_range, popt_resRange]
     
@@ -366,8 +347,8 @@ def main():
 
     filepathref = f"{data_file_path}/{data_file_ref}"
  
-    targetThicknesses = range(100, 300, 100)
-    pmods = range(100, 900, 100)
+    targetThicknesses = range(50, 100, 100)
+    pmods = range(200, 300, 200)
  
     targetParamsList = []
  
@@ -402,7 +383,7 @@ def main():
             # Range analysis
             t = targetParamsList[0].range - fitparams[1][1]
             variance = fitparams[1][2]**2 - targetParamsList[0].sigma**2
-            modulationPower = variance / t * 1000
+            modulationPower = variance / t * 10000
  
             # Energy analysis
             tE = targetParamsList[0].energy - fitparams[0][1]
@@ -412,7 +393,7 @@ def main():
             # Residual Range analysis
             t_res = targetParamsList[0].resRange - fitparams[2][1]
             variance_res = fitparams[2][2]**2 - targetParamsList[0].sigma_res**2
-            modulationPower_resRange = variance_res / t_res * 1000
+            modulationPower_resRange = variance_res / t_res * 10000
  
             targetParamsList.append(TargetParameters(
                 Thickness=thickness,

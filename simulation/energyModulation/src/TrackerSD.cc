@@ -60,11 +60,19 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
     material
     );
 
+    G4double residualCSDARange = emCalc.GetCSDARange(
+    eKin,
+    particle,
+    material
+    );
+    G4cout << "Res " << residualRange << " csda " << residualCSDARange << G4endl;
+
     newHit->SetTrackID(trackid);
     newHit->SetEkin(eKin);
     newHit->SetEdep(eDep);
     newHit->SetEtot(energy);
     newHit->SetResRange(residualRange);
+    newHit->SetCSDARange(residualCSDARange);
     fHitsCollection->insert( newHit );
   }
   

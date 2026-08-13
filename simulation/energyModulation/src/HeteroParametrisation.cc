@@ -14,7 +14,15 @@ class HeteroParameterisation : public G4VPVParameterisation {
                                G4Material* mat1, G4Material* mat2,
                                G4VisAttributes* vis1, G4VisAttributes* vis2)
             : fNx(nx), fNy(ny), fNz(nz), fDx(dx), fDy(dy), fDz(dz),
-              fMat1(mat1), fMat2(mat2), fVis1(vis1), fVis2(vis2) {}
+              fMat1(mat1), fMat2(mat2), fVis1(vis1), fVis2(vis2) {
+                G4double rhoLung = 1.05;
+                G4double rhoLunginf = 0.26;
+                G4double rhoH2O = 1;
+                G4double rhoair = 0.0012;
+                probability = (rhoLunginf-rhoair)/(rhoLung-rhoair);
+                probability = 0.2251;
+                // probability = 0.25;
+              }
     
         void ComputeTransformation(G4int copyNo, G4VPhysicalVolume* physVol) const override {
             int ix = copyNo / (fNy * fNz);
@@ -31,13 +39,14 @@ class HeteroParameterisation : public G4VPVParameterisation {
     
         G4Material* ComputeMaterial(G4int copyNo, G4VPhysicalVolume*, const G4VTouchable*) {
             if (fMaterials.count(copyNo) == 0) {
-                G4Material* mat = (G4UniformRand() < 0.25) ? fMat1 : fMat2;
+                G4Material* mat = (G4UniformRand() < probability) ? fMat1 : fMat2;
                 fMaterials[copyNo] = mat;
             }
             return fMaterials[copyNo];
             }
 
     private:
+        G4double probability;
         G4int fNx, fNy, fNz;
         G4double fDx, fDy, fDz;
         G4Material* fMat1;

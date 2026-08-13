@@ -348,20 +348,24 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
       airVisAttr->SetVisibility(true);
       airVisAttr->SetForceSolid(true);
 
-      cubeSizeXY = 0.2 * mm;
+      cubeSizeXY = 0.1 * mm;
       G4double rhoLung = 1.05;
       G4double rhoH2O = 1;
       G4double probLung = 0.26;
 
       cubeSizeZ = static_cast<double>(pmod)* rhoH2O/rhoLung * 1/(1-probLung)*um;
+      cubeSizeZ = pmod/0.7355*um;
+      // cubeSizeZ = 0.256;
       
-      nx = 100;
+      nx = 150;
       ny = nx;
       nz = static_cast<int>(std::round(heteroThickness/cubeSizeZ));
       // nz = 1;
+
       auto voxelSolid = new G4Box("Voxel", cubeSizeXY/2, cubeSizeXY/2, cubeSizeZ/2);
 
       std::cout << "pmod: " << pmod << std::endl;
+      std::cout << "cubeSizeZ: " << cubeSizeZ << std::endl;
       std::cout << "heteroThickness: " << (nz*cubeSizeZ) << std::endl;
       std::cout << "heteroThickness/cubeSizeZ " << heteroThickness/cubeSizeZ << std::endl;
       std::cout << "std::round(heteroThickness/cubeSizeZ) " << std::round(heteroThickness/cubeSizeZ) << G4endl;

@@ -54,7 +54,7 @@ void PrimaryGeneratorAction::SetBeamEnergy(G4double energy) {
 
 void PrimaryGeneratorAction::GeneratePrimaries(G4Event* anEvent)
 {
-  G4double energy = 220*MeV;
+  G4double energy = 221.6*MeV;
   fBeamEnergy = G4RandGauss::shoot(energy, energy*0.005);
   fParticleGun->SetParticleEnergy(fBeamEnergy);
 

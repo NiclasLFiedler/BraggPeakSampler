@@ -68,6 +68,7 @@ class TrackerHit : public G4VHit
     void SetThetaX   (G4double thetaX){ fThetaX = thetaX; };
     void SetThetaY   (G4double thetaY){ fThetaY = thetaY; };
     void SetResRange   (G4double resRange){ fresRange = resRange; };
+    void SetCSDARange   (G4double CSDARange){ fCSDARange = CSDARange; };
     // Get methods
     G4double GetEdep() const     { return fEdep; };
     G4double GetEkin() const     { return feKin; };
@@ -80,6 +81,7 @@ class TrackerHit : public G4VHit
     G4double GetThetaX() const { return fThetaX; };
     G4double GetThetaY() const { return fThetaY; };
     G4double GetResRange() const { return fresRange; };
+    G4double GetCSDARange() const { return fCSDARange; };
 
     inline void* operator new(size_t);
     inline void  operator delete(void*);
@@ -100,6 +102,7 @@ class TrackerHit : public G4VHit
     G4double      fThetaX = 0.;
     G4double      fThetaY = 0.;
     G4double      fresRange = 0.;
+    G4double      fCSDARange = 0.;
 };
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......

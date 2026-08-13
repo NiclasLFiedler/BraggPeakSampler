@@ -20,6 +20,7 @@ RunAction::RunAction()
   analysisManager->CreateNtupleDColumn("eKin");
   analysisManager->CreateNtupleDColumn("eTot");
   analysisManager->CreateNtupleDColumn("resRange");
+  analysisManager->CreateNtupleDColumn("CSDARange");
   analysisManager->FinishNtuple();
 }
 
