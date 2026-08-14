@@ -1,6 +1,7 @@
 /run/numberOfThreads 16
+/process/eLoss/CSDARange true
 /run/initialize
 /run/verbose 1
 /gun/particle proton
-/set/beamenergy 250 MeV
-/run/beamOn 100000
+/set/beamenergy 220 MeV
+/run/beamOn 300000

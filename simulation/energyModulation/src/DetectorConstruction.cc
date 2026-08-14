@@ -138,8 +138,8 @@ void DetectorConstruction::DefineMaterials()
   G4Element *elPb = nistManager->FindOrBuildElement("Pb");  // 82
   // Air defined using NIST Manager
   worldMat = nistManager->FindOrBuildMaterial("G4_Galactic"); 
-  // detMaterial = nistManager->FindOrBuildMaterial("G4_PbWO4");
-  // detMaterial->GetIonisation()->SetMeanExcitationEnergy(600.7*eV);
+  detMaterial = nistManager->FindOrBuildMaterial("G4_PbWO4");
+  detMaterial->GetIonisation()->SetMeanExcitationEnergy(600.7*eV);
   water = nistManager->FindOrBuildMaterial("G4_WATER");
   air = nistManager->FindOrBuildMaterial("G4_AIR");
   

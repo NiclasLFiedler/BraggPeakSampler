@@ -65,7 +65,7 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
     particle,
     material
     );
-    G4cout << "Res " << residualRange << " csda " << residualCSDARange << G4endl;
+    // G4cout << "Res " << residualRange << " csda " << residualCSDARange << G4endl;
 
     newHit->SetTrackID(trackid);
     newHit->SetEkin(eKin);
