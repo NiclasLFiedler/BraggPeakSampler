@@ -329,10 +329,10 @@ def main():
     )
 
     h2o_data = load_range_data("h2o", name="H2O", colors=colors["H2O"], UseSumFit=UseSumFit)
-    pbwo4_data = load_range_data("pbwo4", name="PbWO4", colors=colors["PbWO4"], UseSumFit=UseSumFit)
+    # pbwo4_data = load_range_data("pbwo4", name="PbWO4", colors=colors["PbWO4"], UseSumFit=UseSumFit)
 
     h2o_data = fit_range_energy(h2o_data)
-    pbwo4_data = fit_range_energy(pbwo4_data)
+    # pbwo4_data = fit_range_energy(pbwo4_data)
 
     ICRU_H2O_data = fit_range_energy(ICRU_H2O_data, output=True)
     # ICRU_AIR_data = fit_range_energy(ICRU_AIR_data)
@@ -340,31 +340,31 @@ def main():
 
     # ICRU_H2O_data.alpha = [6.94656e-3, 8.13116e-4, -1.21068e-6, 1.053e-9] #paper fit paramas
     plotInit()
-    plot_range_energy(pbwo4_data)
+    # plot_range_energy(pbwo4_data)
     plot_range_energy(h2o_data)
     plot_range_energy(ICRU_H2O_data)
 
-    pbwo4_data_alt = deepcopy(pbwo4_data)
-    pbwo4_data_alt.useSumFit = not pbwo4_data_alt.useSumFit
-    pbwo4_data_alt.colors = colors["ICRU_AIR"]
-    pbwo4_data_alt = fit_range_energy(pbwo4_data_alt, output=True)
+    # pbwo4_data_alt = deepcopy(pbwo4_data)
+    # pbwo4_data_alt.useSumFit = not pbwo4_data_alt.useSumFit
+    # pbwo4_data_alt.colors = colors["ICRU_AIR"]
+    # pbwo4_data_alt = fit_range_energy(pbwo4_data_alt, output=True)
 
     h2o_data_alt = deepcopy(h2o_data)
     h2o_data_alt.useSumFit = not h2o_data_alt.useSumFit
     h2o_data_alt.colors = colors["ICRU_AIR"]
     h2o_data_alt = fit_range_energy(h2o_data_alt, output=True)
-    plot_range_energy(pbwo4_data_alt)
-    plot_range_energy(h2o_data_alt)
+    # plot_range_energy(pbwo4_data_alt)
+    # plot_range_energy(h2o_data_alt)
     plotEnd("h2o")
 
-    plotInit()
-    plot_residuals(pbwo4_data)
-    plot_residuals(pbwo4_data_alt)
-    plotEnd()
+    # plotInit()
+    # plot_residuals(pbwo4_data)
+    # plot_residuals(pbwo4_data_alt)
+    # plotEnd()
 
     save_range_data(h2o_data, "h2o_range_energy.npz")
     save_range_data(h2o_data_alt, "h2o_alt_range_energy.npz")
-    save_range_data(pbwo4_data, "pbwo4_range_energy.npz")
+    # save_range_data(pbwo4_data, "pbwo4_range_energy.npz")
     save_range_data(ICRU_H2O_data, "ICRU_H2O_range_energy.npz")
     save_range_data(ICRU_ALU_data, "ICRU_ALU_range_energy.npz")
 

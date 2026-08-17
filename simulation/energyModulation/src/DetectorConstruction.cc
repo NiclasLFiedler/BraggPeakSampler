@@ -348,7 +348,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
       airVisAttr->SetVisibility(true);
       airVisAttr->SetForceSolid(true);
 
-      cubeSizeXY = 0.1 * mm;
+      cubeSizeXY = 0.05 * mm;
       G4double rhoLung = 1.05;
       G4double rhoH2O = 1;
       G4double probLung = 0.26;
@@ -357,7 +357,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
       cubeSizeZ = pmod/0.7355*um;
       // cubeSizeZ = 0.256;
       
-      nx = 150;
+      nx = 250;
       ny = nx;
       nz = static_cast<int>(std::round(heteroThickness/cubeSizeZ));
       // nz = 1;

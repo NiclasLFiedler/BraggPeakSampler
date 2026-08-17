@@ -32,9 +32,9 @@ class TargetParameters:
 
 def print_target_parameters(targetParamsList):
 
-    print("\n" + "=" * 200)
+    print("\n" + "=" * 190)
     print("Target Parameters")
-    print("=" * 200)
+    print("=" * 190)
 
     print(
         f"{'Thickness':>10} "
@@ -56,7 +56,7 @@ def print_target_parameters(targetParamsList):
         f"{'Pmod_E':>10}"
     )
 
-    print("-" * 200)
+    print("-" * 190)
 
     for target in targetParamsList:
         print(
@@ -79,7 +79,7 @@ def print_target_parameters(targetParamsList):
             f"{target.Pmod_E:10.3f}"
         )
 
-    print("=" * 200)
+    print("=" * 190)
     
 def landau(x, A, mpv, sigma):
     """
@@ -151,7 +151,7 @@ def _fit_gaussian_to_data(data, bounds_upper=None):
         sigma = np.std(data)
         A = 1 / (sigma * np.sqrt(2 * np.pi))
         
-        hist, bin_edges = np.histogram(data, bins=2000, density=True)
+        hist, bin_edges = np.histogram(data, bins=4000, density=True)
         bincenters = 0.5 * (bin_edges[:-1] + bin_edges[1:])
         
         if bounds_upper is None:
@@ -188,7 +188,7 @@ def _plot_histogram_with_fit(ax, data, popt, xlabel, ylabel, title, color, unit)
     # Create histogram
     ax.hist(
         data, 
-        bins=2000, 
+        bins=4000, 
         density=True, 
         alpha=0.7, 
         color=color, 
@@ -199,7 +199,7 @@ def _plot_histogram_with_fit(ax, data, popt, xlabel, ylabel, title, color, unit)
     
     # Plot fit if valid
     if not np.isnan(popt[0]):
-        x = np.linspace(data.min(), data.max(), 2000)
+        x = np.linspace(data.min(), data.max(), 4000)
         y = gaussian(x, *popt)
         ax.plot(x, y, 'r-', linewidth=2, label='Gaussian Fit')
         
@@ -353,7 +353,7 @@ def main():
     targetParamsList = []
  
     # Reference measurements
-    fitparams = analyse_data(filepathref)#, True, True)
+    fitparams = analyse_data(filepathref, True, True)
     targetParamsList.append(TargetParameters(
         Thickness=0,
         Pmod_theo=0,

@@ -26,4 +26,5 @@ cd ../data_analysis
 activate_venv
 python3 analyseProjected.py
 python3 range_energy.py
+rm h2o/range_*.root
 

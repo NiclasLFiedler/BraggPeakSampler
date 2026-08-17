@@ -39,7 +39,7 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
                                      G4TouchableHistory*)
 {
   auto newHit = new TrackerHit();
-	
+	if (aStep->GetTrack()->GetTrackID() == 1){
   G4double eDep = aStep->GetTotalEnergyDeposit();
   G4ThreeVector PPos = aStep->GetPostStepPoint()->GetPosition();
   // Get the particle's momentum and mass
@@ -59,7 +59,7 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
   newHit->SetEtot(energy);
   newHit->SetStepLength(StepLength);
   fHitsCollection->insert( newHit );
-  
+  }
   return true;
 }
 
