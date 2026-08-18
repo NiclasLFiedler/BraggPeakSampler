@@ -21,7 +21,7 @@ class HeteroParameterisation : public G4VPVParameterisation {
                 G4double rhoair = 0.0012;
                 probability = (rhoLunginf-rhoair)/(rhoLung-rhoair);
                 probability = 0.2251;
-                // probability = 0.25;
+                probability = 0.2467;
               }
     
         void ComputeTransformation(G4int copyNo, G4VPhysicalVolume* physVol) const override {

@@ -273,8 +273,8 @@ void DetectorConstruction::DefineMaterials()
   
   detMaterial = water;
   
-  heteroMaterial1 = lungTissue;
-  heteroMaterial2 = air;
+  heteroMaterial1 = water;
+  heteroMaterial2 = worldMat;
   
   G4cout <<"Mean excitation Energy: " << detMaterial->GetIonisation()->GetMeanExcitationEnergy() << G4endl;
   G4cout <<"Density: " << detMaterial->GetDensity()/(g/cm3) << G4endl;
@@ -348,16 +348,18 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
       airVisAttr->SetVisibility(true);
       airVisAttr->SetForceSolid(true);
 
-      cubeSizeXY = 0.05 * mm;
+      cubeSizeXY = 0.1 * mm;
       G4double rhoLung = 1.05;
       G4double rhoH2O = 1;
+      G4double rhoAir = 0.0012;
       G4double probLung = 0.26;
 
-      cubeSizeZ = static_cast<double>(pmod)* rhoH2O/rhoLung * 1/(1-probLung)*um;
-      cubeSizeZ = pmod/0.7355*um;
-      // cubeSizeZ = 0.256;
+      cubeSizeZ = static_cast<double>(pmod)* rhoH2O/rhoLung * 1/(1-probLung)*um*0.75;
+      // cubeSizeZ = pmod/0.7355*um;
+      cubeSizeZ = pmod/(probLung*(1-probLung)*(rhoLung-rhoAir)*(rhoLung-rhoAir))*(probLung*(rhoLung-rhoAir)+rhoAir)*rhoH2O*um;
+      // cubeSizeZ = static_cast<double>(pmod)/1000;
       
-      nx = 250;
+      nx = 150;
       ny = nx;
       nz = static_cast<int>(std::round(heteroThickness/cubeSizeZ));
       // nz = 1;
