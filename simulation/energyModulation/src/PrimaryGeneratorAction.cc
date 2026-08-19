@@ -58,10 +58,10 @@ void PrimaryGeneratorAction::GeneratePrimaries(G4Event* anEvent)
   fBeamEnergy = G4RandGauss::shoot(energy, energy*0.005);
   fParticleGun->SetParticleEnergy(fBeamEnergy);
 
-  G4double x0 = G4RandGauss::shoot(0.0, 1*mm);
-  G4double y0 = G4RandGauss::shoot(0.0, 1*mm);
+  G4double x0 = G4RandGauss::shoot(0.0, 2*mm);
+  G4double y0 = G4RandGauss::shoot(0.0, 2*mm);
 
-  beamPos = G4ThreeVector(x0, y0, -50*cm);
+  beamPos = G4ThreeVector(x0, y0, -20*cm);
   
   fParticleGun->SetParticlePosition(beamPos);
   fParticleGun->SetParticleMomentumDirection(G4ThreeVector(0, 0, 1.));

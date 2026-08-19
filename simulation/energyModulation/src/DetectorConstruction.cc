@@ -334,7 +334,20 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
     0,                        // copy number
     fCheckOverlaps);          // checking overlaps
 
+  G4Box *solidAbsorber = new G4Box("solidAbsorber",     // its name
+    detSizeX/2, detSizeY/2, 20*mm/2);             // its size
+  
+  G4LogicalVolume* logicalabsorber = new G4LogicalVolume(solidAbsorber, water, "logicalabsorber");
 
+  new G4PVPlacement(nullptr,  // no rotation
+    G4ThreeVector(0.,0., -20/2*mm-heteroThickness*mm),              // at (x,y,z)
+    // G4ThreeVector(0.,0.,detSizeZ*i),  
+    logicalabsorber,            // its logical volume
+    "physabsorber",           // its name
+    logicalworld,               // its mother volume
+    false,                    // no boolean operations
+    0,                        // copy number
+    fCheckOverlaps);          // checking overlaps
 
   G4double dBeamSpot = 0.1*mm;
   G4int nx, ny, nz;
@@ -348,22 +361,23 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
       airVisAttr->SetVisibility(true);
       airVisAttr->SetForceSolid(true);
 
-      cubeSizeXY = 0.1 * mm;
+      cubeSizeXY = 0.5 * mm;
       G4double rhoLung = 1.05;
       G4double rhoH2O = 1;
       G4double rhoAir = 0.0012;
       G4double probLung = 0.26;
 
-      cubeSizeZ = static_cast<double>(pmod)* rhoH2O/rhoLung * 1/(1-probLung)*um*0.75;
+      // cubeSizeZ = static_cast<double>(pmod)* rhoH2O/rhoLung * 1/(1-probLung)*um;
       // cubeSizeZ = pmod/0.7355*um;
       cubeSizeZ = pmod/(probLung*(1-probLung)*(rhoLung-rhoAir)*(rhoLung-rhoAir))*(probLung*(rhoLung-rhoAir)+rhoAir)*rhoH2O*um;
       // cubeSizeZ = static_cast<double>(pmod)/1000;
       
-      nx = 150;
+      nx = 200;
       ny = nx;
-      nz = static_cast<int>(std::round(heteroThickness/cubeSizeZ));
-      // nz = 1;
-
+      nz = static_cast<int>(heteroThickness/cubeSizeZ);
+      // nz = 2;
+      heteroThickness = nz*cubeSizeZ;
+      G4cout << "heteroThickness " << heteroThickness << G4endl;
       auto voxelSolid = new G4Box("Voxel", cubeSizeXY/2, cubeSizeXY/2, cubeSizeZ/2);
 
       std::cout << "pmod: " << pmod << std::endl;
@@ -374,7 +388,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
 
       auto voxelContainerSolid = new G4Box("VoxelContainer", (nx*cubeSizeXY)/2, (ny*cubeSizeXY)/2, (nz*cubeSizeZ)/2);
       auto voxelContainerLV = new G4LogicalVolume(voxelContainerSolid, heteroMaterial1, "VoxelContainerLV");
-      new G4PVPlacement(nullptr, G4ThreeVector(0,0,-heteroThickness/2-1*mm), voxelContainerLV, "VoxelContainer", logicalworld, false, 0);
+      new G4PVPlacement(nullptr, G4ThreeVector(0,0,-(nz*cubeSizeZ)/2), voxelContainerLV, "VoxelContainer", logicalworld, false, 0);
 
       auto* parameterisation = new HeteroParameterisation(nx, ny, nz,
         cubeSizeXY, cubeSizeXY, cubeSizeZ,
@@ -383,7 +397,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
     
       int nVoxels = nx * ny * nz;
 
-      auto voxelLogic = new G4LogicalVolume(voxelSolid, air, "Voxel");
+      auto voxelLogic = new G4LogicalVolume(voxelSolid, heteroMaterial1, "Voxel");
       voxelLogic->SetVisAttributes(airVisAttr);
 
       new G4PVParameterised(

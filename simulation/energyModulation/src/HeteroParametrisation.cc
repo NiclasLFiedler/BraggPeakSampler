@@ -20,8 +20,8 @@ class HeteroParameterisation : public G4VPVParameterisation {
                 G4double rhoH2O = 1;
                 G4double rhoair = 0.0012;
                 probability = (rhoLunginf-rhoair)/(rhoLung-rhoair);
-                probability = 0.2251;
-                probability = 0.2467;
+                // probability = 0.2251;
+                probability = 0.25;
               }
     
         void ComputeTransformation(G4int copyNo, G4VPhysicalVolume* physVol) const override {
@@ -37,13 +37,12 @@ class HeteroParameterisation : public G4VPVParameterisation {
             physVol->SetTranslation(position);
         }
     
-        G4Material* ComputeMaterial(G4int copyNo, G4VPhysicalVolume*, const G4VTouchable*) {
-            if (fMaterials.count(copyNo) == 0) {
-                G4Material* mat = (G4UniformRand() < probability) ? fMat1 : fMat2;
-                fMaterials[copyNo] = mat;
-            }
-            return fMaterials[copyNo];
-            }
+    G4Material* ComputeMaterial(G4int copyNo, G4VPhysicalVolume*, const G4VTouchable*) {
+        if (fMaterials.count(copyNo) == 0) {
+            G4Material* mat = (G4UniformRand() < probability) ? fMat1 : fMat2; fMaterials[copyNo] = mat;
+        }
+        return fMaterials[copyNo];
+    }
 
     private:
         G4double probability;
