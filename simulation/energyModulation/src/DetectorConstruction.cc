@@ -141,6 +141,7 @@ void DetectorConstruction::DefineMaterials()
   detMaterial = nistManager->FindOrBuildMaterial("G4_PbWO4");
   detMaterial->GetIonisation()->SetMeanExcitationEnergy(600.7*eV);
   water = nistManager->FindOrBuildMaterial("G4_WATER");
+  water->GetIonisation()->SetMeanExcitationEnergy(78*eV);
   air = nistManager->FindOrBuildMaterial("G4_AIR");
   
   G4Material *SiO2 = new G4Material("SiO2", 2.65*g/cm3, 2);
@@ -334,13 +335,15 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
     0,                        // copy number
     fCheckOverlaps);          // checking overlaps
 
+  G4double phantomThickness = 20*mm; 
   G4Box *solidAbsorber = new G4Box("solidAbsorber",     // its name
-    detSizeX/2, detSizeY/2, 20*mm/2);             // its size
+    detSizeX/2, detSizeY/2, phantomThickness*mm/2);             // its size
   
   G4LogicalVolume* logicalabsorber = new G4LogicalVolume(solidAbsorber, water, "logicalabsorber");
 
+
   new G4PVPlacement(nullptr,  // no rotation
-    G4ThreeVector(0.,0., -20/2*mm-heteroThickness*mm),              // at (x,y,z)
+    G4ThreeVector(0.,0., -phantomThickness/2*mm-heteroThickness*mm),              // at (x,y,z)
     // G4ThreeVector(0.,0.,detSizeZ*i),  
     logicalabsorber,            // its logical volume
     "physabsorber",           // its name
@@ -349,7 +352,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
     0,                        // copy number
     fCheckOverlaps);          // checking overlaps
 
-  G4double dBeamSpot = 0.1*mm;
+  
   G4int nx, ny, nz;
   G4double cubeSizeXY, cubeSizeZ;
   if (ftarget == 2){ //heterogenous
@@ -367,12 +370,12 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
       G4double rhoAir = 0.0012;
       G4double probLung = 0.26;
 
-      // cubeSizeZ = static_cast<double>(pmod)* rhoH2O/rhoLung * 1/(1-probLung)*um;
+      cubeSizeZ = static_cast<double>(pmod)* rhoH2O/rhoLung * 1/(1-probLung)*um;
       // cubeSizeZ = pmod/0.7355*um;
-      cubeSizeZ = pmod/(probLung*(1-probLung)*(rhoLung-rhoAir)*(rhoLung-rhoAir))*(probLung*(rhoLung-rhoAir)+rhoAir)*rhoH2O*um;
+      // cubeSizeZ = pmod/(probLung*(1-probLung)*(rhoLung-rhoAir)*(rhoLung-rhoAir))*(probLung*(rhoLung-rhoAir)+rhoAir)*rhoH2O*um;
       // cubeSizeZ = static_cast<double>(pmod)/1000;
       
-      nx = 200;
+      nx = 150;
       ny = nx;
       nz = static_cast<int>(heteroThickness/cubeSizeZ);
       // nz = 2;
