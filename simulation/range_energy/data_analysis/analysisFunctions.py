@@ -37,6 +37,15 @@ def range_energy_sum(energy, alpha1, alpha2, alpha3, alpha4):
 
     return term1 + term2 + term3 + term4
 
+def range_energy(data : EnergyRangeData, energy):
+    if data.useSumFit:
+        return range_energy_sum(energy, *data.alpha)
+    else:
+        return range_energy_relationship(energy, data.alpha[0], data.p)
+
+def stoppingPower(data : EnergyRangeData, energy):
+    return 1/(data.p*data.alpha[0])*energy**(1-data.p)
+
 # Define a Gaussian function
 def gaussian(x, mean, sigma, amplitude):
     return amplitude * np.exp(-0.5 * ((x - mean) / sigma) ** 2)
@@ -53,4 +62,33 @@ def load_range_data(file_folder, name=None, colors=None, UseSumFit=False):
         sigmas=data["sigmas"],
         sigma_errors=data["sigma_errors"],
         useSumFit=UseSumFit
+    )
+
+
+def load_EnergyRange(filename):
+    data = np.load(filename, allow_pickle=True)
+
+    return EnergyRangeData(
+        name=str(data["name"]),
+        colors={},  # colors are currently not saved
+
+        energies=data["energies"],
+        ranges=data["ranges"],
+        range_errors=data["range_errors"],
+        sigmas=data["sigmas"],
+        sigma_errors=data["sigma_errors"],
+
+        alpha=data["alpha"],
+        alpha_error=data["alpha_error"],
+        p=data["p"],
+        p_error=data["p_error"],
+
+        useSumFit=bool(data["useSumFit"]),
+
+        residuals=data["residuals"],
+        normalized_residuals=data["normalized_residuals"],
+
+        chi2=float(data["chi2"]),
+        reduced_chi2=float(data["reduced_chi2"]),
+        rms_residual=float(data["rms_residual"])
     )

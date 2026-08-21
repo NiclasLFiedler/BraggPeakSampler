@@ -86,10 +86,7 @@ void DetectorConstruction::DefineMaterials()
   // Air defined using NIST Manager
   worldMat = nistManager->FindOrBuildMaterial("G4_AIR"); 
 
-  // detMaterial = nistManager->FindOrBuildMaterial("G4_PbWO4");
-  // detMaterial->GetIonisation()->SetMeanExcitationEnergy(600.7*eV);
-  
-  detMaterial = nistManager->FindOrBuildMaterial("G4_WATER");
+
 
   G4Material *SiO2 = new G4Material("SiO2", 2.65*g/cm3, 2);
   SiO2->AddElement(elSi, 1);
@@ -192,6 +189,21 @@ void DetectorConstruction::DefineMaterials()
   PTFEmembrane->AddElement(elC, 2);
   PTFEmembrane->AddElement(elF, 4);
 
+  G4Material *lungTissue = new G4Material("lungTissue", 1.05*g/cm3,13);
+  lungTissue->AddElement(elH, 0.101278);
+  lungTissue->AddElement(elC, 0.102310);
+  lungTissue->AddElement(elN, 0.028650);
+  lungTissue->AddElement(elO, 0.757072);
+  lungTissue->AddElement(elNa, 0.001840);
+  lungTissue->AddElement(elMg, 0.000730);
+  lungTissue->AddElement(elP, 0.000800);
+  lungTissue->AddElement(elS, 0.002250);
+  lungTissue->AddElement(elCl, 0.002660);
+  lungTissue->AddElement(elK, 0.001940);
+  lungTissue->AddElement(elCa, 0.000090);
+  lungTissue->AddElement(elFe, 0.000370);
+  lungTissue->AddElement(elZn, 0.000010);
+  lungTissue->GetIonisation()->SetMeanExcitationEnergy(75.3*eV);
 
   Alu = new G4Material("Alu", 2.71*g/cm3,1);
   Alu->AddElement(elAl,1);
@@ -203,7 +215,12 @@ void DetectorConstruction::DefineMaterials()
   PMMA->AddElement(elC, 5);
   PMMA->AddElement(elH, 8);
   PMMA->AddElement(elO, 2);
+  // detMaterial = nistManager->FindOrBuildMaterial("G4_PbWO4");
+  // detMaterial->GetIonisation()->SetMeanExcitationEnergy(600.7*eV);
+  
+  // detMaterial = nistManager->FindOrBuildMaterial("G4_WATER");
 
+  detMaterial = lungTissue;
   G4cout <<"Mean excitation Energy: " << detMaterial->GetIonisation()->GetMeanExcitationEnergy() << G4endl;
   G4cout <<"Density: " << detMaterial->GetDensity()/(g/cm3) << G4endl;
   G4cout <<"Radiation length: " << detMaterial->GetRadlen()/cm << G4endl;

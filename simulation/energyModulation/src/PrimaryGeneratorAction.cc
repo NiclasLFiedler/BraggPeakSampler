@@ -54,14 +54,14 @@ void PrimaryGeneratorAction::SetBeamEnergy(G4double energy) {
 
 void PrimaryGeneratorAction::GeneratePrimaries(G4Event* anEvent)
 {
-  G4double energy = 90*MeV;
-  fBeamEnergy = G4RandGauss::shoot(energy, energy*0.001);
+  G4double energy = 220*MeV;
+  fBeamEnergy = G4RandGauss::shoot(energy, energy*0.005);
   fParticleGun->SetParticleEnergy(fBeamEnergy);
 
   G4double x0 = G4RandGauss::shoot(0.0, 8*mm);
   G4double y0 = G4RandGauss::shoot(0.0, 8*mm);
 
-  beamPos = G4ThreeVector(x0, y0, -40*cm);
+  beamPos = G4ThreeVector(x0, y0, -50*cm);
   
   fParticleGun->SetParticlePosition(beamPos);
   fParticleGun->SetParticleMomentumDirection(G4ThreeVector(0, 0, 1.));

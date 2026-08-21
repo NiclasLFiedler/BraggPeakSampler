@@ -6,7 +6,7 @@ from scipy.optimize import curve_fit
 import uproot  # uproot is a great library for reading ROOT files in Python
 matplotlib.use('TkAgg')  # or 'Qt5Agg'
 from copy import deepcopy
-from analysisFunctions import EnergyRangeData, range_energy_relationship, range_energy_sum, load_range_data, gaussian
+from analysisFunctions import EnergyRangeData, range_energy_relationship, range_energy_sum, load_range_data, gaussian, range_energy, stoppingPower
 
 def load_range_data(file_folder, name=None, colors=None, UseSumFit=False):
     data = np.load(f"{file_folder}/ranges.npz")
@@ -314,7 +314,7 @@ def main():
         range_errors=np.array(CSDA_ranges_air) / rho_h2o_air * 0.015,
         sigmas=np.full(len(ICRUenergies), np.nan),
         sigma_errors=np.full(len(ICRUenergies), np.nan),
-        useSumFit=UseSumFit
+        useSumFit=not UseSumFit
     )
 
     ICRU_ALU_data = EnergyRangeData(
@@ -329,19 +329,22 @@ def main():
     )
 
     h2o_data = load_range_data("h2o", name="H2O", colors=colors["H2O"], UseSumFit=UseSumFit)
+    lung_data = load_range_data("lung", name="lung", colors=colors["H2O"], UseSumFit=False)
     # pbwo4_data = load_range_data("pbwo4", name="PbWO4", colors=colors["PbWO4"], UseSumFit=UseSumFit)
 
     h2o_data = fit_range_energy(h2o_data)
+    lung_data = fit_range_energy(lung_data)
     # pbwo4_data = fit_range_energy(pbwo4_data)
 
     ICRU_H2O_data = fit_range_energy(ICRU_H2O_data, output=True)
-    # ICRU_AIR_data = fit_range_energy(ICRU_AIR_data)
+    ICRU_AIR_data = fit_range_energy(ICRU_AIR_data)
     ICRU_ALU_data = fit_range_energy(ICRU_ALU_data)
 
     # ICRU_H2O_data.alpha = [6.94656e-3, 8.13116e-4, -1.21068e-6, 1.053e-9] #paper fit paramas
     plotInit()
     # plot_range_energy(pbwo4_data)
     plot_range_energy(h2o_data)
+    plot_range_energy(lung_data)
     plot_range_energy(ICRU_H2O_data)
 
     # pbwo4_data_alt = deepcopy(pbwo4_data)
@@ -362,11 +365,27 @@ def main():
     # plot_residuals(pbwo4_data_alt)
     # plotEnd()
 
+    save_range_data(lung_data, "lung_range_energy.npz")
     save_range_data(h2o_data, "h2o_range_energy.npz")
     save_range_data(h2o_data_alt, "h2o_alt_range_energy.npz")
     # save_range_data(pbwo4_data, "pbwo4_range_energy.npz")
     save_range_data(ICRU_H2O_data, "ICRU_H2O_range_energy.npz")
     save_range_data(ICRU_ALU_data, "ICRU_ALU_range_energy.npz")
+    save_range_data(ICRU_AIR_data, "ICRU_AIR_range_energy.npz")
+
+    S_lung_220 = stoppingPower(lung_data, 220)
+    S_a_220 = stoppingPower(ICRU_AIR_data, 220)
+    S_h2o_220 = stoppingPower(h2o_data_alt, 220)
+    print(f"Lung {S_lung_220}")
+    print(f"H2O {S_h2o_220}")
+
+    S_lung_90 = stoppingPower(lung_data, 90)
+    S_a_90 = stoppingPower(ICRU_AIR_data, 90)
+    S_h2o_90 = stoppingPower(h2o_data_alt, 90)
+
+    print(f"S Ratio 220 MeV: {(S_lung_220)/S_h2o_220}")
+    print(f"S Ratio 90 MeV:  {(S_lung_90)/S_h2o_90}")
+    print(f"Density ratio: {1.05/1.0}")
 
 if __name__ == "__main__":
     main()

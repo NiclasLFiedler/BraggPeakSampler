@@ -111,20 +111,11 @@ def bortfeld_range(E_MeV):
     range_cm = np.zeros_like(E, dtype=float)
     mask_valid = E >= 1.0
 
-    data = np.load("../../range_energy/data_analysis/h2o_range_energy.npz")
-    useSumFit = data["useSumFit"]
-
-    if useSumFit:
-        alpha = data["alpha"]
-        if np.any(mask_valid):
-            E_valid = E[mask_valid] if isinstance(E, np.ndarray) else E
-            range_cm = analysisFunctions.range_energy_sum(E_valid, *alpha)
-    else:
-        alpha = data["alpha"]
-        p = data["p"]
-        if np.any(mask_valid):
-            E_valid = E[mask_valid] if isinstance(E, np.ndarray) else E
-            range_cm = analysisFunctions.range_energy_relationship(E_valid, alpha[0], p)
+    # data = np.load("../../range_energy/data_analysis/h2o_range_energy.npz")
+    data = analysisFunctions.load_EnergyRange("../../range_energy/data_analysis/h2o_range_energy.npz")
+    if np.any(mask_valid):
+        E_valid = E[mask_valid] if isinstance(E, np.ndarray) else E
+        range_cm = analysisFunctions.range_energy(data, E_valid)
         
     return range_cm
  
@@ -347,7 +338,7 @@ def main():
 
     filepathref = f"{data_file_path}/{data_file_ref}"
  
-    targetThicknesses = range(50, 160, 50)
+    targetThicknesses = range(100, 140, 50)
     pmods = range(100, 900, 200)
  
     targetParamsList = []
