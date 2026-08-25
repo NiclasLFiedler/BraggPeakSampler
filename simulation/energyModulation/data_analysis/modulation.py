@@ -338,7 +338,7 @@ def main():
 
     filepathref = f"{data_file_path}/{data_file_ref}"
  
-    targetThicknesses = range(100, 140, 50)
+    targetThicknesses = range(100, 120, 50)
     pmods = range(100, 900, 200)
  
     targetParamsList = []

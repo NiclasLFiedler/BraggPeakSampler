@@ -141,7 +141,7 @@ void DetectorConstruction::DefineMaterials()
   detMaterial = nistManager->FindOrBuildMaterial("G4_PbWO4");
   detMaterial->GetIonisation()->SetMeanExcitationEnergy(600.7*eV);
   water = nistManager->FindOrBuildMaterial("G4_WATER");
-  water->GetIonisation()->SetMeanExcitationEnergy(78*eV);
+  water->GetIonisation()->SetMeanExcitationEnergy(75*eV);
   air = nistManager->FindOrBuildMaterial("G4_AIR");
   
   G4Material *SiO2 = new G4Material("SiO2", 2.65*g/cm3, 2);
@@ -275,7 +275,7 @@ void DetectorConstruction::DefineMaterials()
   detMaterial = water;
   
   heteroMaterial1 = water;
-  heteroMaterial2 = air;
+  heteroMaterial2 = worldMat;
   
   G4cout <<"Mean excitation Energy: " << detMaterial->GetIonisation()->GetMeanExcitationEnergy() << G4endl;
   G4cout <<"Density: " << detMaterial->GetDensity()/(g/cm3) << G4endl;
@@ -335,7 +335,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
     0,                        // copy number
     fCheckOverlaps);          // checking overlaps
 
-  G4double phantomThickness = 10*mm; 
+  G4double phantomThickness = 20*mm; 
   G4Box *solidAbsorber = new G4Box("solidAbsorber",     // its name
     detSizeX/2, detSizeY/2, phantomThickness*mm/2);             // its size
   
@@ -375,7 +375,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
       G4double Sratio90 = 1/1.0537495463081672;
 
       cubeSizeZ = static_cast<double>(pmod)* rhoH2O/rhoLung * 1/(1-probLung)*um;
-      cubeSizeZ = static_cast<double>(pmod)* Sratio220 * 1/(1-probLung)*um;
+      // cubeSizeZ = static_cast<double>(pmod)* Sratio90 * 1/(1-probLung)*um;
       // cubeSizeZ = pmod/0.7355*um;
       // cubeSizeZ = pmod/(probLung*(1-probLung)*(rhoLung-rhoAir)*(rhoLung-rhoAir))*(probLung*(rhoLung-rhoAir)+rhoAir)*rhoH2O*um;
       // cubeSizeZ = static_cast<double>(pmod)/1000;
