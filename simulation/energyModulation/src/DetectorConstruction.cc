@@ -335,7 +335,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
     0,                        // copy number
     fCheckOverlaps);          // checking overlaps
 
-  G4double phantomThickness = 20*mm; 
+  G4double phantomThickness = 10*mm; 
   G4Box *solidAbsorber = new G4Box("solidAbsorber",     // its name
     detSizeX/2, detSizeY/2, phantomThickness*mm/2);             // its size
   
@@ -364,7 +364,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
       airVisAttr->SetVisibility(true);
       airVisAttr->SetForceSolid(true);
 
-      cubeSizeXY = 0.5 * mm;
+      cubeSizeXY = 0.6 * mm;
       G4double rhoLung = 1.05;
       G4double rhoH2O = 1;
       G4double rhoAir = 0.0012;

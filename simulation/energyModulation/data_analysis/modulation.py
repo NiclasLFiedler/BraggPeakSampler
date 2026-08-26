@@ -1,5 +1,7 @@
 import uproot
+import ROOT
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from scipy import stats
@@ -154,7 +156,7 @@ def _fit_gaussian_to_data(data, bounds_upper=None):
             hist,
             p0=[A, mu, sigma],
             bounds=([0, 0, 0], bounds_upper),
-            maxfev=5000
+            maxfev=10000
         )
         return popt
     except Exception as e:
@@ -332,81 +334,287 @@ def analyse_data(file_path, enablePrint=False, enablePlot=False):
     return fitParameters
 
 
-def main():
-    data_file_path = "data"
-    data_file_ref = "data_0_0.root"
+def analyse_CSV(file_path, enablePrint=False, enablePlot=False):
+    fitParameters = []
+    
+    try:
+        df = pd.read_csv(file_path)
+        energies = df["energy"].to_numpy()
+               
+        if enablePrint:
+            print(f"Successfully read {len(energies)} events")
+            print(f"Kinetic energy range: {np.min(energies):.3f} - {np.max(energies):.3f} MeV")
+        
+    except Exception as e:
+        print(f"Error reading ROOT file: {e}")
+        print("Make sure the file path is correct and the ROOT file is properly formatted.")
+        return
+    
+    # Calculate range from kinetic energy using Bortfeld's formula
+    if enablePrint:
+        print("\nCalculating range from kinetic energy using Bortfeld's formula...")
+    range_cm = bortfeld_range(energies)
+    
+    if enablePrint:
+        print(f"Range values: {np.min(range_cm):.3f} - {np.max(range_cm):.3f} cm")
+    
+    range_mask = range_cm < 50
+    range_cm = range_cm[range_mask]
+    energy_mask = energies < 400
+    energies = energies[energy_mask]
 
-    filepathref = f"{data_file_path}/{data_file_ref}"
- 
-    targetThicknesses = range(100, 120, 50)
-    pmods = range(100, 900, 200)
- 
-    targetParamsList = []
- 
-    # Reference measurements
-    fitparams = analyse_data(filepathref, True, True)
-    targetParamsList.append(TargetParameters(
-        Thickness=0,
-        Pmod_theo=0,
-        range=fitparams[1][1],
-        sigma=fitparams[1][2],
-        sigma_t=0,
-        t=0,
-        Pmod_sim=0,
-        resRange=fitparams[2][1],
-        sigma_res=fitparams[2][2],
-        sigma_t_res=0,
-        t_res=0,
-        Pmod_res=0,
-        energy=fitparams[0][1],
-        sigma_E=fitparams[0][2],
-        sigma_T_E=0,
-        t_E=0,
-        Pmod_E=0
-    ))
- 
-    # Scan over thicknesses and modulation powers
-    for thickness in targetThicknesses:
-        for pmod in pmods:   
-            dataFile = f"{data_file_path}/data_{pmod}_{thickness}.root"         
-            fitparams = analyse_data(dataFile)
- 
-            # Range analysis
+
+    hist_energy = ROOT.TH1D(
+        f"{file_path}_energy",
+        "Energy distribution;Energy [MeV];Counts",
+        4000,     # number of bins
+        0,       # lower edge
+        400      # upper edge
+    )
+
+    hist_range = ROOT.TH1D(
+        f"{file_path}_range",
+        "Range distribution;Range [cm];Counts",
+        4000,     # number of bins
+        0,       # lower edge
+        50      # upper edge
+    )
+    
+    for energy in energies:
+        hist_energy.Fill(energy)
+
+    for range in range_cm:
+        hist_range.Fill(range)
+
+    popt_eKin = _fit_gaussian_to_data(energies, bounds_upper=[np.inf, 400, np.inf])
+    popt_range = _fit_gaussian_to_data(range_cm, bounds_upper=[np.inf, 50, np.inf])
+
+    fitParameters = [popt_eKin, popt_range, [hist_energy, hist_range]]
+    
+    # Create and populate plots if enabled
+    if enablePlot:
+        fig, axes = plt.subplots(1, 3, figsize=(21, 5))
+        
+        _plot_histogram_with_fit(
+            axes[0], energies, popt_eKin,
+            xlabel='Kinetic Energy (MeV)',
+            ylabel='Probability Density',
+            title='Kinetic Energy Distribution',
+            color='blue',
+            unit='MeV'
+        )
+
+        _plot_histogram_with_fit(
+            axes[1], range_cm, popt_range,
+            xlabel='Range in Water (cm)',
+            ylabel='Probability Density',
+            title='Range Distribution (Bortfeld)',
+            color='green',
+            unit='cm'
+        )
+
+        plt.tight_layout()
+        plt.show()
+    else:
+        plt.close()
+    
+    # Print summary statistics if enabled
+    if enablePrint:
+        data_dict = {
+            'Kinetic Energy (MeV)': (energies, popt_eKin, 'MeV'),
+            'Range in Water (cm)': (range_cm, popt_range, 'cm'),
+        }
+        _print_summary_statistics(data_dict)
+
+    
+    return fitParameters
+
+
+def plot_energy_modulation(targetParamsList):
+    thicknesses = sorted(
+        set(p.Thickness for p in targetParamsList if p.Thickness != 0)
+    )
+
+    plt.figure(figsize=(8, 6))
+
+    for thickness in thicknesses:
+        data = [
+            p for p in targetParamsList
+            if p.Thickness == thickness
+        ]
+
+        # Sort by theoretical modulation power
+        data.sort(key=lambda p: p.Pmod_theo)
+
+        pmod_theo = [p.Pmod_res for p in data]
+        pmod_energy = [p.Pmod_E for p in data]
+
+        plt.plot(
+            pmod_theo,
+            pmod_energy,
+            marker="o",
+            label=f"{thickness} mm"
+        )
+
+    plt.xlabel("Modulation power / um")
+    plt.ylabel("Energy modulation power / keV")
+
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+def main():
+    simulation = False
+    if simulation:
+        data_file_path = "data"
+        data_file_ref = "data_0_0.root"
+
+        filepathref = f"{data_file_path}/{data_file_ref}"
+    
+        targetThicknesses = range(50, 210, 50)
+        pmods = range(100, 810, 100)
+    
+        targetParamsList = []
+    
+        # Reference measurements
+        fitparams = analyse_data(filepathref, True, True)
+
+        targetParamsList.append(TargetParameters(
+            Thickness=0,
+            Pmod_theo=0,
+            range=fitparams[1][1],
+            sigma=fitparams[1][2],
+            sigma_t=0,
+            t=0,
+            Pmod_sim=0,
+            resRange=fitparams[2][1],
+            sigma_res=fitparams[2][2],
+            sigma_t_res=0,
+            t_res=0,
+            Pmod_res=0,
+            energy=fitparams[0][1],
+            sigma_E=fitparams[0][2],
+            sigma_T_E=0,
+            t_E=0,
+            Pmod_E=0
+        ))
+    
+        # Scan over thicknesses and modulation powers
+        for thickness in targetThicknesses:
+            for pmod in pmods:   
+                dataFile = f"{data_file_path}/data_{pmod}_{thickness}.root"         
+                fitparams = analyse_data(dataFile)
+    
+                # Range analysis
+                t = targetParamsList[0].range - fitparams[1][1]
+                variance = fitparams[1][2]**2 - targetParamsList[0].sigma**2
+                modulationPower = variance / t * 10000
+    
+                # Energy analysis
+                tE = targetParamsList[0].energy - fitparams[0][1]
+                varianceE = fitparams[0][2]**2 - targetParamsList[0].sigma_E**2
+                S_eff = tE / t 
+                EnergyModulation = varianceE / (tE) * 1000
+    
+                # Residual Range analysis
+                t_res = targetParamsList[0].resRange - fitparams[2][1]
+                variance_res = fitparams[2][2]**2 - targetParamsList[0].sigma_res**2
+                modulationPower_resRange = variance_res / (t_res) * 10000
+                targetParamsList.append(TargetParameters(
+                    Thickness=thickness,
+                    Pmod_theo=pmod,
+                    range=fitparams[1][1],
+                    sigma=fitparams[1][2],
+                    sigma_t=np.sqrt(variance),
+                    t=t,
+                    Pmod_sim=modulationPower,
+                    resRange=fitparams[2][1],
+                    sigma_res=fitparams[2][2],
+                    sigma_t_res=np.sqrt(variance_res),
+                    t_res=t_res,
+                    Pmod_res=modulationPower_resRange,
+                    energy=fitparams[0][1],
+                    sigma_E=fitparams[0][2],
+                    sigma_T_E=np.sqrt(varianceE),
+                    t_E=tE,
+                    Pmod_E=EnergyModulation
+                ))
+    
+        print_target_parameters(targetParamsList)
+        plot_energy_modulation(targetParamsList)
+    else: 
+        folder = "data/phoswitch"
+        notargetfile = "notarget"
+        targetfiles  = ["52mmPMMA50mmLN300", "100mmLN300", "52mmPMMA150mmLN300", "200mmLN300"]
+        thicknesses = [50,100,150,200]
+        targetParamsList = []
+        hists = []
+        fitparams = analyse_CSV(f"{folder}/{notargetfile}.csv", True, True)
+        print(fitparams)
+        targetParamsList.append(TargetParameters(
+            Thickness=0,
+            Pmod_theo=0,
+            range=fitparams[1][1],
+            sigma=fitparams[1][2],
+            sigma_t=0,
+            t=0,
+            Pmod_sim=0,
+            resRange=0,
+            sigma_res=0,
+            sigma_t_res=0,
+            t_res=0,
+            Pmod_res=0,
+            energy=fitparams[0][1],
+            sigma_E=fitparams[0][2],
+            sigma_T_E=0,
+            t_E=0,
+            Pmod_E=0
+        ))
+        hists.append(fitparams[2][0])
+        hists.append(fitparams[2][1])
+
+        for index, file in enumerate(targetfiles):
+            fitparams = analyse_CSV(f"{folder}/{file}.csv")
+
             t = targetParamsList[0].range - fitparams[1][1]
             variance = fitparams[1][2]**2 - targetParamsList[0].sigma**2
             modulationPower = variance / t * 10000
- 
+            
             # Energy analysis
             tE = targetParamsList[0].energy - fitparams[0][1]
             varianceE = fitparams[0][2]**2 - targetParamsList[0].sigma_E**2
-            EnergyModulation = varianceE / tE * 1000
- 
-            # Residual Range analysis
-            t_res = targetParamsList[0].resRange - fitparams[2][1]
-            variance_res = fitparams[2][2]**2 - targetParamsList[0].sigma_res**2
-            modulationPower_resRange = variance_res / t_res * 10000
- 
+            S_eff = tE / t 
+            EnergyModulation = varianceE / (tE) * 1000
+
             targetParamsList.append(TargetParameters(
-                Thickness=thickness,
-                Pmod_theo=pmod,
+                Thickness=thicknesses[index],
+                Pmod_theo=0,
                 range=fitparams[1][1],
                 sigma=fitparams[1][2],
                 sigma_t=np.sqrt(variance),
                 t=t,
                 Pmod_sim=modulationPower,
-                resRange=fitparams[2][1],
-                sigma_res=fitparams[2][2],
-                sigma_t_res=np.sqrt(variance_res),
-                t_res=t_res,
-                Pmod_res=modulationPower_resRange,
+                resRange=0,
+                sigma_res=0,
+                sigma_t_res=0,
+                t_res=0,
+                Pmod_res=0,
                 energy=fitparams[0][1],
                 sigma_E=fitparams[0][2],
                 sigma_T_E=np.sqrt(varianceE),
                 t_E=tE,
                 Pmod_E=EnergyModulation
             ))
- 
-    print_target_parameters(targetParamsList)
+            hists.append(fitparams[2][0])
+            hists.append(fitparams[2][1])
+        
+        root_file = ROOT.TFile("energy_hist.root", "RECREATE")
+        for hist in hists:
+            hist.Write()
+        root_file.Close()
+
+        print_target_parameters(targetParamsList)
 
  
 if __name__ == "__main__":
