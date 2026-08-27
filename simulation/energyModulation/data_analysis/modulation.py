@@ -7,6 +7,7 @@ from scipy.optimize import curve_fit
 from scipy import stats
 from scipy.stats import exponnorm
 from scipy.stats import moyal
+from scipy.signal import find_peaks
 from dataclasses import dataclass
 import sys
 sys.path.append("../../range_energy/data_analysis")
@@ -113,7 +114,6 @@ def bortfeld_range(E_MeV):
     range_cm = np.zeros_like(E, dtype=float)
     mask_valid = E >= 1.0
 
-    # data = np.load("../../range_energy/data_analysis/h2o_range_energy.npz")
     data = analysisFunctions.load_EnergyRange("../../range_energy/data_analysis/h2o_range_energy.npz")
     if np.any(mask_valid):
         E_valid = E[mask_valid] if isinstance(E, np.ndarray) else E
@@ -126,39 +126,187 @@ def gaussian(x, A, mu, sigma):
     """Gaussian function for fitting."""
     return A * np.exp(-0.5 * ((x - mu) / sigma) ** 2)
  
- 
-def _fit_gaussian_to_data(data, bounds_upper=None):
+def _fit_gaussian_to_data(data, bounds_upper=None, plot=False):
     """
-    Fit a Gaussian to histogram data.
-    
-    Args:
-        data: numpy array of data points
-        bounds_upper: optional upper bounds for [A, mu, sigma]
-    
-    Returns:
-        popt: fitted parameters [A, mu, sigma]
-        or (np.nan, np.nan, np.nan) if fit fails
+    Fit a Gaussian to the main peak of histogram data.
+
+    If plot=True, show the histogram, detected peak, fit bounds,
+    and Gaussian fit.
     """
+
     try:
-        mu = np.mean(data)
-        sigma = np.std(data)
-        A = 1 / (sigma * np.sqrt(2 * np.pi))
-        
-        hist, bin_edges = np.histogram(data, bins=4000, density=True)
+        # ---------------------------------------------------------
+        # 1. Histogram
+        # ---------------------------------------------------------
+        hist, bin_edges = np.histogram(
+            data,
+            bins=1000,
+            density=True
+        )
+
         bincenters = 0.5 * (bin_edges[:-1] + bin_edges[1:])
-        
+
+        # ---------------------------------------------------------
+        # 2. Find peaks
+        # ---------------------------------------------------------
+        peaks, properties = find_peaks(
+            hist,
+            prominence=0.05 * np.max(hist),
+            distance=10
+        )
+
+        if len(peaks) == 0:
+            raise RuntimeError("No peak found")
+
+        # Highest peak
+        peak_idx = peaks[np.argmax(hist[peaks])]
+
+        peak_x = bincenters[peak_idx]
+        peak_y = hist[peak_idx]
+
+        # ---------------------------------------------------------
+        # 3. Find FWHM
+        # ---------------------------------------------------------
+        half_max = peak_y * 0.5
+
+        left_idx = peak_idx
+        while left_idx > 0 and hist[left_idx] > half_max:
+            left_idx -= 1
+
+        right_idx = peak_idx
+        while right_idx < len(hist) - 1 and hist[right_idx] > half_max:
+            right_idx += 1
+
+        fwhm = bincenters[right_idx] - bincenters[left_idx]
+
+        # ---------------------------------------------------------
+        # 4. Define fitting region
+        # ---------------------------------------------------------
+        fit_width = 1.5 * fwhm
+
+        fit_min = peak_x - fit_width
+        fit_max = peak_x + fit_width
+
+        mask = (
+            (bincenters >= fit_min) &
+            (bincenters <= fit_max)
+        )
+
+        x_fit = bincenters[mask]
+        y_fit = hist[mask]
+
+        # ---------------------------------------------------------
+        # 5. Initial parameters
+        # ---------------------------------------------------------
+        sigma_guess = fwhm / 2.355
+        A_guess = peak_y
+
+        p0 = [
+            A_guess,
+            peak_x,
+            sigma_guess
+        ]
+
         if bounds_upper is None:
             bounds_upper = [np.inf, np.inf, np.inf]
-        
+
+        # ---------------------------------------------------------
+        # 6. Gaussian fit
+        # ---------------------------------------------------------
         popt, pcov = curve_fit(
-            gaussian, 
-            bincenters, 
-            hist,
-            p0=[A, mu, sigma],
-            bounds=([0, 0, 0], bounds_upper),
+            gaussian,
+            x_fit,
+            y_fit,
+            p0=p0,
+            bounds=(
+                [0, 0, 0],
+                bounds_upper
+            ),
             maxfev=10000
         )
+
+        # ---------------------------------------------------------
+        # 7. Plot
+        # ---------------------------------------------------------
+        if plot:
+
+            A_fit, mu_fit, sigma_fit = popt
+
+            x_plot = np.linspace(
+                fit_min,
+                fit_max,
+                500
+            )
+
+            y_plot = gaussian(
+                x_plot,
+                A_fit,
+                mu_fit,
+                sigma_fit
+            )
+
+            plt.figure(figsize=(9, 5))
+
+            # Histogram
+            plt.step(
+                bincenters,
+                hist,
+                where="mid",
+                label="Histogram"
+            )
+
+            # Gaussian
+            plt.plot(
+                x_plot,
+                y_plot,
+                label="Gaussian fit"
+            )
+
+            # Peak
+            plt.axvline(
+                peak_x,
+                linestyle="--",
+                label=f"Found peak = {peak_x:.3f}"
+            )
+
+            # Fit bounds
+            plt.axvline(
+                fit_min,
+                linestyle=":",
+                label=f"Fit bounds"
+            )
+
+            plt.axvline(
+                fit_max,
+                linestyle=":"
+            )
+
+            # FWHM boundaries
+            plt.axvline(
+                bincenters[left_idx],
+                linestyle="-."
+            )
+
+            plt.axvline(
+                bincenters[right_idx],
+                linestyle="-."
+            )
+
+            plt.xlabel("Range")
+            plt.ylabel("Density")
+            plt.legend()
+
+            plt.title(
+                f"Gaussian fit\n"
+                f"$\\mu$ = {mu_fit:.3f}, "
+                f"$\\sigma$ = {sigma_fit:.3f}"
+            )
+
+            plt.tight_layout()
+            plt.show()
+
         return popt
+
     except Exception as e:
         print(f"Warning: Could not fit Gaussian: {e}")
         return (np.nan, np.nan, np.nan)
@@ -336,11 +484,17 @@ def analyse_data(file_path, enablePrint=False, enablePlot=False):
 
 def analyse_CSV(file_path, enablePrint=False, enablePlot=False):
     fitParameters = []
-    
+    npz = True
     try:
-        df = pd.read_csv(file_path)
-        energies = df["energy"].to_numpy()
-               
+
+        if npz:
+            data = np.load(file_path)
+            energies = data["energy"]               
+        else:
+            df = pd.read_csv(file_path)
+            energies = df["energy"].to_numpy()
+        
+
         if enablePrint:
             print(f"Successfully read {len(energies)} events")
             print(f"Kinetic energy range: {np.min(energies):.3f} - {np.max(energies):.3f} MeV")
@@ -367,7 +521,7 @@ def analyse_CSV(file_path, enablePrint=False, enablePlot=False):
     hist_energy = ROOT.TH1D(
         f"{file_path}_energy",
         "Energy distribution;Energy [MeV];Counts",
-        4000,     # number of bins
+        1000,     # number of bins
         0,       # lower edge
         400      # upper edge
     )
@@ -375,7 +529,7 @@ def analyse_CSV(file_path, enablePrint=False, enablePlot=False):
     hist_range = ROOT.TH1D(
         f"{file_path}_range",
         "Range distribution;Range [cm];Counts",
-        4000,     # number of bins
+        1000,     # number of bins
         0,       # lower edge
         50      # upper edge
     )
@@ -544,13 +698,19 @@ def main():
         print_target_parameters(targetParamsList)
         plot_energy_modulation(targetParamsList)
     else: 
-        folder = "data/phoswitch"
-        notargetfile = "notarget"
-        targetfiles  = ["52mmPMMA50mmLN300", "100mmLN300", "52mmPMMA150mmLN300", "200mmLN300"]
+        # folder = "data/phoswitch"
+        # notargetfile = "notarget"
+        # targetfiles  = ["52mmPMMA50mmLN300", "100mmLN300", "52mmPMMA150mmLN300", "200mmLN300"]
+        # fitparams = analyse_CSV(f"{folder}/dot_{notargetfile}.csv", True, True)
+        
+        folder = "data/BPS"
+        notargetfile = "total_energy_notarget.npz"
+        targetfiles  = ["total_energy_ln300.npz"]
+        fitparams = analyse_CSV(f"{folder}/{notargetfile}", True, True)
+
         thicknesses = [50,100,150,200]
         targetParamsList = []
         hists = []
-        fitparams = analyse_CSV(f"{folder}/{notargetfile}.csv", True, True)
         print(fitparams)
         targetParamsList.append(TargetParameters(
             Thickness=0,
@@ -575,7 +735,8 @@ def main():
         hists.append(fitparams[2][1])
 
         for index, file in enumerate(targetfiles):
-            fitparams = analyse_CSV(f"{folder}/{file}.csv")
+            # fitparams = analyse_CSV(f"{folder}/dot_{file}.csv")
+            fitparams = analyse_CSV(f"{folder}/{file}", True, True)
 
             t = targetParamsList[0].range - fitparams[1][1]
             variance = fitparams[1][2]**2 - targetParamsList[0].sigma**2
@@ -609,10 +770,10 @@ def main():
             hists.append(fitparams[2][0])
             hists.append(fitparams[2][1])
         
-        root_file = ROOT.TFile("energy_hist.root", "RECREATE")
-        for hist in hists:
-            hist.Write()
-        root_file.Close()
+        # root_file = ROOT.TFile("energy_hist.root", "RECREATE")
+        # for hist in hists:
+        #     hist.Write()
+        # root_file.Close()
 
         print_target_parameters(targetParamsList)
 

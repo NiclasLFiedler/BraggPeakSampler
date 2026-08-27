@@ -1,6 +1,6 @@
 {
-  "detectorSelect": 0,
-  "targetSelect": 2,
+  "detectorSelect": 3,
+  "targetSelect": 0,
   "pmod": 800,
   "heteroThickness": 200,
   "plotEnable": 1,
@@ -38,7 +38,7 @@
       "detectorID": 1,
       "comment": "ideal detector",
       "datasetSelect": 1,
-      "detectorType": "h2o",
+      "detectorType": "pbwo4",
       "beamEnergy": 220,
       "nLayers": 300,
       "crystalSize": [
@@ -95,7 +95,7 @@
     {
       "detectorID": 3,
       "comment": "Detector",
-      "datasetSelect": 1,
+      "datasetSelect": 2,
       "detectorType": "pbwo4",
       "beamEnergy": 221,
       "nLayers": 32,
@@ -119,7 +119,7 @@
       "coincidenceTime": 10,
       "coincidenceLayer": 28,
       "discardIndex": 50,
-      "targetThickness": 60
+      "targetThickness": 0
     }
   ]
 }

@@ -916,7 +916,13 @@ if __name__ == "__main__":
             else:
                 energyEvent.append(detector.adc_to_energy(layer, layerCharge))
         energy.append(np.sum(energyEvent))
-    
+
+    energy = np.asarray(energy, dtype=np.float64)
+    np.savez(
+        f"{datapath}/total_energy.npz",
+        energy=energy
+    )
+
     TEnergyCounts, TEnergyEdges = np.histogram(energy, bins=2000)
     TEnergyCenters = 0.5 * (TEnergyEdges[:-1] + TEnergyEdges[1:])
     peak_idx = np.argmax(TEnergyCounts)
@@ -965,7 +971,7 @@ if __name__ == "__main__":
         if(np.sum(energyEvent)>energyCutOff):
             selectedCharge.append(event)
             energy.append(np.sum(energyEvent))
-    
+    exit()
     mask = TEnergyCenters >= energyCutOff
     TCutEnergyCounts = TEnergyCounts[mask]
     TCutEnergyCenters = TEnergyCenters[mask]
