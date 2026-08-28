@@ -1,6 +1,6 @@
 {
-  "detectorSelect": 3,
-  "targetSelect": 0,
+  "detectorSelect": 0,
+  "targetSelect": 2,
   "pmod": 800,
   "heteroThickness": 200,
   "plotEnable": 1,
@@ -32,7 +32,7 @@
       "coincidenceTime": 50,
       "coincidenceLayer": 1,
       "discardIndex": 50,
-      "targetThickness": 200
+      "targetThickness": 100
     },
     {
       "detectorID": 1,
@@ -113,13 +113,13 @@
       "absorberSize": 0,
       "reversedStatus": false,
       "normStatus": false,
-      "simulationStatus": true,
+      "simulationStatus": false,
       "teflonThickness": 0.5,
       "aluThickness": 0.06,
-      "coincidenceTime": 10,
-      "coincidenceLayer": 28,
+      "coincidenceTime": 50,
+      "coincidenceLayer": 27,
       "discardIndex": 50,
-      "targetThickness": 0
+      "targetThickness": 200
     }
   ]
 }

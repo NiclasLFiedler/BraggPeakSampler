@@ -904,17 +904,19 @@ if __name__ == "__main__":
     energy = []
     selectedCharge = []
     idx = 0
-
+    ch8Energy = [7.449727330559672, 7.453257268411435, 7.476103577336389, 7.496305293163929, 7.521611829149524, 7.543090448048813]
     for event in charge:
         idx += 1
         energyEvent = []
         for layer, layerCharge in enumerate(event):
             if(layerCharge == 0):
                 energyEvent.append(0)
-            # elif(layer == 8 and targetSelect != 0):
-                # energyEvent.append(0)
+            elif(layer == 8 and targetSelect != 0):
+                energyEvent.append(ch8Energy[-1])
             else:
-                energyEvent.append(detector.adc_to_energy(layer, layerCharge))
+                #energyEvent.append(detector.adc_to_energy(layer, layerCharge))
+                energyEvent.append(detector.linear_adc_to_energy(layer, layerCharge))
+                
         energy.append(np.sum(energyEvent))
 
     energy = np.asarray(energy, dtype=np.float64)
@@ -967,11 +969,12 @@ if __name__ == "__main__":
             if(layerCharge == 0):
                 energyEvent.append(0)
             else:
-                energyEvent.append(detector.adc_to_energy(layer, layerCharge))
+                # energyEvent.append(detector.adc_to_energy(layer, layerCharge))
+                energyEvent.append(detector.linear_adc_to_energy(layer, layerCharge))
         if(np.sum(energyEvent)>energyCutOff):
             selectedCharge.append(event)
             energy.append(np.sum(energyEvent))
-    exit()
+    
     mask = TEnergyCenters >= energyCutOff
     TCutEnergyCounts = TEnergyCounts[mask]
     TCutEnergyCenters = TEnergyCenters[mask]
@@ -1007,7 +1010,7 @@ if __name__ == "__main__":
     # plt.show()
     plt.close()
 
-    # exit()
+    exit()
     selectedCharge = np.array(selectedCharge)
     
     for i in range(0,32):

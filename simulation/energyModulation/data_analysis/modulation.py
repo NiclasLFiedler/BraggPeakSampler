@@ -140,7 +140,7 @@ def _fit_gaussian_to_data(data, bounds_upper=None, plot=False):
         # ---------------------------------------------------------
         hist, bin_edges = np.histogram(
             data,
-            bins=1000,
+            bins=4000,
             density=True
         )
 
@@ -619,15 +619,15 @@ def plot_energy_modulation(targetParamsList):
     plt.show()
 
 def main():
-    simulation = False
+    simulation = True
     if simulation:
         data_file_path = "data"
         data_file_ref = "data_0_0.root"
 
         filepathref = f"{data_file_path}/{data_file_ref}"
     
-        targetThicknesses = range(50, 210, 50)
-        pmods = range(100, 810, 100)
+        targetThicknesses = range(100, 110, 50)
+        pmods = range(200, 810, 200)
     
         targetParamsList = []
     

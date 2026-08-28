@@ -275,7 +275,7 @@ void DetectorConstruction::DefineMaterials()
   detMaterial = water;
   
   heteroMaterial1 = water;
-  heteroMaterial2 = worldMat;
+  heteroMaterial2 = air;
   
   G4cout <<"Mean excitation Energy: " << detMaterial->GetIonisation()->GetMeanExcitationEnergy() << G4endl;
   G4cout <<"Density: " << detMaterial->GetDensity()/(g/cm3) << G4endl;
@@ -364,18 +364,19 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
       airVisAttr->SetVisibility(true);
       airVisAttr->SetForceSolid(true);
 
-      cubeSizeXY = 0.6 * mm;
+      cubeSizeXY = 0.5 * mm;
       G4double rhoLung = 1.05;
+      G4double rhoLunginf = 0.26;
       G4double rhoH2O = 1;
       G4double rhoAir = 0.0012;
-      G4double probLung = 0.26;
-
+      // G4double probLung = 0.26;
+      G4double probLung = (rhoLunginf-rhoAir)/(rhoLung-rhoAir);
       G4double Sratio220 = 1/1.0704244067096704;
       Sratio220 = 1/1.1;
       G4double Sratio90 = 1/1.0537495463081672;
 
-      cubeSizeZ = static_cast<double>(pmod)* rhoH2O/rhoLung * 1/(1-probLung)*um;
-      // cubeSizeZ = static_cast<double>(pmod)* Sratio90 * 1/(1-probLung)*um;
+      // cubeSizeZ = static_cast<double>(pmod)* rhoH2O/rhoLung * 1/(1-probLung)*um;
+      cubeSizeZ = static_cast<double>(pmod)* Sratio90 * 1/(1-probLung)*um;
       // cubeSizeZ = pmod/0.7355*um;
       // cubeSizeZ = pmod/(probLung*(1-probLung)*(rhoLung-rhoAir)*(rhoLung-rhoAir))*(probLung*(rhoLung-rhoAir)+rhoAir)*rhoH2O*um;
       // cubeSizeZ = static_cast<double>(pmod)/1000;
