@@ -16,12 +16,12 @@ RunAction::RunAction()
   analysisManager->CreateNtuple("braggsampler", "event, pos, eDep, dEdX, theta, trackid, eKin and eTot");
   analysisManager->CreateNtupleIColumn("event");	
   analysisManager->CreateNtupleDColumn("trackid");
-  analysisManager->CreateNtupleDColumn("pos");	 
-  // analysisManager->CreateNtupleDColumn("eDep");
-  // analysisManager->CreateNtupleDColumn("eKin");
-  // analysisManager->CreateNtupleDColumn("eTot");
-  analysisManager->CreateNtupleDColumn("thetaX");
-  analysisManager->CreateNtupleDColumn("thetaY");
+  analysisManager->CreateNtupleDColumn("depth");	 
+  analysisManager->CreateNtupleDColumn("eTot");
+  analysisManager->CreateNtupleDColumn("eKin");
+  analysisManager->CreateNtupleDColumn("ScatteringAngle");
+  analysisManager->CreateNtupleDColumn("CumVariance");
+  analysisManager->CreateNtupleIColumn("layerID");
 
   analysisManager->FinishNtuple();
 }

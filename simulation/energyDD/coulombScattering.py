@@ -28,20 +28,15 @@ def EnergyFromRange(range, material):
     return (range/material.alpha)**(1/material.p)
 
 def ScatteringAngle(material, particle, LayerThickness):
-    return 13.6 * particle.charge * np.sqrt(LayerThickness / material.X0) *(particle.mass+particle.energy) / (particle.energy**2+2*particle.mass * particle.energy)*(1+0.038*np.log(LayerThickness/material.X0))
+    return 13.6 * particle.charge * np.sqrt(LayerThickness / material.X0) *(particle.mass+particle.energy) / (particle.energy**2+2*particle.mass * particle.energy)
 
 def CumulativeScatteringAngle(material, particle, InitialEnergy, LayerThickness):
-    """
-    Calculate cumulative scattering angle vs depth.
-    Uses constant depth increments through the material.
-    """
-    # Total range at initial energy
     total_range = RangeFromEnergy(InitialEnergy, material)
-    
+    print(f"total range: {total_range}")
     # Create constant depth steps
     num_steps = int(total_range / LayerThickness)
     depths = np.linspace(0, total_range, num_steps)
-    
+        
     depths_list = []
     energies_list = []
     scatteringAngles = []
@@ -50,6 +45,9 @@ def CumulativeScatteringAngle(material, particle, InitialEnergy, LayerThickness)
     total_angle_sq = 0
     
     for i in range(len(depths)-1):  # Step through each layer
+        depthDiff = (depths[i]-depths[0])
+        if depthDiff == 0:
+            depthDiff = depths[1]-depths[0]
         depth_start = depths[i]
         depth_end = depths[i+1]
         
@@ -63,14 +61,14 @@ def CumulativeScatteringAngle(material, particle, InitialEnergy, LayerThickness)
         
         particle.energy = energy_at_start
         
-        # Scattering angle for this layer (constant thickness)
         angle = ScatteringAngle(material, particle, LayerThickness)
-        scatteringAngles.append(angle)
-        individual_angles.append(angle)
         
-        # Accumulate in quadrature
+        print(f"depth diff {depthDiff}")
+        
         total_angle_sq += angle**2
-        cumulativeAngle.append(np.sqrt(total_angle_sq))
+        scatteringAngles.append(angle*(1+0.038*np.log(depthDiff/material.X0)))
+        individual_angles.append(angle*(1+0.038*np.log(depthDiff/material.X0)))
+        cumulativeAngle.append(np.sqrt(total_angle_sq)*(1+0.038*np.log(depthDiff/material.X0)))
         
         depths_list.append(depth_start)
         energies_list.append(energy_at_start)
@@ -92,7 +90,7 @@ h2o = Material(
     density=1.0,
     X0=36.08,
     I=75,
-    alpha=2.369e-2,
+    alpha=2.369e-2/10,
     p=1.757
 )
 
@@ -103,12 +101,12 @@ proton = Particle(
     energy=0.0
 )
 
-LayerThickness = 0.01  # 0.01 cm depth increments
-InitialEnergy = 220.1   # MeV
+LayerThickness = 0.1 
+InitialEnergy = 220.1
 
 depths, scatteringAngles, energies_at_depth, individual_angles = CumulativeScatteringAngle(h2o, proton, InitialEnergy, LayerThickness)
 
-sigma_r = depths[-1]/10*(1-np.cos(scatteringAngles[-1])) 
+sigma_r = depths[-1]*(1-np.cos(scatteringAngles[-1])) 
 print(f"Depth of material: {depths[-1]:.4f} cm")
 print(f"Final cumulative scattering angle: {scatteringAngles[-1]:.4f} mrad")
 

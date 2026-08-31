@@ -22,6 +22,9 @@
 #include "G4Colour.hh"
 #include "G4RotationMatrix.hh"
 #include "G4SystemOfUnits.hh"
+#include "DetectorParameterisationColour.hh"
+#include "HeteroParametrisation.cc"
+#include "G4VPVParameterisation.hh"
 
 using namespace B2;
 
@@ -240,29 +243,34 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
     0,                                       // copy number
     fCheckOverlaps);                         // checking overlaps
 
-  // Target
-
-  soliddetector = new G4Box("soliddetector",     // its name
-    detSizeX/2, detSizeY/2, detSizeZ/2);             // its size
   
-  logicaldetector = new G4LogicalVolume(soliddetector, detMaterial, "logicaldetector");
+  G4double phantomX = 200 * cm;
+  G4double phantomY = 200 * cm;
+  G4double phantomZ = 35*cm;
+  // if(detectorType == "pbwo4"){
+  //   phantomZ = 8*cm;
+  // }
+  G4double fLayers = 350;
+  detSizeZ = phantomZ/fLayers;
 
-  G4UserLimits* userLimits = new G4UserLimits();
-  userLimits->SetMaxAllowedStep(2*mm);
-  logicaldetector->SetUserLimits(userLimits);
+  G4Box* solidPhantom = new G4Box("solidPhantom", phantomX/2, phantomY/2, phantomZ/2);
+  G4LogicalVolume* logicPhantom = new G4LogicalVolume(solidPhantom, detMaterial, "logPhantom");
+  new G4PVPlacement(nullptr, G4ThreeVector(0,0,phantomZ/2), logicPhantom, "physPhantom", logicalworld, false, 0);
 
-  physdetector = new G4PVPlacement(nullptr,  // no rotation
-    G4ThreeVector(0.,0., detSizeZ/2),              // at (x,y,z)
-    // G4ThreeVector(0.,0.,detSizeZ*i),  
-    logicaldetector,            // its logical volume
-    "physdetector",           // its name
-    logicalworld,               // its mother volume
-    false,                    // no boolean operations
-    0,                        // copy number
-    fCheckOverlaps);          // checking overlaps
+  G4Box* solidLayer = new G4Box("solidLayer", phantomX/2, phantomY/2, detSizeZ/2);
+  G4LogicalVolume* logicLayer = new G4LogicalVolume(solidLayer, detMaterial, "logLayer");
+  
+  auto PhantomVisAttr = new G4VisAttributes(G4Colour(0.0, 0.0, 1.0)); // Blue
+  PhantomVisAttr->SetVisibility(true);
+  PhantomVisAttr->SetForceSolid(true);
 
-  //Always return the physical world
-  //logicalworld->SetVisAttributes(G4VisAttributes);
+  auto* parameterisationPhantom = new HeteroParameterisation(1, 1, fLayers, 0, 0, detSizeZ, detMaterial, detMaterial, PhantomVisAttr, PhantomVisAttr);
+
+  new G4PVParameterised(
+    "Layer", logicLayer, logicPhantom, kUndefined, fLayers, parameterisationPhantom
+  );
+
+
   return physworld;
 }
 
@@ -277,7 +285,7 @@ void DetectorConstruction::ConstructSDandField()
   G4SDManager::GetSDMpointer()->AddNewDetector(aTrackerSD);
   // Setting aTrackerSD to all logical volumes with the same name
   // of "Chamber_LV".
-  SetSensitiveDetector("logicaldetector", aTrackerSD, true);
+  SetSensitiveDetector("logLayer", aTrackerSD, true);
 
   // Create global magnetic field messenger.
   // Uniform magnetic field is then created automatically if

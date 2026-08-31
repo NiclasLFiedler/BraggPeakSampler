@@ -167,7 +167,7 @@ def _fit_gaussian_to_data(data, bounds_upper=None, plot=False):
         # ---------------------------------------------------------
         # 3. Find FWHM
         # ---------------------------------------------------------
-        half_max = peak_y * 0.5
+        half_max = peak_y * 0.8
 
         left_idx = peak_idx
         while left_idx > 0 and hist[left_idx] > half_max:
@@ -329,12 +329,11 @@ def _plot_histogram_with_fit(ax, data, popt, xlabel, ylabel, title, color, unit)
     # Create histogram
     ax.hist(
         data, 
-        bins=4000, 
+        bins=500, 
         density=True, 
         alpha=0.7, 
         color=color, 
         edgecolor='black',
-        label='Data',
         histtype='step'
     )
     
@@ -342,7 +341,7 @@ def _plot_histogram_with_fit(ax, data, popt, xlabel, ylabel, title, color, unit)
     if not np.isnan(popt[0]):
         x = np.linspace(data.min(), data.max(), 4000)
         y = gaussian(x, *popt)
-        ax.plot(x, y, 'r-', linewidth=2, label='Gaussian Fit')
+        ax.plot(x, y, 'r-', linewidth=2 )
         
         # Add text box with fit parameters
         ax.text(0.95, 0.95, 
@@ -353,11 +352,11 @@ def _plot_histogram_with_fit(ax, data, popt, xlabel, ylabel, title, color, unit)
                 horizontalalignment='right',
                 bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
     
-    ax.set_xlabel(xlabel, fontsize=12)
-    ax.set_ylabel(ylabel, fontsize=12)
-    ax.set_title(title, fontsize=13, fontweight='bold')
-    ax.legend(fontsize=11)
-    ax.grid(True, alpha=0.3)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.set_title(title)
+    # ax.legend(fontsize=11)
+    ax.grid(True, alpha=0.8)
 
 
 def _print_summary_statistics(data_dict):
@@ -484,7 +483,7 @@ def analyse_data(file_path, enablePrint=False, enablePlot=False):
 
 def analyse_CSV(file_path, enablePrint=False, enablePlot=False):
     fitParameters = []
-    npz = True
+    npz = False
     try:
 
         if npz:
@@ -494,7 +493,6 @@ def analyse_CSV(file_path, enablePrint=False, enablePlot=False):
             df = pd.read_csv(file_path)
             energies = df["energy"].to_numpy()
         
-
         if enablePrint:
             print(f"Successfully read {len(energies)} events")
             print(f"Kinetic energy range: {np.min(energies):.3f} - {np.max(energies):.3f} MeV")
@@ -514,6 +512,7 @@ def analyse_CSV(file_path, enablePrint=False, enablePlot=False):
     
     range_mask = range_cm < 50
     range_cm = range_cm[range_mask]
+    
     energy_mask = energies < 400
     energies = energies[energy_mask]
 
@@ -521,7 +520,7 @@ def analyse_CSV(file_path, enablePrint=False, enablePlot=False):
     hist_energy = ROOT.TH1D(
         f"{file_path}_energy",
         "Energy distribution;Energy [MeV];Counts",
-        1000,     # number of bins
+        200,     # number of bins
         0,       # lower edge
         400      # upper edge
     )
@@ -529,7 +528,7 @@ def analyse_CSV(file_path, enablePrint=False, enablePlot=False):
     hist_range = ROOT.TH1D(
         f"{file_path}_range",
         "Range distribution;Range [cm];Counts",
-        1000,     # number of bins
+        200,     # number of bins
         0,       # lower edge
         50      # upper edge
     )
@@ -547,7 +546,8 @@ def analyse_CSV(file_path, enablePrint=False, enablePlot=False):
     
     # Create and populate plots if enabled
     if enablePlot:
-        fig, axes = plt.subplots(1, 3, figsize=(21, 5))
+        plt.rcParams.update({'font.size': 26})
+        fig, axes = plt.subplots(1, 2, figsize=(24, 9))
         
         _plot_histogram_with_fit(
             axes[0], energies, popt_eKin,
@@ -568,6 +568,7 @@ def analyse_CSV(file_path, enablePrint=False, enablePlot=False):
         )
 
         plt.tight_layout()
+        plt.savefig(f"energyModulation.svg", format="svg", bbox_inches="tight")
         plt.show()
     else:
         plt.close()
@@ -619,7 +620,7 @@ def plot_energy_modulation(targetParamsList):
     plt.show()
 
 def main():
-    simulation = True
+    simulation = False
     if simulation:
         data_file_path = "data"
         data_file_ref = "data_0_0.root"
@@ -698,15 +699,15 @@ def main():
         print_target_parameters(targetParamsList)
         plot_energy_modulation(targetParamsList)
     else: 
-        # folder = "data/phoswitch"
-        # notargetfile = "notarget"
-        # targetfiles  = ["52mmPMMA50mmLN300", "100mmLN300", "52mmPMMA150mmLN300", "200mmLN300"]
-        # fitparams = analyse_CSV(f"{folder}/dot_{notargetfile}.csv", True, True)
+        folder = "data/phoswitch"
+        notargetfile = "notarget"
+        targetfiles  = ["52mmPMMA50mmLN300", "100mmLN300", "52mmPMMA150mmLN300", "200mmLN300"]
+        fitparams = analyse_CSV(f"{folder}/{notargetfile}.csv", True, True)
         
-        folder = "data/BPS"
-        notargetfile = "total_energy_notarget.npz"
-        targetfiles  = ["total_energy_ln300.npz"]
-        fitparams = analyse_CSV(f"{folder}/{notargetfile}", True, True)
+        # folder = "data/BPS"
+        # notargetfile = "total_energy_notarget.npz"
+        # targetfiles  = ["total_energy_ln300.npz"]
+        # fitparams = analyse_CSV(f"{folder}/{notargetfile}", True, True)
 
         thicknesses = [50,100,150,200]
         targetParamsList = []
@@ -735,8 +736,8 @@ def main():
         hists.append(fitparams[2][1])
 
         for index, file in enumerate(targetfiles):
-            # fitparams = analyse_CSV(f"{folder}/dot_{file}.csv")
-            fitparams = analyse_CSV(f"{folder}/{file}", True, True)
+            fitparams = analyse_CSV(f"{folder}/{file}.csv")
+            # fitparams = analyse_CSV(f"{folder}/{file}", True, True)
 
             t = targetParamsList[0].range - fitparams[1][1]
             variance = fitparams[1][2]**2 - targetParamsList[0].sigma**2

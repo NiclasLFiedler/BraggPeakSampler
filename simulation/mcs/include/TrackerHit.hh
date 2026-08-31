@@ -59,7 +59,6 @@ class TrackerHit : public G4VHit
     // Set methods
     void SetEdep     (G4double de)      { fEdep += de; };
     void SetEkin     (G4double eKin)      { feKin += eKin; };
-    void SetPos      (G4ThreeVector xyz){ fPos = xyz; };
     void SetdEdX      (G4double dEdX){ fdEdX = dEdX; };
     void Setbeta      (G4double beta){ fbeta = beta; };
     void SetEtot      (G4double eTot){ feTot = eTot; };
@@ -67,6 +66,10 @@ class TrackerHit : public G4VHit
     void SetTrackID   (G4double TrackID){ fTrackID = TrackID; };
     void SetThetaX   (G4double thetaX){ fThetaX = thetaX; };
     void SetThetaY   (G4double thetaY){ fThetaY = thetaY; };
+    void SetDepth      (G4double Depth){ fDepth = Depth; };
+    void SetScatteringAngle      (G4double ScatteringAngle){ fScatteringAngle = ScatteringAngle; };
+    void SetCumVariance      (G4double CumVariance){ fCumVariance = CumVariance; };
+    void SetLayerID      (G4double LayerID){ fLayerID = LayerID; };
 
     // Get methods
     G4double GetEdep() const     { return fEdep; };
@@ -76,9 +79,12 @@ class TrackerHit : public G4VHit
     G4double GetEtot() const     { return feTot; };
     G4double GetStepLength() const     { return fStepLength; };
     G4double GetTrackID() const     { return fTrackID; };
-    G4ThreeVector GetPos() const { return fPos; };
+    G4double GetDepth() const {return fDepth;};
+    G4double GetCumVariance() const {return fCumVariance;};
+    G4double GetScatteringAngle() const {return fScatteringAngle;};
     G4double GetThetaX() const { return fThetaX; };
-    G4double GetThetaY() const { return fThetaY; };
+    G4double GetThetaY() const { return fThetaY; }; 
+    G4double GetLayerID() const { return fLayerID; }; 
 
     inline void* operator new(size_t);
     inline void  operator delete(void*);
@@ -94,10 +100,13 @@ class TrackerHit : public G4VHit
     G4double      fbeta = 0.;
     G4double      feTot = 0.;
     G4double      fStepLength = 0.;
-    G4ThreeVector fPos;
     G4double      fTrackID = 0.;
     G4double      fThetaX = 0.;
     G4double      fThetaY = 0.;
+    G4double      fDepth = 0.;
+    G4double      fCumVariance = 0.;
+    G4double      fScatteringAngle = 0.;
+    G4int     fLayerID = 0.;
 };
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......

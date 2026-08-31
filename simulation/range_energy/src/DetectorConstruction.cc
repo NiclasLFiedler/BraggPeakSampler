@@ -218,9 +218,9 @@ void DetectorConstruction::DefineMaterials()
   // detMaterial = nistManager->FindOrBuildMaterial("G4_PbWO4");
   // detMaterial->GetIonisation()->SetMeanExcitationEnergy(600.7*eV);
   
-  // detMaterial = nistManager->FindOrBuildMaterial("G4_WATER");
+  detMaterial = nistManager->FindOrBuildMaterial("G4_WATER");
 
-  detMaterial = lungTissue;
+  // detMaterial = water;
   G4cout <<"Mean excitation Energy: " << detMaterial->GetIonisation()->GetMeanExcitationEnergy() << G4endl;
   G4cout <<"Density: " << detMaterial->GetDensity()/(g/cm3) << G4endl;
   G4cout <<"Radiation length: " << detMaterial->GetRadlen()/cm << G4endl;

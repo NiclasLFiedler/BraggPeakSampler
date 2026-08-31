@@ -38,11 +38,6 @@ void EventAction::EndOfEventAction(const G4Event* event)
   // -- Collection ID is correct, we get the pointer of the collection:
   if (hitsCollectionID>=0) hitsCollection = (TrackerHitsCollection*)(event->GetHCofThisEvent()->GetHC(hitsCollectionID));
   else G4cout << "Collection `hitsCollection' not found!" << G4endl;
- 
-  if(trackerSD->fStopped == 0){
-    trackerSD->ClearHits();
-    return;
-  }
 
   if(hitsCollection){
     G4int n_hit = hitsCollection->entries();
@@ -51,18 +46,19 @@ void EventAction::EndOfEventAction(const G4Event* event)
       G4double eTot = (*hitsCollection)[i]->GetEtot();
       G4double TrackID = (*hitsCollection)[i]->GetTrackID();
       G4double eKin = (*hitsCollection)[i]->GetEkin();
-      G4ThreeVector Pos = (*hitsCollection)[i]->GetPos();
-      G4double ThetaX = (*hitsCollection)[i]->GetThetaX();
-      G4double ThetaY = (*hitsCollection)[i]->GetThetaY();
+      G4double ScatteringAngle = (*hitsCollection)[i]->GetScatteringAngle();
+      G4double CumVariance = (*hitsCollection)[i]->GetCumVariance();
+      G4double Depth = (*hitsCollection)[i]->GetDepth();
+      G4int layerID = (*hitsCollection)[i]->GetLayerID();
 
       analysisManager->FillNtupleIColumn(0, eventID);	
       analysisManager->FillNtupleDColumn(1, TrackID);
-      analysisManager->FillNtupleDColumn(2, Pos.z());
-	    // analysisManager->FillNtupleDColumn(3, partEdep/MeV);
-      // analysisManager->FillNtupleDColumn(4, eKin);
-      // analysisManager->FillNtupleDColumn(5, eTot);
-      analysisManager->FillNtupleDColumn(3, ThetaX);
-      analysisManager->FillNtupleDColumn(4, ThetaY);
+      analysisManager->FillNtupleDColumn(2, Depth);
+      analysisManager->FillNtupleDColumn(3, eTot);
+      analysisManager->FillNtupleDColumn(4, eKin);
+      analysisManager->FillNtupleDColumn(5, ScatteringAngle);
+      analysisManager->FillNtupleDColumn(6, CumVariance);
+      analysisManager->FillNtupleIColumn(7, layerID);
       
  	    analysisManager->AddNtupleRow();
     }

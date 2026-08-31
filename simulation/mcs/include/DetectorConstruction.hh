@@ -11,6 +11,8 @@
 #include "G4OpticalSurface.hh"
 #include "G4LogicalSkinSurface.hh"
 #include "G4STL.hh"
+#include "G4VPVParameterisation.hh"
+#include "G4PVParameterised.hh"
 
 class G4VPhysicalVolume;
 class G4LogicalVolume;

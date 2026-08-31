@@ -41,30 +41,41 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
   
   G4double trackid = aStep->GetTrack()->GetTrackID();
   if (trackid == 1){
-    auto newHit = new TrackerHit();
-    
-    G4double eDep = aStep->GetTotalEnergyDeposit();
-    G4ThreeVector PPos = aStep->GetPostStepPoint()->GetPosition();
-    G4double energy = aStep->GetPreStepPoint()->GetTotalEnergy();
-    G4double eKin = aStep->GetPreStepPoint()->GetKineticEnergy();
-    G4ThreeVector dir = aStep->GetTrack()->GetMomentumDirection();
-    G4double depth = PPos.z();
+    G4StepPoint* pre  = aStep->GetPreStepPoint();
+    G4StepPoint* post = aStep->GetPostStepPoint();
 
-    G4double thetaX = dir.x()/dir.z();
-    G4double thetaY = dir.y()/dir.z();
+    if(pre->GetStepStatus() == fGeomBoundary) {
+      auto newHit = new TrackerHit();
+      G4int layerID = pre->GetTouchable()->GetCopyNumber();
+      G4ThreeVector PPos = aStep->GetPostStepPoint()->GetPosition();
+      // G4double depth = PPos.z();
+      G4double layerThickness = 1;
+      G4double depth = std::round(pre->GetPosition().z() / layerThickness) * layerThickness/10;
+      G4double energy = aStep->GetPreStepPoint()->GetTotalEnergy();
+      G4double eKin = aStep->GetPreStepPoint()->GetKineticEnergy();     
+      
+      G4ThreeVector dirOut = post->GetMomentumDirection();
+      G4double thetaOut = std::atan2(dirOut.x(), dirOut.z());
 
-    newHit->SetTrackID(trackid);
-    newHit->SetEkin(eKin);
-    newHit->SetEdep(eDep);
-    newHit->SetPos(PPos);
-    newHit->SetEtot(energy);
-    newHit->SetThetaX(thetaX);
-    newHit->SetThetaY(thetaY);
-    fHitsCollection->insert( newHit );
-    if(eKin < 0.5){
-      fStopped = 1;
+      G4ThreeVector preMom = aStep->GetPreStepPoint()->GetMomentumDirection();
+      G4double cosDeflectionAngle = preMom.dot(dirOut);
+      G4double deflectionAngle = std::acos(cosDeflectionAngle);
+
+      // G4cout << "cosDeflectionAngle " <<  cosDeflectionAngle << G4endl;
+
+      newHit->SetTrackID(trackid);
+      newHit->SetEkin(eKin);
+      newHit->SetEtot(energy);
+      newHit->SetDepth(depth);
+      newHit->SetCumVariance(thetaOut*thetaOut);
+      newHit->SetScatteringAngle(deflectionAngle);
+      newHit->SetLayerID(layerID);
+
+      fHitsCollection->insert(newHit);
     }
-    fNextDepthBoundary += 1;      
+    else{
+      return true;
+    }
   }
       
   return true;

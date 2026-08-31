@@ -49,7 +49,7 @@ PrimaryGeneratorAction::~PrimaryGeneratorAction()
 
 
 void PrimaryGeneratorAction::SetBeamEnergy(G4double energy) {
-    fBeamEnergy = energy;
+    fBeamEnergy = 220*MeV;
     // G4cout << "Changed beamenergy to " << energy << " MeV" << G4endl;
     G4cout << "Energy change " << energy << G4endl;
 

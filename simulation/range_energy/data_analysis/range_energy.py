@@ -105,7 +105,7 @@ def calculate_residuals(data: EnergyRangeData):
 
 def plotInit():
     plt.rcParams.update({'font.size': 26})
-    plt.figure(figsize=(20, 15))
+    plt.figure(figsize=(12, 9))
     plt.xlabel('Energy / MeV')
     plt.ylabel('Range / cm')
     plt.grid(True)
@@ -158,10 +158,10 @@ def plot_range_energy(data: EnergyRangeData):
             linewidth=2,
             label=(
                 f'{data.name} Fit: '
-                f'$\\alpha_1 = {data.alpha[0]:.3e}$ '
-                f'$\\alpha_2 = {data.alpha[1]:.3e}$ '
-                f'$\\alpha_3 = {data.alpha[2]:.3e}$ '
-                f'$\\alpha_4 = {data.alpha[3]:.3e}$ '
+                #f'$\\alpha_1 = {data.alpha[0]:.3e}$ '
+                #f'$\\alpha_2 = {data.alpha[1]:.3e}$ '
+                #f'$\\alpha_3 = {data.alpha[2]:.3e}$ '
+                #f'$\\alpha_4 = {data.alpha[3]:.3e}$ '
             )
         )
     else:
@@ -172,9 +172,6 @@ def plot_range_energy(data: EnergyRangeData):
             linewidth=2,
             label=(
                 f'{data.name} Fit: '
-                f'$\\alpha_{{{data.name}}} = {data.alpha[0]:.3e}$ '
-                f'$\\frac{{cm}}{{MeV^p}}$; '
-                f'$p_{{{data.name}}}$ = {data.p:.3e}'
             )
         )
     return
@@ -187,20 +184,19 @@ def plot_residuals(data: EnergyRangeData):
         yerr=data.range_errors,
         fmt='o--',
         color=data.colors[0],
-        capsize=5
+        capsize=5,
+        label=(f'{data.name}')      
     )
 
-    plt.axhline(
-        0,
-        color='black',
-        linestyle='--',
-        linewidth=2,
-        label=(
-            f'{data.name} ({fit_type}), '
-            fr'$\chi^2_\nu={data.reduced_chi2:.2f}$, '
-            fr'RMS={data.rms_residual:.2e}\,\mathrm{{cm}}'
-        )
-    )
+    # plt.axhline(
+    #     0,
+    #     color='black',
+    #     linestyle='--',
+    #     linewidth=2,
+    #     label=(
+    #         f'{data.name} ({fit_type}), '
+    #     )
+    # )
     plt.ylabel(r'Residual $R_\mathrm{data}-R_\mathrm{fit}$ / cm')
 
 def plot_normalized_residuals(data: EnergyRangeData):
@@ -275,7 +271,7 @@ def save_range_data(data: EnergyRangeData, filename):
 def main():
     UseSumFit = True
 
-    targetColorMap = ["#000000","#1f77b4", "#4e79a7", "#76b7b2", "#bab0ac", "#f28e2b", "#e15759", "#9c755f"]
+    targetColorMap = ["#16C000","#1f77b4", "#4e79a7", "#76b7b2", "#bab0ac", "#f28e2b", "#e15759", "#9c755f"]
 
     colors = {
         "PbWO4":    (targetColorMap[0], targetColorMap[0]),
@@ -296,7 +292,7 @@ def main():
     CSDA_ranges_alu = [2.193e-02, 5.157e-02, 1.697e-01, 3.448e-01, 5.726e-01, 1.175e+00, 1.961e+00, 2.918e+00, 4.037e+00, 5.309e+00, 6.727e+00, 8.284e+00, 9.976e+00, 1.476e+01, 2.026e+01, 2.644e+01, 3.322e+01, 4.057e+01, 4.843e+01]
     
     ICRU_H2O_data = EnergyRangeData(
-        name="ICRU_H2O",
+        name="ICRU_H2O_Polynomial",
         colors = colors["ICRU_H2O"],
         energies=np.array(ICRUenergies),
         ranges=np.array(CSDA_ranges_h20) / rho_h2o_icru,
@@ -304,6 +300,17 @@ def main():
         sigmas=np.full(len(ICRUenergies), np.nan),
         sigma_errors=np.full(len(ICRUenergies), np.nan),
         useSumFit=UseSumFit
+    )
+
+    ICRU_H2O_data_pow = EnergyRangeData(
+        name="ICRU_H2O_PowerLaw",
+        colors = colors["PbWO4"],
+        energies=np.array(ICRUenergies),
+        ranges=np.array(CSDA_ranges_h20) / rho_h2o_icru,
+        range_errors=np.array(CSDA_ranges_h20) / rho_h2o_icru * 0.015,
+        sigmas=np.full(len(ICRUenergies), np.nan),
+        sigma_errors=np.full(len(ICRUenergies), np.nan),
+        useSumFit=not UseSumFit
     )
 
     ICRU_AIR_data = EnergyRangeData(
@@ -329,23 +336,25 @@ def main():
     )
 
     h2o_data = load_range_data("h2o", name="H2O", colors=colors["H2O"], UseSumFit=UseSumFit)
-    lung_data = load_range_data("lung", name="lung", colors=colors["H2O"], UseSumFit=False)
-    # pbwo4_data = load_range_data("pbwo4", name="PbWO4", colors=colors["PbWO4"], UseSumFit=UseSumFit)
+    # lung_data = load_range_data("lung", name="lung", colors=colors["H2O"], UseSumFit=False)
+    # pbwo4_data = load_range_da    ta("pbwo4", name="PbWO4", colors=colors["PbWO4"], UseSumFit=UseSumFit)
 
     h2o_data = fit_range_energy(h2o_data)
-    lung_data = fit_range_energy(lung_data)
+    # lung_data = fit_range_energy(lung_data)
     # pbwo4_data = fit_range_energy(pbwo4_data)
 
     ICRU_H2O_data = fit_range_energy(ICRU_H2O_data, output=True)
+    ICRU_H2O_data_pow = fit_range_energy(ICRU_H2O_data_pow)
     ICRU_AIR_data = fit_range_energy(ICRU_AIR_data)
     ICRU_ALU_data = fit_range_energy(ICRU_ALU_data)
 
     # ICRU_H2O_data.alpha = [6.94656e-3, 8.13116e-4, -1.21068e-6, 1.053e-9] #paper fit paramas
     plotInit()
     # plot_range_energy(pbwo4_data)
-    plot_range_energy(h2o_data)
-    plot_range_energy(lung_data)
     plot_range_energy(ICRU_H2O_data)
+    plot_range_energy(ICRU_H2O_data_pow)
+    # plot_range_energy(lung_data)
+    # plot_range_energy(ICRU_H2O_data)
 
     # pbwo4_data_alt = deepcopy(pbwo4_data)
     # pbwo4_data_alt.useSumFit = not pbwo4_data_alt.useSumFit
@@ -358,14 +367,30 @@ def main():
     h2o_data_alt = fit_range_energy(h2o_data_alt, output=True)
     # plot_range_energy(pbwo4_data_alt)
     # plot_range_energy(h2o_data_alt)
-    plotEnd("h2o")
-
-    # plotInit()
-    # plot_residuals(pbwo4_data)
-    # plot_residuals(pbwo4_data_alt)
+    plt.legend()
+    plt.savefig(
+        "range_comparison.svg",
+        format="svg",
+        bbox_inches="tight"
+    )
+    plt.close()
     # plotEnd()
 
-    save_range_data(lung_data, "lung_range_energy.npz")
+    plotInit()
+    plot_residuals(ICRU_H2O_data)
+    plot_residuals(ICRU_H2O_data_pow)
+    plt.tight_layout()
+
+    plt.legend()
+    plt.savefig(
+        "residuals.svg",
+        format="svg",
+        bbox_inches="tight"
+    )
+    plt.close()
+    # plotEnd()
+
+    # save_range_data(lung_data, "lung_range_energy.npz")
     save_range_data(h2o_data, "h2o_range_energy.npz")
     save_range_data(h2o_data_alt, "h2o_alt_range_energy.npz")
     # save_range_data(pbwo4_data, "pbwo4_range_energy.npz")
@@ -373,18 +398,18 @@ def main():
     save_range_data(ICRU_ALU_data, "ICRU_ALU_range_energy.npz")
     save_range_data(ICRU_AIR_data, "ICRU_AIR_range_energy.npz")
 
-    S_lung_220 = stoppingPower(lung_data, 220)
+    # S_lung_220 = stoppingPower(lung_data, 220)
     S_a_220 = stoppingPower(ICRU_AIR_data, 220)
     S_h2o_220 = stoppingPower(h2o_data_alt, 220)
-    print(f"Lung {S_lung_220}")
+    # print(f"Lung {S_lung_220}")
     print(f"H2O {S_h2o_220}")
 
-    S_lung_90 = stoppingPower(lung_data, 90)
+    # S_lung_90 = stoppingPower(lung_data, 90)
     S_a_90 = stoppingPower(ICRU_AIR_data, 90)
     S_h2o_90 = stoppingPower(h2o_data_alt, 90)
 
-    print(f"S Ratio 220 MeV: {(S_lung_220)/S_h2o_220}")
-    print(f"S Ratio 90 MeV:  {(S_lung_90)/S_h2o_90}")
+    # print(f"S Ratio 220 MeV: {(S_lung_220)/S_h2o_220}")
+    # print(f"S Ratio 90 MeV:  {(S_lung_90)/S_h2o_90}")
     print(f"Density ratio: {1.05/1.0}")
 
 if __name__ == "__main__":
