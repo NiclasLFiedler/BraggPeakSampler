@@ -40,13 +40,23 @@ with uproot.open("h2oproj.root") as f:
     event = tree["event"].array(library="np")
     depth = tree["depth"].array(library="np")
     var = tree["CumVariance"].array(library="np")
+    phi = tree["ScatteringAngle"].array(library="np")
 
 theta = np.degrees(np.sqrt(var))
+phi = np.degrees(phi)
 
 Vardepths = np.unique(depth)
 
 mean_theta = np.array([
-    np.mean(theta[depth == d])
+    np.nanmean(theta[depth == d])
+    for d in Vardepths
+])
+
+mean_theta2 = mean_theta[0] + [angle**2-mean_theta[index-1]**2 for index, angle in enumerate(mean_theta)]
+
+
+mean_phi= np.array([
+    np.nanmean(phi[depth == d])
     for d in Vardepths
 ])
 
@@ -63,12 +73,20 @@ R0 = alpha * (E0**p_exp)
 
 N = len(mean_theta)
 Vardepths = Vardepths[:N]
+mean_phi = mean_phi[:N]
+
 mask = Vardepths < R0
 
 Vardepths = Vardepths[mask]
 mean_theta = mean_theta[mask]
+mean_phi = mean_phi[mask]
 
+layerThickness  = 0.1
 
+lateralVariance = [(layerThickness/2)**2*np.deg2rad(angle)**2 for index, angle in enumerate(mean_phi)]
+
+cumulativeVariance = np.cumsum(lateralVariance)
+# print(cumulativeVariance)
 print(f"R0: {R0}")
 dx = 0.05
 x_max = 0.999 * R0
@@ -117,6 +135,24 @@ plt.scatter(
     label="Geant4"
 )
 
+plt.scatter(
+    Vardepths,
+    mean_phi,
+    marker="o",
+    s=10,
+    color="green",
+    label="Geant4 Theta"
+)
+
+# plt.scatter(
+#     Vardepths,
+#     mean_theta2,
+#     marker="o",
+#     s=10,
+#     color="red",
+#     label="Geant4 Theta"
+# )
+
 plt.xlabel("Depth / cm")
 plt.ylabel("RMS projected angle / degree")
 plt.title("Multiple Coulomb Scattering")
@@ -126,6 +162,43 @@ plt.legend()
 plt.tight_layout()
 plt.savefig(
     "multiple_coulomb_scattering.svg",
+    format="svg",
+    bbox_inches="tight"
+)
+plt.show()
+
+
+plt.rcParams.update({'font.size': 26})
+plt.figure(figsize=(12, 9))
+
+print(np.sqrt(cumulativeVariance))
+
+plt.scatter(
+    Vardepths,
+    lateralVariance,
+    marker="o",
+    s=10,
+    color="orange",
+    label="Geant4"
+)
+
+plt.scatter(
+    Vardepths,
+    np.sqrt(cumulativeVariance),
+    marker="o",
+    s=10,
+    color="green",
+    label="Geant4"
+)
+
+plt.xlabel("Depth / cm")
+plt.ylabel("Lateral Scattering / cm")
+plt.grid(True)
+plt.legend()
+
+plt.tight_layout()
+plt.savefig(
+    "lateral_scattering.svg",
     format="svg",
     bbox_inches="tight"
 )
