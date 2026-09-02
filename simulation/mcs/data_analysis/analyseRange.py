@@ -39,26 +39,63 @@ with uproot.open("h2oproj.root") as f:
 
     event = tree["event"].array(library="np")
     depth = tree["depth"].array(library="np")
-    var = tree["CumVariance"].array(library="np")
-    phi = tree["ScatteringAngle"].array(library="np")
+    cumAngleSquared =   tree["CumVariance"].array(library="np")
+    phi =   tree["ScatteringAngle"].array(library="np")
 
-theta = np.degrees(np.sqrt(var))
 phi = np.degrees(phi)
 
-Vardepths = np.unique(depth)
+G4depths = np.unique(depth)
 
-mean_theta = np.array([
-    np.nanmean(theta[depth == d])
-    for d in Vardepths
+thetaRMS = np.array([
+    np.sqrt(np.mean(cumAngleSquared[depth == d]))
+    for d in G4depths
 ])
 
-mean_theta2 = mean_theta[0] + [angle**2-mean_theta[index-1]**2 for index, angle in enumerate(mean_theta)]
+singlethetaRMS = thetaRMS[0] + [thetaRMS[index]-thetaRMS[index-1] for index in range(1, len(thetaRMS))]
+singlethetaRMS = np.degrees(np.sqrt(singlethetaRMS))
 
 
-mean_phi= np.array([
-    np.nanmean(phi[depth == d])
-    for d in Vardepths
+phiRMS= np.array([
+    np.sqrt(np.mean(phi[depth == d]**2))
+    for d in G4depths
 ])
+phiRMSSQ = phiRMS**2
+varRMS = np.sqrt(np.cumsum(phiRMSSQ))
+print(f"phi {phiRMS}")
+print(f"singlethetaRMS {singlethetaRMS}")
+print(f"thetaRMS {np.degrees(thetaRMS)}")
+print(f"varRMS {varRMS}")
+
+target_depth = 20.0
+tolerance = 0.1
+
+angles = phi[np.abs(depth - target_depth) < tolerance]
+
+
+counts, bin_edges = np.histogram(angles, bins=500, density=True)
+bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
+
+A0 = np.max(counts)
+mu0 = np.mean(angles)
+sigma0 = np.std(angles)
+
+popt, pcov = curve_fit(
+    gaussian,
+    bin_centers,
+    counts,
+    p0=[A0, mu0, sigma0]
+)
+
+A, mu, sigma = popt
+
+# Smooth curve for plotting
+x_fit = np.linspace(
+    bin_edges[0],
+    bin_edges[-1],
+    500
+)
+
+y_fit = gaussian(x_fit, A, mu, sigma)
 
 E0 = 220  # Initial kinetic energy in MeV
 m_p = 938.272  # Proton rest mass in MeV/c^2
@@ -71,19 +108,19 @@ p_exp = data.p
 
 R0 = alpha * (E0**p_exp)
 
-N = len(mean_theta)
-Vardepths = Vardepths[:N]
-mean_phi = mean_phi[:N]
+N = len(thetaRMS)
+G4depths = G4depths[:N]
+phiRMS = phiRMS[:N]
 
-mask = Vardepths < R0
+mask = G4depths < R0
 
-Vardepths = Vardepths[mask]
-mean_theta = mean_theta[mask]
-mean_phi = mean_phi[mask]
+G4depths = G4depths[mask]
+thetaRMS = thetaRMS[mask]
+phiRMS = phiRMS[mask]
 
-layerThickness  = 0.1
+layerThickness  = 1
 
-lateralVariance = [(layerThickness/2)**2*np.deg2rad(angle)**2 for index, angle in enumerate(mean_phi)]
+lateralVariance = [(layerThickness/2)**2*np.deg2rad(angle)**2 for index, angle in enumerate(phiRMS)]
 
 cumulativeVariance = np.cumsum(lateralVariance)
 # print(cumulativeVariance)
@@ -127,8 +164,8 @@ plt.figure(figsize=(12, 9))
 plt.plot(depths, theta_iH_deg, color="navy", linewidth=2, label="Integral Highland (Thick Target)")
 # plt.plot(depths, theta_naive_deg, color="black", linewidth=2.5, label="True Integral Highland (Thick Target)")
 plt.scatter(
-    Vardepths,
-    mean_theta,
+    G4depths,
+    thetaRMS,
     marker="o",
     s=10,
     color="orange",
@@ -136,8 +173,8 @@ plt.scatter(
 )
 
 plt.scatter(
-    Vardepths,
-    mean_phi,
+    G4depths,
+    phiRMS,
     marker="o",
     s=10,
     color="green",
@@ -145,8 +182,8 @@ plt.scatter(
 )
 
 # plt.scatter(
-#     Vardepths,
-#     mean_theta2,
+#     G4depths,
+#     thetaRMS2,
 #     marker="o",
 #     s=10,
 #     color="red",
@@ -174,7 +211,7 @@ plt.figure(figsize=(12, 9))
 print(np.sqrt(cumulativeVariance))
 
 plt.scatter(
-    Vardepths,
+    G4depths,
     lateralVariance,
     marker="o",
     s=10,
@@ -183,7 +220,7 @@ plt.scatter(
 )
 
 plt.scatter(
-    Vardepths,
+    G4depths,
     np.sqrt(cumulativeVariance),
     marker="o",
     s=10,

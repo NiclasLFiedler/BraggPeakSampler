@@ -4,6 +4,7 @@
 #include "G4ThreeVector.hh"
 #include "G4SDManager.hh"
 #include "G4ios.hh"
+#include <algorithm>
 
 namespace B2
 {
@@ -49,7 +50,7 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
       G4int layerID = pre->GetTouchable()->GetCopyNumber();
       G4ThreeVector PPos = aStep->GetPostStepPoint()->GetPosition();
       // G4double depth = PPos.z();
-      G4double layerThickness = 1;
+      G4double layerThickness = 10;
       G4double depth = std::round(pre->GetPosition().z() / layerThickness) * layerThickness/10;
       G4double energy = aStep->GetPreStepPoint()->GetTotalEnergy();
       G4double eKin = aStep->GetPreStepPoint()->GetKineticEnergy();     
@@ -59,16 +60,19 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
 
       G4ThreeVector preMom = aStep->GetPreStepPoint()->GetMomentumDirection();
       G4double cosDeflectionAngle = preMom.dot(dirOut);
-      G4double deflectionAngle = std::acos(cosDeflectionAngle);
+      G4double thetaXPre  = std::atan2(preMom.x(), preMom.z());
+      G4double thetaXPost = std::atan2(dirOut.x(), dirOut.z());
 
-      // G4cout << "cosDeflectionAngle " <<  cosDeflectionAngle << G4endl;
+      G4double deltaThetaX = thetaXPost - thetaXPre;
+      // cosDeflectionAngle = std::clamp(cosDeflectionAngle, -1.0, 1.0);
+      // G4double deflectionAngle = std::acos(cosDeflectionAngle);
 
       newHit->SetTrackID(trackid);
       newHit->SetEkin(eKin);
       newHit->SetEtot(energy);
       newHit->SetDepth(depth);
       newHit->SetCumVariance(thetaOut*thetaOut);
-      newHit->SetScatteringAngle(deflectionAngle);
+      newHit->SetScatteringAngle(deltaThetaX);
       newHit->SetLayerID(layerID);
 
       fHitsCollection->insert(newHit);
