@@ -19,10 +19,9 @@ RunAction::RunAction()
   analysisManager->CreateNtupleDColumn("depth");	 
   analysisManager->CreateNtupleDColumn("eTot");
   analysisManager->CreateNtupleDColumn("eKin");
-  analysisManager->CreateNtupleDColumn("ScatteringAngle");
-  analysisManager->CreateNtupleDColumn("CumVariance");
+  analysisManager->CreateNtupleDColumn("SingleScatteringAngle");
+  analysisManager->CreateNtupleDColumn("CumScatteringAngle");
   analysisManager->CreateNtupleIColumn("layerID");
-
   analysisManager->FinishNtuple();
 }
 

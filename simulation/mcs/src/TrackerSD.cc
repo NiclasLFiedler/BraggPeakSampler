@@ -34,58 +34,93 @@ void TrackerSD::Initialize(G4HCofThisEvent* hce)
   hce->AddHitsCollection( hcID, fHitsCollection );
 }
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
 G4bool TrackerSD::ProcessHits(G4Step* aStep,
-                                     G4TouchableHistory*)
+                              G4TouchableHistory*)
 {
-  
-  G4double trackid = aStep->GetTrack()->GetTrackID();
-  if (trackid == 1){
+    G4double trackid = aStep->GetTrack()->GetTrackID();
+
+    if (trackid != 1)
+        return true;
+
     G4StepPoint* pre  = aStep->GetPreStepPoint();
     G4StepPoint* post = aStep->GetPostStepPoint();
+    
+    // Entering a layer
+    if (pre->GetStepStatus() == fGeomBoundary)
+    {
+        layerID = pre->GetTouchable()->GetCopyNumber();
+        prepos = pre->GetPosition().z();
+        const G4ThreeVector& dirIn =
+            pre->GetMomentumDirection();
 
-    if(pre->GetStepStatus() == fGeomBoundary) {
-      auto newHit = new TrackerHit();
-      G4int layerID = pre->GetTouchable()->GetCopyNumber();
-      G4ThreeVector PPos = aStep->GetPostStepPoint()->GetPosition();
-      // G4double depth = PPos.z();
-      G4double layerThickness = 10;
-      G4double depth = std::round(pre->GetPosition().z() / layerThickness) * layerThickness/10;
-      G4double energy = aStep->GetPreStepPoint()->GetTotalEnergy();
-      G4double eKin = aStep->GetPreStepPoint()->GetKineticEnergy();     
-      
-      G4ThreeVector dirOut = post->GetMomentumDirection();
-      G4double thetaOut = std::atan2(dirOut.x(), dirOut.z());
-
-      G4ThreeVector preMom = aStep->GetPreStepPoint()->GetMomentumDirection();
-      G4double cosDeflectionAngle = preMom.dot(dirOut);
-      G4double thetaXPre  = std::atan2(preMom.x(), preMom.z());
-      G4double thetaXPost = std::atan2(dirOut.x(), dirOut.z());
-
-      G4double deltaThetaX = thetaXPost - thetaXPre;
-      // cosDeflectionAngle = std::clamp(cosDeflectionAngle, -1.0, 1.0);
-      // G4double deflectionAngle = std::acos(cosDeflectionAngle);
-
-      newHit->SetTrackID(trackid);
-      newHit->SetEkin(eKin);
-      newHit->SetEtot(energy);
-      newHit->SetDepth(depth);
-      newHit->SetCumVariance(thetaOut*thetaOut);
-      newHit->SetScatteringAngle(deltaThetaX);
-      newHit->SetLayerID(layerID);
-
-      fHitsCollection->insert(newHit);
+        thetaXIn = std::atan2(dirIn.x(), -dirIn.z());
     }
-    else{
-      return true;
+
+    // Leaving a layer
+    if (post->GetStepStatus() == fGeomBoundary)
+    {
+        // Check that this is the layer we stored at entrance
+        if (layerID != pre->GetTouchable()->GetCopyNumber())
+        { 
+            layerID = -1;
+            thetaXIn = 0.;
+            return true;
+        }
+
+        auto newHit = new TrackerHit();
+
+        const G4ThreeVector& dirOut =
+            post->GetMomentumDirection();
+
+        thetaXOut =
+            std::atan2(dirOut.x(), -dirOut.z());
+
+
+        G4double deltaThetaX =
+            thetaXOut - thetaXIn;
+    
+        G4double layerThickness = 1.; // mm
+        
+        // G4double depth = std::abs(std::round(post->GetPosition().z() / layerThickness)* layerThickness / 10.);
+        G4double depth = (layerID+1)* layerThickness / 10.;
+        postpos = post->GetPosition().z();
+        G4double energy =
+            pre->GetTotalEnergy();
+
+        G4double eKin =
+            pre->GetKineticEnergy();
+        if (prepos == postpos){
+          layerID = -1;
+          thetaXIn = 0.;
+          thetaXOut = 0;
+          return true;
+        }
+
+        newHit->SetTrackID(trackid);
+        newHit->SetEkin(eKin);
+        newHit->SetEtot(energy);
+        newHit->SetDepth(depth);
+
+        // Cumulative angle relative to original z direction
+        newHit->SetCumVariance(thetaXOut);
+
+        // Angular change accumulated over this entire layer
+        newHit->SetScatteringAngle(deltaThetaX);
+
+        newHit->SetLayerID(layerID);
+
+        fHitsCollection->insert(newHit);
+
+        // Reset
+        prepos = 0;
+        postpos = 0;
+        layerID = -1;
+        thetaXIn = 0.;
+        thetaXOut = 0;
     }
-  }
-      
-  return true;
+
+    return true;
 }
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
 void TrackerSD::EndOfEvent(G4HCofThisEvent*)
 {

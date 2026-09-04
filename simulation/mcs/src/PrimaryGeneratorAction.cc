@@ -64,8 +64,8 @@ void PrimaryGeneratorAction::SetBeamEnergy(G4double energy) {
 
 void PrimaryGeneratorAction::GeneratePrimaries(G4Event* anEvent)
 {
-  beamPos = G4ThreeVector(0,0,-0.1*mm);
-  fParticleGun->SetParticleMomentumDirection(G4ThreeVector(0, 0, 1.));
+  beamPos = G4ThreeVector(0,0,0.1*mm);
+  fParticleGun->SetParticleMomentumDirection(G4ThreeVector(0, 0, -1.));
   
   // Apply beam position and direction
   fParticleGun->SetParticlePosition(beamPos);

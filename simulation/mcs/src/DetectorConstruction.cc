@@ -250,12 +250,12 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   // if(detectorType == "pbwo4"){
   //   phantomZ = 8*cm;
   // }
-  G4double fLayers = 35;
+  G4double fLayers = 350;
   detSizeZ = phantomZ/fLayers;
 
   G4Box* solidPhantom = new G4Box("solidPhantom", phantomX/2, phantomY/2, phantomZ/2);
-  G4LogicalVolume* logicPhantom = new G4LogicalVolume(solidPhantom, detMaterial, "logPhantom");
-  new G4PVPlacement(nullptr, G4ThreeVector(0,0,phantomZ/2), logicPhantom, "physPhantom", logicalworld, false, 0);
+  G4LogicalVolume* logicPhantom = new G4LogicalVolume(solidPhantom, worldMat, "logPhantom");
+  new G4PVPlacement(nullptr, G4ThreeVector(0,0, -phantomZ/2), logicPhantom, "physPhantom", logicalworld, false, 60);
 
   G4Box* solidLayer = new G4Box("solidLayer", phantomX/2, phantomY/2, detSizeZ/2);
   G4LogicalVolume* logicLayer = new G4LogicalVolume(solidLayer, detMaterial, "logLayer");
