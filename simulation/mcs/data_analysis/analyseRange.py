@@ -1,5 +1,7 @@
 import uproot
 import numpy as np
+import matplotlib
+matplotlib.use("QtAgg")
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from dataclasses import dataclass
@@ -44,171 +46,67 @@ with uproot.open("h2oproj.root") as f:
 
 G4depths = np.unique(depth)
 
+CumVariance = np.array([np.var(CumScatteringAngle[depth == d]) for d in G4depths])
+ScatteringVariance= np.array([np.var(ScatteringAngle[depth == d]) for d in G4depths])
 
-
-# plt.figure(figsize=(12, 9))
-# angles = CumScatteringAngle[depth == 32]
-# plt.hist(
-#     angles,
-#     bins=1000,
-#     density=True,
-#     histtype="step",
-#     alpha=0.7,
-# )
-
-# plt.xlabel("Cumulative scattering angle / degree")
-# plt.ylabel("Probability density")
-# plt.title("Cumulative scattering angle distributions")
-# plt.grid(True)
-# plt.tight_layout()
-# plt.show()
-
-CumVariance_G4 = np.array([
-    np.var(CumScatteringAngle[depth == d])
-    for d in G4depths
-])
-thetaRMS = np.sqrt(CumVariance_G4)
-singleVariance = np.empty_like(thetaRMS)
-
-singleVariance[0] = thetaRMS[0]**2
-singleVariance[1:] = thetaRMS[1:]**2-thetaRMS[0:-1]**2
-
-singlethetaRMS = np.sqrt(singleVariance)
-
-ScatteringVariance= np.array([
-    np.var(ScatteringAngle[depth == d])
-    for d in G4depths
-])
-
-ScatteringAngleRMS = np.sqrt(ScatteringVariance)
-CumVariance_from_layers = np.cumsum(ScatteringVariance)
-
-CumVariance = np.cumsum(ScatteringVariance)
-CumRMS = np.sqrt(CumVariance)
-
-CumVariance_from_layers = np.cumsum(ScatteringVariance)
-CumVariance_G4 = np.array([
-    np.var(CumScatteringAngle[depth == d])
-    for d in G4depths
-])
-
-difference = CumVariance_G4 - CumVariance_from_layers
-
-plt.figure(figsize=(10, 6))
-plt.plot(G4depths, CumVariance_from_layers, "o-")
-plt.plot(G4depths, CumVariance_G4, "x-")
-plt.xlabel("Depth / mm")
-plt.ylabel(r"$\mathrm{Var}_{G4}-\sum\mathrm{Var}_{layer}$")
-plt.grid(True)
-plt.show()
-
-print(f"ScatteringAngle {ScatteringAngleRMS}")
-print(f"CumRMS {CumRMS}")
-print(f"singlethetaRMS {singlethetaRMS}")
-print(f"thetaRMS {thetaRMS}")
+CumAngleRMS = np.sqrt(CumVariance)
+SingleAngleRMS = np.sqrt(ScatteringVariance)
 
 plt.figure(figsize=(12, 8))
 
-plt.plot(
-    G4depths,
-    thetaRMS,
-    "o-",
-    markersize=4,
-    label="Cumulative angle RMS"
-)
-
-plt.plot(
-    G4depths,
-    CumRMS,
-    "s--",
-    markersize=4,
-    label="Cumulative RMS from single scattering"
-)
-
-plt.plot(
-    G4depths,
-    ScatteringAngleRMS,
-    "^-",
-    markersize=4,
-    label="Single scattering angle RMS"
-)
-
-plt.plot(
-    G4depths,
-    singlethetaRMS,
-    "d--",
-    markersize=4,
-    label="Single RMS from cumulative variance"
-)
+plt.plot( G4depths, CumAngleRMS, "s--", markersize=4, label="Cumulative RMS")
+plt.plot( G4depths, SingleAngleRMS, "^-", markersize=4, label="Single scattering angle RMS")
 
 plt.xlabel("Depth / mm")
 plt.ylabel("Scattering angle RMS / degree")
-plt.title("Comparison of scattering-angle RMS calculations")
-
 plt.grid(True, alpha=0.3)
 plt.legend()
 plt.tight_layout()
-plt.show()
+plt.close()
+# plt.show()
+
 target_depth = 20.0
 tolerance = 0.1
 
 angles = ScatteringAngle[np.abs(depth - target_depth) < tolerance]
-
-
 counts, bin_edges = np.histogram(angles, bins=500, density=True)
 bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
-
 A0 = np.max(counts)
 mu0 = np.mean(angles)
 sigma0 = np.std(angles)
-
-popt, pcov = curve_fit(
-    gaussian,
-    bin_centers,
-    counts,
-    p0=[A0, mu0, sigma0]
-)
-
+popt, pcov = curve_fit(gaussian, bin_centers, counts, p0=[A0, mu0, sigma0])
 A, mu, sigma = popt
-
-# Smooth curve for plotting
-x_fit = np.linspace(
-    bin_edges[0],
-    bin_edges[-1],
-    500
-)
-
+x_fit = np.linspace( bin_edges[0], bin_edges[-1], 500)
 y_fit = gaussian(x_fit, A, mu, sigma)
 
-E0 = 220  # Initial kinetic energy in MeV
-m_p = 938.272  # Proton rest mass in MeV/c^2
-X0 = 36.08   # Radiation length of water in cm
+
 
 data = analysisFunctions.load_EnergyRange("../../range_energy/data_analysis/h2o_alt_range_energy.npz")
-
 alpha = data.alpha[0]
 p_exp = data.p
+E0 = 220
 
-R0 = alpha * (E0**p_exp)
+R0 = analysisFunctions.range_energy(data, E0)
 
-N = len(thetaRMS)
-G4depths = G4depths[:N]
-ScatteringAngleRMS = ScatteringAngleRMS[:N]
+useMask = True
+if useMask:
+    N = len(CumAngleRMS)
+    G4depths = G4depths[:N]
+    SingleAngleRMS = SingleAngleRMS[:N]
 
-mask = G4depths < R0
+    mask = G4depths < R0 + 1
 
-G4depths = G4depths[mask]
-thetaRMS = thetaRMS[mask]
-ScatteringAngleRMS = ScatteringAngleRMS[mask]
+    G4depths = G4depths[mask]
+    CumAngleRMS = CumAngleRMS[mask]
+    SingleAngleRMS = SingleAngleRMS[mask]
 
 layerThickness  = 0.1
-
-lateralVariance = [(layerThickness/2)**2*np.deg2rad(angle)**2 for index, angle in enumerate(ScatteringAngleRMS)]
-
+lateralVariance = [(layerThickness/2*np.deg2rad(angle))**2 for index, angle in enumerate(SingleAngleRMS)]
 cumulativeVariance = np.cumsum(lateralVariance)
-# print(cumulativeVariance)
-print(f"R0: {R0}")
-dx = 0.05
+
+m_p = 938.272
+X0 = 36.08
+dx = 0.1
 x_max = 0.999 * R0
 depths = np.arange(0, x_max, dx)
 
@@ -221,7 +119,7 @@ theta_iH_rad = np.zeros_like(depths)
 
 depthDiff = (depths-depths[0])
 depthDiff[0] = depthDiff[1]
-# print(depthDiff)
+
 global_log_factor = 1 + 0.038 * np.log(depthDiff / X0)
 # global_log_factor = 1 + 0.038 * np.log(depths[1:]/10 / X0)
 
@@ -233,22 +131,16 @@ log_step = 1 + 0.038 * np.log(dx / X0)
 theta_step = (13.6 / beta_p) * np.sqrt(dx / X0) * log_step
 theta_naive_deg = np.degrees(np.sqrt(np.cumsum(theta_step**2)))
 
-# Calculate kinetic energy at each depth
 E_k = E0 * np.maximum(0, (1 - depths / R0)) ** (1.0 / p_exp)
 
-# Calculate momentum (in units where c=1)
 beta_p = np.sqrt(E_k * (E_k + 2 * m_p)) / (E_k + m_p)
 
-# Highland formula at each depth
-# θ₀(t) = (13.6 / βp) × √(t/X₀) × [1 + 0.038×ln(t/X₀)]
 t_over_X0 = depths / X0
 
 theta_highland_rad = (13.6 / beta_p) * np.sqrt(t_over_X0) * (1 + 0.038 * np.log(t_over_X0))
 
-# Convert to degrees
 theta_highland_deg = np.degrees(theta_highland_rad)
 
-# Also calculate variance for comparison
 variance_highland = theta_highland_rad ** 2
 
 
@@ -264,7 +156,7 @@ plt.plot(depths, theta_highland_deg, color="navy", linewidth=2, label="Integral 
 # plt.plot(depths, theta_naive_deg, color="black", linewidth=2.5, label="True Integral Highland (Thick Target)")
 plt.scatter(
     G4depths,
-    thetaRMS,
+    CumAngleRMS,
     marker="o",
     s=10,
     color="orange",
@@ -273,21 +165,13 @@ plt.scatter(
 
 plt.scatter(
     G4depths,
-    ScatteringAngleRMS,
+    SingleAngleRMS,
     marker="o",
     s=10,
     color="green",
     label="Geant4 Theta"
 )
 
-# plt.scatter(
-#     G4depths,
-#     thetaRMS2,
-#     marker="o",
-#     s=10,
-#     color="red",
-#     label="Geant4 Theta"
-# )
 
 plt.xlabel("Depth / cm")
 plt.ylabel("RMS projected angle / degree")
@@ -306,8 +190,6 @@ plt.show()
 
 plt.rcParams.update({'font.size': 26})
 plt.figure(figsize=(12, 9))
-
-print(np.sqrt(cumulativeVariance))
 
 plt.scatter(
     G4depths,
