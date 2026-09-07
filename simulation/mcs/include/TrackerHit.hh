@@ -68,7 +68,7 @@ class TrackerHit : public G4VHit
     void SetThetaY   (G4double thetaY){ fThetaY = thetaY; };
     void SetDepth      (G4double Depth){ fDepth = Depth; };
     void SetScatteringAngle      (G4double ScatteringAngle){ fScatteringAngle = ScatteringAngle; };
-    void SetCumVariance      (G4double CumVariance){ fCumVariance = CumVariance; };
+    void SetCumAngle      (G4double CumAngle){ fCumAngle = CumAngle; };
     void SetLayerID      (G4double LayerID){ fLayerID = LayerID; };
 
     // Get methods
@@ -80,7 +80,7 @@ class TrackerHit : public G4VHit
     G4double GetStepLength() const     { return fStepLength; };
     G4double GetTrackID() const     { return fTrackID; };
     G4double GetDepth() const {return fDepth;};
-    G4double GetCumVariance() const {return fCumVariance;};
+    G4double GetCumAngle() const {return fCumAngle;};
     G4double GetScatteringAngle() const {return fScatteringAngle;};
     G4double GetThetaX() const { return fThetaX; };
     G4double GetThetaY() const { return fThetaY; }; 
@@ -104,7 +104,7 @@ class TrackerHit : public G4VHit
     G4double      fThetaX = 0.;
     G4double      fThetaY = 0.;
     G4double      fDepth = 0.;
-    G4double      fCumVariance = 0.;
+    G4double      fCumAngle = 0.;
     G4double      fScatteringAngle = 0.;
     G4int     fLayerID = 0.;
 };

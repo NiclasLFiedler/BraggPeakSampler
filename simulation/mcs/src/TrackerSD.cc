@@ -78,8 +78,10 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
 
         G4double deltaThetaX =
             thetaXOut - thetaXIn;
-    
-        G4double layerThickness = 1.; // mm
+        // if(layerID == 24){
+        //     G4cout << "layerID = " << layerID << " thetaXIn [deg] = " << thetaXIn * 180.0 / CLHEP::pi << " thetaXOut [deg] = " << thetaXOut * 180.0 / CLHEP::pi << " deltaThetaX [deg] = " << thetaXOut * 180.0 / CLHEP::pi << G4endl;
+        // }
+        G4double layerThickness = 10.; // mm
         
         // G4double depth = std::abs(std::round(post->GetPosition().z() / layerThickness)* layerThickness / 10.);
         G4double depth = (layerID+1)* layerThickness / 10.;
@@ -102,7 +104,7 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
         newHit->SetDepth(depth);
 
         // Cumulative angle relative to original z direction
-        newHit->SetCumVariance(thetaXOut);
+        newHit->SetCumAngle(thetaXOut);
 
         // Angular change accumulated over this entire layer
         newHit->SetScatteringAngle(deltaThetaX);

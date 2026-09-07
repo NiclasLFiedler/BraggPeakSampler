@@ -250,7 +250,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   // if(detectorType == "pbwo4"){
   //   phantomZ = 8*cm;
   // }
-  G4double fLayers = 350;
+  G4double fLayers = 35;
   detSizeZ = phantomZ/fLayers;
 
   G4Box* solidPhantom = new G4Box("solidPhantom", phantomX/2, phantomY/2, phantomZ/2);

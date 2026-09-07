@@ -47,7 +47,7 @@ void EventAction::EndOfEventAction(const G4Event* event)
       G4double TrackID = (*hitsCollection)[i]->GetTrackID();
       G4double eKin = (*hitsCollection)[i]->GetEkin();
       G4double ScatteringAngle = (*hitsCollection)[i]->GetScatteringAngle();
-      G4double CumVariance = (*hitsCollection)[i]->GetCumVariance();
+      G4double CumAngle = (*hitsCollection)[i]->GetCumAngle();
       G4double Depth = (*hitsCollection)[i]->GetDepth();
       G4int layerID = (*hitsCollection)[i]->GetLayerID();
 
@@ -57,7 +57,7 @@ void EventAction::EndOfEventAction(const G4Event* event)
       analysisManager->FillNtupleDColumn(3, eTot);
       analysisManager->FillNtupleDColumn(4, eKin);
       analysisManager->FillNtupleDColumn(5, ScatteringAngle);
-      analysisManager->FillNtupleDColumn(6, CumVariance);
+      analysisManager->FillNtupleDColumn(6, CumAngle);
       analysisManager->FillNtupleIColumn(7, layerID);
       
  	    analysisManager->AddNtupleRow();
