@@ -81,7 +81,7 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
         // if(layerID == 24){
         //     G4cout << "layerID = " << layerID << " thetaXIn [deg] = " << thetaXIn * 180.0 / CLHEP::pi << " thetaXOut [deg] = " << thetaXOut * 180.0 / CLHEP::pi << " deltaThetaX [deg] = " << thetaXOut * 180.0 / CLHEP::pi << G4endl;
         // }
-        G4double layerThickness = 10.; // mm
+        G4double layerThickness = 2.; // mm
         
         // G4double depth = std::abs(std::round(post->GetPosition().z() / layerThickness)* layerThickness / 10.);
         G4double depth = (layerID+1)* layerThickness / 10.;
