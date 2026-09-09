@@ -56,7 +56,7 @@ def gaussian_sigma_vs_depth(depth, angles, depths, tolerance=0.1, bins=100):
         sigma0 = np.std(selected)
 
         try:
-            popt, pcov = curve_fit(gaussian, bin_centers, counts, p0=[A0, mu0, sigma0])
+            popt, pcov = curve_fit(gaussian, bin_centers, counts, p0=[A0, mu0, sigma0], maxfev=10000)
             A, mu, sigma = popt
             sigma = abs(sigma)
             sigma_fit[i] = sigma
@@ -70,6 +70,14 @@ def gaussian_sigma_vs_depth(depth, angles, depths, tolerance=0.1, bins=100):
 
     return (sigma_fit, variance_fit, std_data, variance_data)
 
+def plotSingleThickness(target_depth, depth, deltaX, label):
+    tolerance = 0.1
+
+    selected_deltaX = deltaX[np.abs(depth - target_depth) < tolerance]
+    selected_deltaX = selected_deltaX[np.isfinite(selected_deltaX)]
+
+    plt.hist(selected_deltaX, bins=1000, density=True, alpha=0.7, label=label)
+
 with uproot.open("h2oproj.root") as f:
     tree = f["braggsampler"]
 
@@ -77,12 +85,28 @@ with uproot.open("h2oproj.root") as f:
     depth = tree["depth"].array(library="np")
     CumScatteringAngle =   np.degrees(tree["CumScatteringAngle"].array(library="np"))
     ScatteringAngle =   np.degrees(tree["SingleScatteringAngle"].array(library="np"))
+    deltaX =        tree["deltaX"].array(library="np")
 
 G4depths = np.unique(depth)
+layerThickness = G4depths[1] - G4depths[0]
+
+rangeIncrease = layerThickness/np.cos(np.radians(CumScatteringAngle))-layerThickness
+
+# plt.figure(figsize=(10, 7))
+# plotSingleThickness(20, depth, rangeIncrease, r"$z/\cos(\theta)-z$")
+# plt.xlabel(r"$\Delta X$ / degree")
+# plt.ylabel("Probability density")
+# plt.yscale("log")
+# plt.title(f"$\\Delta X$ distribution at depth = {20} mm")
+# plt.grid(True, alpha=0.3)
+# plt.tight_layout()
+# plt.show()
 
 CumSigmaFit, CumVarFit, CumStd, _ =  gaussian_sigma_vs_depth( depth, CumScatteringAngle, G4depths, tolerance=0.1, bins=2000)
-print(CumSigmaFit-CumStd)
+
 SingleSigmaFit, SingleVarFit, SingleStd, _ =  gaussian_sigma_vs_depth(depth, ScatteringAngle, G4depths, tolerance=0.1, bins=2000)
+
+CumDeltaXSigma, CumDeltaXVar, CumDeltaXStd, _ =  gaussian_sigma_vs_depth(depth, deltaX, G4depths, tolerance=0.1, bins=2000)
 
 SingleAngleVarianceFromCum = np.empty_like(CumVarFit)
 SingleAngleVarianceFromCum[0] = CumVarFit[0]
@@ -189,15 +213,16 @@ lateralVariance = np.zeros(len(G4depths))
 
 for j, d in enumerate(G4depths):
     lever_arm = layerThickness+d - G4depths[:j+1]
-    lateralVariance[j] = np.maximum(np.sum((lever_arm * np.radians(SingleAngleRMSFromCum[:j+1]))**2),0)
-    print(f"Depth: {d:.2f} cm, Lever arm: {lever_arm}, lateralVariance[j]: {lateralVariance[j]:.4f} cm^2")
-    print(f"scattering angles: {SingleAngleRMSFromCum[:j+1]}")
+    lateralVariance[j] = np.maximum(np.sum((lever_arm * np.tan(np.radians(SingleAngleRMSFromCum[:j+1])))**2),0)
+#    print(f"Depth: {d:.2f} cm, Lever arm: {lever_arm}, lateralVariance[j]: {lateralVariance[j]:.4f} cm^2")
+#    print(f"scattering angles: {SingleAngleRMSFromCum[:j+1]}")
 
 plt.rcParams.update({'font.size': 26})
 plt.figure(figsize=(12, 9))
 
-plt.scatter(G4depths, lateralVariance, marker="o", s=10, color="orange", label="Geant4")
-
+plt.scatter(G4depths, np.sqrt(lateralVariance), marker="o", s=10, color="orange", label="Geant4")
+plt.plot(G4depths, CumDeltaXSigma, color="navy", linewidth=2, label="Geant4 Lateral Scattering RMS")
+plt.plot(G4depths, RangeIncreaseSigma, color="black", linewidth=2.5, label=r"$z/\cos(\theta)-z$")
 plt.xlabel("Depth / cm")
 plt.ylabel("Lateral Scattering / cm")
 plt.grid(True)

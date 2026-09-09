@@ -50,24 +50,13 @@ PrimaryGeneratorAction::~PrimaryGeneratorAction()
 
 void PrimaryGeneratorAction::SetBeamEnergy(G4double energy) {
     fBeamEnergy = 220*MeV;
-    // G4cout << "Changed beamenergy to " << energy << " MeV" << G4endl;
-    G4cout << "Energy change " << energy << G4endl;
-
-    G4UserLimits* userLimits = new G4UserLimits();
-    if(energy < 5){
-      userLimits->SetMaxAllowedStep(0.1*mm);
-      G4LogicalVolume* logicaldetector = G4LogicalVolumeStore::GetInstance()->GetVolume("logicaldetector");
-      logicaldetector->SetUserLimits(userLimits);
-    }
-    fParticleGun->SetParticleEnergy(fBeamEnergy);
+     fParticleGun->SetParticleEnergy(fBeamEnergy);
 }
 
 void PrimaryGeneratorAction::GeneratePrimaries(G4Event* anEvent)
 {
   beamPos = G4ThreeVector(0,0,0.1*mm);
   fParticleGun->SetParticleMomentumDirection(G4ThreeVector(0, 0, -1.));
-  
-  // Apply beam position and direction
   fParticleGun->SetParticlePosition(beamPos);
   fParticleGun->GeneratePrimaryVertex(anEvent);
 }

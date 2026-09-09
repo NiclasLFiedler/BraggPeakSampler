@@ -86,6 +86,7 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
         // G4double depth = std::abs(std::round(post->GetPosition().z() / layerThickness)* layerThickness / 10.);
         G4double depth = (layerID+1)* layerThickness / 10.;
         postpos = post->GetPosition().z();
+        G4double deltaX = post->GetPosition().x();
         G4double energy =
             pre->GetTotalEnergy();
 
@@ -108,9 +109,9 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
 
         // Angular change accumulated over this entire layer
         newHit->SetScatteringAngle(deltaThetaX);
-
         newHit->SetLayerID(layerID);
-
+        newHit->SetDeltaX(deltaX/10);
+        
         fHitsCollection->insert(newHit);
 
         // Reset

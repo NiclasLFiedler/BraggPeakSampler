@@ -22,6 +22,7 @@ RunAction::RunAction()
   analysisManager->CreateNtupleDColumn("SingleScatteringAngle");
   analysisManager->CreateNtupleDColumn("CumScatteringAngle");
   analysisManager->CreateNtupleIColumn("layerID");
+  analysisManager->CreateNtupleDColumn("deltaX");
   analysisManager->FinishNtuple();
 }
 
