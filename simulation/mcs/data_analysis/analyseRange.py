@@ -88,19 +88,6 @@ with uproot.open("h2oproj.root") as f:
     deltaX =        tree["deltaX"].array(library="np")
 
 G4depths = np.unique(depth)
-layerThickness = G4depths[1] - G4depths[0]
-
-rangeIncrease = layerThickness/np.cos(np.radians(CumScatteringAngle))-layerThickness
-
-# plt.figure(figsize=(10, 7))
-# plotSingleThickness(20, depth, rangeIncrease, r"$z/\cos(\theta)-z$")
-# plt.xlabel(r"$\Delta X$ / degree")
-# plt.ylabel("Probability density")
-# plt.yscale("log")
-# plt.title(f"$\\Delta X$ distribution at depth = {20} mm")
-# plt.grid(True, alpha=0.3)
-# plt.tight_layout()
-# plt.show()
 
 CumSigmaFit, CumVarFit, CumStd, _ =  gaussian_sigma_vs_depth( depth, CumScatteringAngle, G4depths, tolerance=0.1, bins=2000)
 
@@ -222,11 +209,25 @@ plt.figure(figsize=(12, 9))
 
 plt.scatter(G4depths, np.sqrt(lateralVariance), marker="o", s=10, color="orange", label="Geant4")
 plt.plot(G4depths, CumDeltaXSigma, color="navy", linewidth=2, label="Geant4 Lateral Scattering RMS")
-plt.plot(G4depths, RangeIncreaseSigma, color="black", linewidth=2.5, label=r"$z/\cos(\theta)-z$")
 plt.xlabel("Depth / cm")
 plt.ylabel("Lateral Scattering / cm")
 plt.grid(True)
 plt.legend()
 plt.tight_layout()
 plt.savefig("lateral_scattering.svg", format="svg", bbox_inches="tight")
+plt.show()
+
+rangeDecrease = layerThickness/np.cos(np.radians(CumScatteringAngle))-layerThickness
+rangeDecreaseSigma = np.sqrt(np.var(rangeDecrease))
+sigmaRange = layerThickness/np.sqrt(2)*CumSigmaFit**2
+plt.figure(figsize=(10, 7))
+plotSingleThickness(20, depth, rangeDecrease, r"$z/\cos(\theta)-z$")
+plt.plot(G4depths, sigmaRange, color="navy", linewidth=2, label="Geant4 Lateral Scattering RMS")
+plt.plot(G4depths, rangeDecreaseSigma, color="navy", linewidth=2, label="rangeDecreaseSigma")
+plt.xlabel(r"$\Delta X$ / degree")
+plt.ylabel("Probability density")
+plt.yscale("log")
+plt.title(f"$\\Delta X$ distribution at depth = {20} mm")
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
 plt.show()
