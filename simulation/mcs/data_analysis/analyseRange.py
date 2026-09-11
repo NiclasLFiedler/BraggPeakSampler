@@ -132,7 +132,7 @@ p_exp = data.p
 E0 = 220
 
 R0 = analysisFunctions.range_energy(data, E0)
-print(f"range {R0}")
+
 useMask = False
 if useMask:
     N = len(CumSigmaFit)
@@ -154,33 +154,54 @@ x_max = 0.999 * R0
 depths = np.arange(dx, x_max, dx)
 
 E_k = E0 * (1 - depths/R0)**(1/p_exp)
-beta_p = E_k * (E_k + 2*m_p)/(E_k + m_p)
+betaPc = E_k * (E_k + 2*m_p)/(E_k + m_p)
 
-integrand = (13.6/beta_p)**2 * dx/X0
-uncorrected_variance = np.cumsum(integrand)
+integrand = (13.6/betaPc)**2 * dx/X0
 log_factor = 1 + 0.038*np.log(depths/X0)
-theta_integrated_rad = log_factor * np.sqrt(uncorrected_variance)
+theta_integrated_rad = log_factor * np.sqrt(np.cumsum(integrand))
 theta_integrated_deg = np.degrees(theta_integrated_rad)
 
 varianceHigh = theta_integrated_rad**2
 SingleAngleVarianceHigh = np.empty_like(theta_integrated_deg)
 SingleAngleVarianceHigh[0] = varianceHigh[0]
 SingleAngleVarianceHigh[1:] = (varianceHigh[1:] - varianceHigh[:-1])
-
 SingleAngleHigh = np.degrees(np.sqrt(SingleAngleVarianceHigh))
 
-log_step = 1 + 0.038 * np.log(dx / X0)
-theta_step = (13.6 / beta_p) * np.sqrt(dx / X0) * log_step
-theta_naive_deg = np.degrees(np.sqrt(np.cumsum(theta_step**2)))
+# ################
+# integrand14 = (14.1/betaPc)**2 * dx/X0
+# log_factor14 = 1 + 1/9*np.log(depths/X0)
+# theta_integrated_deg14 = np.degrees(log_factor14 * np.sqrt(np.cumsum(integrand14)))
 
-print(f"Depth of material: {depths[-1]:.4f} cm")
-print(f"Final cumulative scattering angle: {theta_integrated_deg[-1]:.4f} mrad")
+# pv0 = betaPc[0]       # approximately initial pv
+# pv  = betaPc
+# f_dM = (
+    # 0.5244
+    # + 0.1975*np.log10(1 - (pv/pv0)**2)
+    # + 0.2320*np.log10(pv)
+    # - 0.0098*np.log10(pv)
+    #   *np.log10(1 - (pv/pv0)**2)
+# )
+
+# T = f_dM * (E_k/pv)**2 / X0
+
+# variance = np.cumsum(T * dx)
+# theta = np.degrees(np.sqrt(variance))
+
+# theta_step = (13.6 / betaPc) * np.sqrt(dx / X0) * (1 + 0.038 * np.log(dx / X0))
+# theta_naive_deg = np.degrees(np.sqrt(np.cumsum(theta_step**2)))
+
+# simpleTheta = np.degrees((13.6 / betaPc) * np.sqrt(depths / X0) * (1 + 0.038 * np.log(depths / X0)))
+# #############
 
 plt.rcParams.update({'font.size': 26})
 plt.figure(figsize=(12, 9))
 
-plt.plot(depths, theta_integrated_deg, color="navy", linewidth=2, label="Integral Highland (Thick Target)")
-plt.plot(depths, SingleAngleHigh, color="black", linewidth=2.5, label="Single Highland Angle")
+plt.plot(depths, theta_integrated_deg, color="navy", linewidth=2, label="Integral Highland global log")
+
+# plt.plot(depths, theta_integrated_deg14, color="green", linewidth=2, label="Integral Highland global log 14.1")
+#plt.plot(depths, theta_naive_deg, color="orange", linewidth=2, label="Integral Highland local log")
+# plt.plot(depths, theta, color="red", linewidth=2, label="Simple Highland")
+#plt.plot(depths, SingleAngleHigh, color="black", linewidth=2.5, label="Single Highland Angle")
 
 plt.scatter(G4depths, CumSigmaFit, s=10, color="green", label="Geant4 Theta")
 plt.scatter(G4depths, SingleAngleRMSFromCum, s=10, label="SingleAngleRMSFromCum")
@@ -201,8 +222,6 @@ lateralVariance = np.zeros(len(G4depths))
 for j, d in enumerate(G4depths):
     lever_arm = layerThickness+d - G4depths[:j+1]
     lateralVariance[j] = np.maximum(np.sum((lever_arm * np.tan(np.radians(SingleAngleRMSFromCum[:j+1])))**2),0)
-#    print(f"Depth: {d:.2f} cm, Lever arm: {lever_arm}, lateralVariance[j]: {lateralVariance[j]:.4f} cm^2")
-#    print(f"scattering angles: {SingleAngleRMSFromCum[:j+1]}")
 
 plt.rcParams.update({'font.size': 26})
 plt.figure(figsize=(12, 9))
@@ -219,11 +238,14 @@ plt.show()
 
 rangeDecrease = layerThickness/np.cos(np.radians(CumScatteringAngle))-layerThickness
 rangeDecreaseSigma = np.sqrt(np.var(rangeDecrease))
-sigmaRange = layerThickness/np.sqrt(2)*CumSigmaFit**2
+sigmaRangeHighland = layerThickness/np.sqrt(2)*np.radians(theta_integrated_deg)**2
+sigmaRange = layerThickness/np.sqrt(2)*np.radians(CumSigmaFit)**2
+
 plt.figure(figsize=(10, 7))
 plotSingleThickness(20, depth, rangeDecrease, r"$z/\cos(\theta)-z$")
 plt.plot(G4depths, sigmaRange, color="navy", linewidth=2, label="Geant4 Lateral Scattering RMS")
-plt.plot(G4depths, rangeDecreaseSigma, color="navy", linewidth=2, label="rangeDecreaseSigma")
+plt.plot(G4depths, sigmaRangeHighland, color="red", linewidth=2, label="Highland Lateral Scattering RMS")
+# plt.plot(G4depths, rangeDecreaseSigma, color="navy", linewidth=2, label="rangeDecreaseSigma")
 plt.xlabel(r"$\Delta X$ / degree")
 plt.ylabel("Probability density")
 plt.yscale("log")
