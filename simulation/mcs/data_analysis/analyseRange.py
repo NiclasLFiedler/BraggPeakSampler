@@ -121,7 +121,7 @@ bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
 A0 = np.max(counts)
 mu0 = np.mean(angles)
 sigma0 = np.std(angles)
-popt, pcov = curve_fit(gaussian, bin_centers, counts, p0=[A0, mu0, sigma0])
+popt, pcov = curve_fit(gaussian, bin_centers, counts, p0=[A0, mu0, sigma0], maxfev=100000)
 A, mu, sigma = popt
 x_fit = np.linspace( bin_edges[0], bin_edges[-1], 500)
 y_fit = gaussian(x_fit, A, mu, sigma)
@@ -133,23 +133,25 @@ E0 = 220
 
 R0 = analysisFunctions.range_energy(data, E0)
 
-useMask = False
+useMask = True
 if useMask:
     N = len(CumSigmaFit)
     G4depths = G4depths[:N]
     SingleAngleRMSFromCum = SingleAngleRMSFromCum[:N]
     SingleSigmaFit = SingleSigmaFit [:N]
-
+    CumDeltaXSigma = CumDeltaXSigma [:N]
+    
     mask = G4depths < R0 + 1
 
     G4depths = G4depths[mask]
     CumSigmaFit = CumSigmaFit[mask]
     SingleAngleRMSFromCum = SingleAngleRMSFromCum[mask]
     SingleSigmaFit = SingleSigmaFit[mask]
+    CumDeltaXSigma = CumDeltaXSigma[mask]
 
 m_p = 938.272
 X0 = 36.08
-dx = 0.2
+dx = 1
 x_max = 0.999 * R0
 depths = np.arange(dx, x_max, dx)
 
@@ -241,10 +243,12 @@ rangeDecreaseSigma = np.sqrt(np.var(rangeDecrease))
 sigmaRangeHighland = layerThickness/np.sqrt(2)*np.radians(theta_integrated_deg)**2
 sigmaRange = layerThickness/np.sqrt(2)*np.radians(CumSigmaFit)**2
 
+print(f"length range: {len(sigmaRange)}, length highland {len(sigmaRangeHighland)}")
+
 plt.figure(figsize=(10, 7))
-plotSingleThickness(20, depth, rangeDecrease, r"$z/\cos(\theta)-z$")
+#plotSingleThickness(20, depth, rangeDecrease, r"$z/\cos(\theta)-z$")
 plt.plot(G4depths, sigmaRange, color="navy", linewidth=2, label="Geant4 Lateral Scattering RMS")
-plt.plot(G4depths, sigmaRangeHighland, color="red", linewidth=2, label="Highland Lateral Scattering RMS")
+plt.plot(depths, sigmaRangeHighland, color="red", linewidth=2, label="Highland Lateral Scattering RMS")
 # plt.plot(G4depths, rangeDecreaseSigma, color="navy", linewidth=2, label="rangeDecreaseSigma")
 plt.xlabel(r"$\Delta X$ / degree")
 plt.ylabel("Probability density")
@@ -253,3 +257,5 @@ plt.title(f"$\\Delta X$ distribution at depth = {20} mm")
 plt.grid(True, alpha=0.3)
 plt.tight_layout()
 plt.show()
+
+C = np.minimum.outer(CumVarFit, CumVarFit)
