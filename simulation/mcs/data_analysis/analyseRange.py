@@ -4,6 +4,10 @@ import numpy as np
 #matplotlib.use("QtAgg")
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
+from scipy.special import gamma as gamma_func
+from scipy.stats import chi2, gamma
+from scipy.integrate import quad
+
 from dataclasses import dataclass
 
 import sys
@@ -29,6 +33,68 @@ class TargetParameters:
     sigma_T_E: float
     t_E: float
     Pmod_E: float
+
+
+def pdf_chi2_scaled(x, w):
+    """PDF of scaled chi²_2: w * chi²_2"""
+    return chi2.pdf(x / w, df=2) / w
+ 
+def conv_two_pdfs(pdf1, pdf2, x, a, b):
+    """Convolve two PDFs numerically"""
+    def integrand(t):
+        return pdf1(t, a) * pdf2(x - t, b)
+    
+    result, _ = quad(integrand, 0, max(x, 1e-10), limit=100)
+    return result
+ 
+# ============================================================================
+# Method 1: Satterthwaite Approximation
+# ============================================================================
+def gchi2_satterthwaite(x, weights):
+    """PDF using Satterthwaite approximation (scaled chi²)"""
+    w_sum = np.sum(weights)
+    w_sum_sq = np.sum(np.array(weights) ** 2)
+    
+    # Effective DOF and scale
+    nu = 2 * w_sum**2 / w_sum_sq
+    c = w_sum_sq / w_sum
+    
+    return chi2.pdf(x / c, df=nu) / c
+ 
+# ============================================================================
+# Method 2: Welch-Welford (Gamma Approximation)
+# ============================================================================
+def gchi2_welch_welford(x, weights):
+    """PDF using Welch-Welford approximation (gamma distribution)"""
+    w_sum = np.sum(weights)
+    w_sum_sq = np.sum(np.array(weights) ** 2)
+    
+    # Gamma parameters
+    alpha = w_sum**2 / w_sum_sq
+    beta = w_sum_sq / w_sum
+    
+    return gamma.pdf(x, a=alpha, scale=beta)
+ 
+# ============================================================================
+# Method 3: Exact (via successive convolution)
+# ============================================================================
+def gchi2_exact_convolution(x, weights):
+    """PDF using exact convolution of scaled chi²_2 distributions"""
+    if len(weights) == 1:
+        return pdf_chi2_scaled(x, weights[0])
+    
+    # Start with first chi²_2
+    print(f"Convolving PDFs with number of weights: {len(weights)}")
+    pdf_result = lambda t, w=weights[0]: pdf_chi2_scaled(t, w)
+    
+    # Convolve with each subsequent chi²_2
+    for i, w in enumerate(weights[1:]):
+        pdf_prev = pdf_result
+        print(f"Convolving with weight: i={i+1}")
+        pdf_result = lambda t, w=w, prev=pdf_prev: conv_two_pdfs(prev, pdf_chi2_scaled, t, 1, w)
+    
+    return pdf_result(x)
+
 
 def gaussian(x, A, mu, sigma):
     return A * np.exp(-(x - mu)**2 / (2 * sigma**2))
@@ -247,15 +313,43 @@ print(f"length range: {len(sigmaRange)}, length highland {len(sigmaRangeHighland
 
 plt.figure(figsize=(10, 7))
 #plotSingleThickness(20, depth, rangeDecrease, r"$z/\cos(\theta)-z$")
-plt.plot(G4depths, sigmaRange, color="navy", linewidth=2, label="Geant4 Lateral Scattering RMS")
+plt.plot(G4depths, sigmaRange, color="navy", linestyle="--", marker="o", linewidth=2, label="Geant4 Lateral Scattering RMS")
 plt.plot(depths, sigmaRangeHighland, color="red", linewidth=2, label="Highland Lateral Scattering RMS")
 # plt.plot(G4depths, rangeDecreaseSigma, color="navy", linewidth=2, label="rangeDecreaseSigma")
-plt.xlabel(r"$\Delta X$ / degree")
-plt.ylabel("Probability density")
-plt.yscale("log")
-plt.title(f"$\\Delta X$ distribution at depth = {20} mm")
+plt.xlabel("Depth / cm")
+plt.ylabel("RMS range decrease / cm")
+# plt.yscale("log")
 plt.grid(True, alpha=0.3)
 plt.tight_layout()
 plt.show()
 
 C = np.minimum.outer(CumVarFit, CumVarFit)
+eigenvalues, eigenvectors = np.linalg.eigh(C)
+print(eigenvectors)
+
+weights = eigenvalues*layerThickness/2
+print(depths)
+x = depths
+
+pdf_sat = np.array([gchi2_satterthwaite(xi, weights) for xi in x])
+print(f"Computed Satterthwaite PDF for {len(x)} points.")
+pdf_ww = np.array([gchi2_welch_welford(xi, weights) for xi in x])
+print(f"Computed Welch-Welford PDF for {len(x)} points.")
+pdf_exact = np.array([gchi2_exact_convolution(xi, weights) for xi in x])
+print(f"Computed Exact PDF for {len(x)} points.")
+
+# Plot
+plt.figure(figsize=(10, 6))
+plt.plot(x, pdf_sat, 'b-', label='Satterthwaite (χ²)', linewidth=2)
+plt.plot(x, pdf_ww, 'g-', label='Welch-Welford (Gamma)', linewidth=2)
+# plt.plot(x, pdf_exact, 'r--', label='Exact (Convolution)', linewidth=2.5)
+
+plt.xlabel('x', fontsize=12)
+plt.ylabel('PDF', fontsize=12)
+plt.title(f'gChi² Comparison: weights = {weights}', fontsize=13)
+plt.legend(fontsize=11)
+plt.grid(True, alpha=0.3)
+plt.xlim(0, 15)
+plt.tight_layout()
+plt.show()
+
