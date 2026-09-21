@@ -35,6 +35,39 @@ class TargetParameters:
     Pmod_E: float
 
 
+
+def calculate_eigenvalue_sum(eigenvalues):
+    eigenvalues = np.asarray(eigenvalues, dtype=float)
+    n = len(eigenvalues)
+    result = np.zeros(n)
+    
+    for i in range(n):
+        total = 0.0
+        for j in range(n):
+            if i != j:
+                total += eigenvalues[i] / (eigenvalues[i] - eigenvalues[j])
+        result[i] = total
+    
+    return result
+ 
+ 
+def calculate_eigenvalue_sum_vectorized(eigenvalues):
+    eigenvalues = np.asarray(eigenvalues, dtype=float)
+    n = len(eigenvalues)
+
+    numerator = eigenvalues[:, None]
+    denominator = eigenvalues[:, None] - eigenvalues[None, :]
+    
+    with np.errstate(divide='ignore', invalid='ignore'):
+        fraction_matrix = numerator / denominator
+    
+    np.fill_diagonal(fraction_matrix, 0)
+    
+    result = np.sum(fraction_matrix, axis=1)
+    
+    return result
+
+
 def pdf_chi2_scaled(x, w):
     """PDF of scaled chi²_2: w * chi²_2"""
     return chi2.pdf(x / w, df=2) / w
@@ -323,33 +356,52 @@ plt.grid(True, alpha=0.3)
 plt.tight_layout()
 plt.show()
 
-C = np.minimum.outer(CumVarFit, CumVarFit)
+valid_mask = ~np.isnan(CumVarFit)
+CumVarFit_filtered = CumVarFit[valid_mask]
+C = np.minimum.outer(CumVarFit_filtered, CumVarFit_filtered)
+
 eigenvalues, eigenvectors = np.linalg.eigh(C)
-print(eigenvectors)
 
+depthsFiltered = depths[:len(CumVarFit_filtered)]
 weights = eigenvalues*layerThickness/2
-print(depths)
+print(f"weights: {weights}")
+a_is = [calculate_eigenvalue_sum(weights[:idx+1]) for idx in range(len(weights))]
+
 x = depths
+PDF_matrix_1 = np.zeros((len(depthsFiltered), len(weights)))
 
-pdf_sat = np.array([gchi2_satterthwaite(xi, weights) for xi in x])
-print(f"Computed Satterthwaite PDF for {len(x)} points.")
-pdf_ww = np.array([gchi2_welch_welford(xi, weights) for xi in x])
-print(f"Computed Welch-Welford PDF for {len(x)} points.")
-pdf_exact = np.array([gchi2_exact_convolution(xi, weights) for xi in x])
-print(f"Computed Exact PDF for {len(x)} points.")
+for idx, d in enumerate(depthsFiltered):
+    a_i_truncated = a_is[idx]  # This has length idx+1
+    for j in range(len(a_i_truncated)):
+        PDF_matrix[idx, j] = a_i_truncated[j] * (1 - np.exp(-d / (2*weights[j])))
 
-# Plot
+
+print(PDF_reach)
+# a_i2 = calculate_eigenvalue_sum_vectorized(eigenvalues)
 plt.figure(figsize=(10, 6))
-plt.plot(x, pdf_sat, 'b-', label='Satterthwaite (χ²)', linewidth=2)
-plt.plot(x, pdf_ww, 'g-', label='Welch-Welford (Gamma)', linewidth=2)
-# plt.plot(x, pdf_exact, 'r--', label='Exact (Convolution)', linewidth=2.5)
+
+plt.plot(depthsFiltered, PDF_reach, 'r--', linewidth=2)
 
 plt.xlabel('x', fontsize=12)
 plt.ylabel('PDF', fontsize=12)
-plt.title(f'gChi² Comparison: weights = {weights}', fontsize=13)
+plt.tight_layout()
+plt.show()
+
+pdf_sat = np.array([gchi2_satterthwaite(xi, weights) for xi in depthsFiltered])
+print(f"Computed Satterthwaite PDF for {len(x)} points.")
+pdf_ww = np.array([gchi2_welch_welford(xi, weights) for xi in depthsFiltered])
+print(f"Computed Welch-Welford PDF for {len(x)} points.")
+
+# Plot
+plt.figure(figsize=(10, 6))
+plt.plot(depthsFiltered, pdf_sat, 'b-', label='Satterthwaite (χ²)', linewidth=2)
+plt.plot(depthsFiltered, pdf_ww, 'g-', label='Welch-Welford (Gamma)', linewidth=2)
+plt.plot(depthsFiltered, PDF_reach, 'r--', label='Exact (Convolution)', linewidth=2.5)
+
+plt.xlabel('x', fontsize=12)
+plt.ylabel('PDF', fontsize=12)
 plt.legend(fontsize=11)
 plt.grid(True, alpha=0.3)
-plt.xlim(0, 15)
 plt.tight_layout()
 plt.show()
 
