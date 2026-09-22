@@ -36,37 +36,17 @@ class TargetParameters:
 
 
 
-def calculate_eigenvalue_sum(eigenvalues):
-    eigenvalues = np.asarray(eigenvalues, dtype=float)
-    n = len(eigenvalues)
-    result = np.zeros(n)
-    
-    for i in range(n):
-        total = 0.0
-        for j in range(n):
+def calculate_coefficients(weights):
+    weights = np.asarray(weights, dtype=float)
+
+    coefficients = np.ones(len(weights))
+
+    for i, wi in enumerate(weights):
+        for j, wj in enumerate(weights):
             if i != j:
-                total += eigenvalues[i] / (eigenvalues[i] - eigenvalues[j])
-        result[i] = total
-    
-    return result
- 
- 
-def calculate_eigenvalue_sum_vectorized(eigenvalues):
-    eigenvalues = np.asarray(eigenvalues, dtype=float)
-    n = len(eigenvalues)
+                coefficients[i] *= wi / (wi - wj)
 
-    numerator = eigenvalues[:, None]
-    denominator = eigenvalues[:, None] - eigenvalues[None, :]
-    
-    with np.errstate(divide='ignore', invalid='ignore'):
-        fraction_matrix = numerator / denominator
-    
-    np.fill_diagonal(fraction_matrix, 0)
-    
-    result = np.sum(fraction_matrix, axis=1)
-    
-    return result
-
+    return coefficients
 
 def pdf_chi2_scaled(x, w):
     """PDF of scaled chi²_2: w * chi²_2"""
@@ -104,35 +84,46 @@ def gchi2_welch_welford(x, weights):
     
     # Gamma parameters
     alpha = w_sum**2 / w_sum_sq
-    beta = w_sum_sq / w_sum
+    beta = 2*w_sum_sq / w_sum
     
     return gamma.pdf(x, a=alpha, scale=beta)
  
 # ============================================================================
 # Method 3: Exact (via successive convolution)
 # ============================================================================
-def gchi2_exact_convolution(x, weights):
-    """PDF using exact convolution of scaled chi²_2 distributions"""
-    if len(weights) == 1:
-        return pdf_chi2_scaled(x, weights[0])
-    
-    # Start with first chi²_2
-    print(f"Convolving PDFs with number of weights: {len(weights)}")
-    pdf_result = lambda t, w=weights[0]: pdf_chi2_scaled(t, w)
-    
-    # Convolve with each subsequent chi²_2
-    for i, w in enumerate(weights[1:]):
-        pdf_prev = pdf_result
-        print(f"Convolving with weight: i={i+1}")
-        pdf_result = lambda t, w=w, prev=pdf_prev: conv_two_pdfs(prev, pdf_chi2_scaled, t, 1, w)
-    
-    return pdf_result(x)
+def gchi2_exact_pdf(x, weights):
+    weights = np.asarray(weights, dtype=float)
+    weights = weights[weights > 0]
 
+    coefficients = calculate_coefficients(weights)
+
+    x = np.asarray(x, dtype=float)
+    pdf = np.zeros_like(x)
+
+    for wi, Ai in zip(weights, coefficients):
+        pdf += Ai / (2 * wi) * np.exp(-x / (2 * wi))
+
+    return pdf
+
+def gchi2_exact_cdf(x, weights):
+    weights = np.asarray(weights, dtype=float)
+    weights = weights[weights > 0]
+
+    coefficients = calculate_coefficients(weights)
+
+    x = np.asarray(x, dtype=float)
+
+    cdf = np.ones_like(x)
+
+    for wi, Ai in zip(weights, coefficients):
+        cdf -= Ai * np.exp(-x / (2 * wi))
+
+    return cdf
 
 def gaussian(x, A, mu, sigma):
     return A * np.exp(-(x - mu)**2 / (2 * sigma**2))
 
-def gaussian_sigma_vs_depth(depth, angles, depths, tolerance=0.1, bins=100):
+def gaussian_sigma_vs_depth(depth, angles, depths, bins=100):
     sigma_fit = np.full(len(depths), np.nan)
     variance_fit = np.full(len(depths), np.nan)
 
@@ -141,7 +132,7 @@ def gaussian_sigma_vs_depth(depth, angles, depths, tolerance=0.1, bins=100):
 
     for i, d in enumerate(depths):
 
-        selected = angles[np.abs(depth - d) < tolerance]
+        selected = angles[np.isclose(depth, d)]
         selected = selected[np.isfinite(selected)]
 
         if len(selected) < 10:
@@ -170,9 +161,7 @@ def gaussian_sigma_vs_depth(depth, angles, depths, tolerance=0.1, bins=100):
     return (sigma_fit, variance_fit, std_data, variance_data)
 
 def plotSingleThickness(target_depth, depth, deltaX, label):
-    tolerance = 0.1
-
-    selected_deltaX = deltaX[np.abs(depth - target_depth) < tolerance]
+    selected_deltaX = deltaX[np.isclose(depth, target_depth)]
     selected_deltaX = selected_deltaX[np.isfinite(selected_deltaX)]
 
     plt.hist(selected_deltaX, bins=1000, density=True, alpha=0.7, label=label)
@@ -181,18 +170,155 @@ with uproot.open("h2oproj.root") as f:
     tree = f["braggsampler"]
 
     event = tree["event"].array(library="np")
+    layerID = tree["layerID"].array(library="np")
     depth = tree["depth"].array(library="np")
     CumScatteringAngle =   np.degrees(tree["CumScatteringAngle"].array(library="np"))
     ScatteringAngle =   np.degrees(tree["SingleScatteringAngle"].array(library="np"))
     deltaX =        tree["deltaX"].array(library="np")
 
+
 G4depths = np.unique(depth)
+layerThickness  = G4depths[1] - G4depths[0]
+print("Layer thickness:", layerThickness)
 
-CumSigmaFit, CumVarFit, CumStd, _ =  gaussian_sigma_vs_depth( depth, CumScatteringAngle, G4depths, tolerance=0.1, bins=2000)
+last = np.r_[event[1:] != event[:-1], True]
+last_event = event[last]
+last_layer = layerID[last]
+last_depth = depth[last]
+print("Number of total events:", len(event), " Number of last events:", len(last_event), "Number of layers:", len(last_layer), "Number of depths:", len(last_depth))
 
-SingleSigmaFit, SingleVarFit, SingleStd, _ =  gaussian_sigma_vs_depth(depth, ScatteringAngle, G4depths, tolerance=0.1, bins=2000)
+reach_probability_g4 = np.array([np.mean(last_depth >= d) for d in G4depths])
 
-CumDeltaXSigma, CumDeltaXVar, CumDeltaXStd, _ =  gaussian_sigma_vs_depth(depth, deltaX, G4depths, tolerance=0.1, bins=2000)
+
+layers, counts = np.unique(last_layer, return_counts=True)
+
+stopping_probability_g4 = -np.gradient(reach_probability_g4, G4depths)
+stopping_probability_g4 = np.maximum(stopping_probability_g4, 0)
+normalization = np.trapezoid(stopping_probability_g4, G4depths)
+
+if normalization > 0:
+    stopping_probability_g4 /= normalization
+
+def gaussian_core_sigma(data):
+    data = data[np.isfinite(data)]
+
+    q_low, q_high = np.percentile(
+        data,
+        [15.8655, 84.1345]
+    )
+
+    return 0.5 * (q_high - q_low)
+
+CumSigmaCore = np.full(len(G4depths), np.nan)
+
+for i, layer in enumerate(G4depths):
+    
+    selected = CumScatteringAngle[np.isclose(depth, i)]
+    selected = selected[np.isfinite(selected)]
+
+    CumSigmaCore[i] = gaussian_core_sigma(selected)
+
+CumSigmaFit, CumVarFit, CumStd, CumStdVar =  gaussian_sigma_vs_depth( depth, CumScatteringAngle, G4depths, bins=2000)
+plt.figure(figsize=(10, 6))
+plt.plot(G4depths, CumStdVar, linewidth=2, label="Numpy variance")
+plt.plot(G4depths, CumVarFit, linewidth=2, label="Gausfit variance")
+plt.plot(G4depths, CumSigmaCore**2, linewidth=2, label="Core sigma")
+
+plt.xlabel("Depth / cm")
+plt.ylabel(r"Variance / cm$^2$")
+
+plt.grid(True)
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+
+# ============================================================================
+# Depth-dependent generalized chi-square distribution
+# ============================================================================
+data = analysisFunctions.load_EnergyRange("../../range_energy/data_analysis/h2o_alt_range_energy.npz")
+E0 = 220
+R0 = analysisFunctions.range_energy(data, E0)
+
+print(f"Projected Max Range: {R0:.3f} cm")
+
+CumVarRad = np.radians(CumSigmaFit)**2
+valid_mask = np.isfinite(CumVarRad)
+
+depthsFiltered = G4depths[:len(CumVarRad)][valid_mask]
+CumVarRad_filtered = CumVarRad[valid_mask]
+
+layerThickness = G4depths[1] - G4depths[0]
+
+reach_probability = np.zeros(len(depthsFiltered))
+
+storeEigenvalues = False
+all_weights = []
+all_eigenvalues = []
+
+for j, d in enumerate(depthsFiltered):
+    V = CumVarRad_filtered[:j+1]
+
+    C_j = np.minimum.outer(V, V)
+    eigenvalues = np.linalg.eigvalsh(C_j)
+    eigenvalues = eigenvalues[eigenvalues > 0]
+    weights = eigenvalues * layerThickness / 2
+
+    #mean_direct = layerThickness * np.sum(V)
+    #mean_eigen = 2 * np.sum(weights)
+    # print("mean_direct:", mean_direct, "mean_eigen:", mean_eigen)
+
+    if storeEigenvalues:
+        all_eigenvalues.append(eigenvalues)
+        all_weights.append(weights)
+    
+    deltaR_max = R0 - d
+
+    if deltaR_max <= 0:
+        reach_probability[j] = 0.0
+        continue
+    reach_probability[j] = gchi2_exact_cdf(deltaR_max, weights)
+
+
+stopping_probability = -np.gradient(reach_probability, depthsFiltered)
+stopping_probability = np.maximum(stopping_probability, 0)
+normalization = np.trapezoid(stopping_probability, depthsFiltered)
+
+if normalization > 0:
+    stopping_probability /= normalization
+
+
+plt.figure(figsize=(10, 6))
+plt.plot(depthsFiltered, reach_probability, linewidth=2, label="Analytical reach probability")
+plt.plot(depthsFiltered, stopping_probability, linewidth=2, label="Analytical stopping probability")
+plt.plot(G4depths, reach_probability_g4, label="G4 Reach probability")
+plt.plot(G4depths, stopping_probability_g4, color="red", linewidth=2, label="G4 Stopping probability")
+
+plt.xlabel("Stopping depth / cm")
+plt.ylabel(r"$P_{\mathrm{stop}}(x)$")
+
+plt.grid(True)
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+
+pdf_sat = np.array([gchi2_satterthwaite(xi, weights) for xi in depthsFiltered])
+pdf_ww = np.array([gchi2_welch_welford(xi, weights) for xi in depthsFiltered])
+
+plt.figure(figsize=(10, 6))
+plt.plot(depthsFiltered, pdf_sat, 'b-', label='Satterthwaite (χ²)', linewidth=2)
+plt.plot(depthsFiltered, pdf_ww, 'g-', label='Welch-Welford (Gamma)', linewidth=2)
+
+plt.xlabel('x', fontsize=12)
+plt.ylabel('PDF', fontsize=12)
+plt.legend(fontsize=11)
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.show()
+
+SingleSigmaFit, SingleVarFit, SingleStd, _ =  gaussian_sigma_vs_depth(depth, ScatteringAngle, G4depths, bins=2000)
+CumDeltaXSigma, CumDeltaXVar, CumDeltaXStd, _ =  gaussian_sigma_vs_depth(depth, deltaX, G4depths, bins=2000)
 
 SingleAngleVarianceFromCum = np.empty_like(CumVarFit)
 SingleAngleVarianceFromCum[0] = CumVarFit[0]
@@ -204,28 +330,27 @@ plt.figure(figsize=(12, 9))
 plt.plot(G4depths, SingleAngleRMSFromCum, "o-", label="Gaussian fit single scattering rms")
 plt.plot(G4depths, SingleSigmaFit, "s--", label=r"$\sqrt{\mathrm{np.var}}$")
 
-plt.xlabel("Depth / mm")
+plt.xlabel("Depth / cm")
 plt.ylabel("Single scattering angle RMS / degree")
 plt.grid(True, alpha=0.3)
 plt.legend()
 plt.tight_layout()
 plt.show()
 
-target_depth = 20.0
-tolerance = 0.1
+################################################################################# gaussian test 
 
-angles = ScatteringAngle[np.abs(depth - target_depth) < tolerance]
-counts, bin_edges = np.histogram(angles, bins=500, density=True)
-bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
-A0 = np.max(counts)
-mu0 = np.mean(angles)
-sigma0 = np.std(angles)
-popt, pcov = curve_fit(gaussian, bin_centers, counts, p0=[A0, mu0, sigma0], maxfev=100000)
-A, mu, sigma = popt
-x_fit = np.linspace( bin_edges[0], bin_edges[-1], 500)
-y_fit = gaussian(x_fit, A, mu, sigma)
+# target_depth = 20.0
+# angles = ScatteringAngle[np.isclose(depth, target_depth)]
+# counts, bin_edges = np.histogram(angles, bins=500, density=True)
+# bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
+# A0 = np.max(counts)
+# mu0 = np.mean(angles)
+# sigma0 = np.std(angles)
+# popt, pcov = curve_fit(gaussian, bin_centers, counts, p0=[A0, mu0, sigma0], maxfev=100000)
+# A, mu, sigma = popt
+# x_fit = np.linspace( bin_edges[0], bin_edges[-1], 500)
+# y_fit = gaussian(x_fit, A, mu, sigma)
 
-data = analysisFunctions.load_EnergyRange("../../range_energy/data_analysis/h2o_alt_range_energy.npz")
 alpha = data.alpha[0]
 p_exp = data.p
 E0 = 220
@@ -267,32 +392,6 @@ SingleAngleVarianceHigh = np.empty_like(theta_integrated_deg)
 SingleAngleVarianceHigh[0] = varianceHigh[0]
 SingleAngleVarianceHigh[1:] = (varianceHigh[1:] - varianceHigh[:-1])
 SingleAngleHigh = np.degrees(np.sqrt(SingleAngleVarianceHigh))
-
-# ################
-# integrand14 = (14.1/betaPc)**2 * dx/X0
-# log_factor14 = 1 + 1/9*np.log(depths/X0)
-# theta_integrated_deg14 = np.degrees(log_factor14 * np.sqrt(np.cumsum(integrand14)))
-
-# pv0 = betaPc[0]       # approximately initial pv
-# pv  = betaPc
-# f_dM = (
-    # 0.5244
-    # + 0.1975*np.log10(1 - (pv/pv0)**2)
-    # + 0.2320*np.log10(pv)
-    # - 0.0098*np.log10(pv)
-    #   *np.log10(1 - (pv/pv0)**2)
-# )
-
-# T = f_dM * (E_k/pv)**2 / X0
-
-# variance = np.cumsum(T * dx)
-# theta = np.degrees(np.sqrt(variance))
-
-# theta_step = (13.6 / betaPc) * np.sqrt(dx / X0) * (1 + 0.038 * np.log(dx / X0))
-# theta_naive_deg = np.degrees(np.sqrt(np.cumsum(theta_step**2)))
-
-# simpleTheta = np.degrees((13.6 / betaPc) * np.sqrt(depths / X0) * (1 + 0.038 * np.log(depths / X0)))
-# #############
 
 plt.rcParams.update({'font.size': 26})
 plt.figure(figsize=(12, 9))
@@ -355,53 +454,3 @@ plt.ylabel("RMS range decrease / cm")
 plt.grid(True, alpha=0.3)
 plt.tight_layout()
 plt.show()
-
-valid_mask = ~np.isnan(CumVarFit)
-CumVarFit_filtered = CumVarFit[valid_mask]
-C = np.minimum.outer(CumVarFit_filtered, CumVarFit_filtered)
-
-eigenvalues, eigenvectors = np.linalg.eigh(C)
-
-depthsFiltered = depths[:len(CumVarFit_filtered)]
-weights = eigenvalues*layerThickness/2
-print(f"weights: {weights}")
-a_is = [calculate_eigenvalue_sum(weights[:idx+1]) for idx in range(len(weights))]
-
-x = depths
-PDF_matrix_1 = np.zeros((len(depthsFiltered), len(weights)))
-
-for idx, d in enumerate(depthsFiltered):
-    a_i_truncated = a_is[idx]  # This has length idx+1
-    for j in range(len(a_i_truncated)):
-        PDF_matrix[idx, j] = a_i_truncated[j] * (1 - np.exp(-d / (2*weights[j])))
-
-
-print(PDF_reach)
-# a_i2 = calculate_eigenvalue_sum_vectorized(eigenvalues)
-plt.figure(figsize=(10, 6))
-
-plt.plot(depthsFiltered, PDF_reach, 'r--', linewidth=2)
-
-plt.xlabel('x', fontsize=12)
-plt.ylabel('PDF', fontsize=12)
-plt.tight_layout()
-plt.show()
-
-pdf_sat = np.array([gchi2_satterthwaite(xi, weights) for xi in depthsFiltered])
-print(f"Computed Satterthwaite PDF for {len(x)} points.")
-pdf_ww = np.array([gchi2_welch_welford(xi, weights) for xi in depthsFiltered])
-print(f"Computed Welch-Welford PDF for {len(x)} points.")
-
-# Plot
-plt.figure(figsize=(10, 6))
-plt.plot(depthsFiltered, pdf_sat, 'b-', label='Satterthwaite (χ²)', linewidth=2)
-plt.plot(depthsFiltered, pdf_ww, 'g-', label='Welch-Welford (Gamma)', linewidth=2)
-plt.plot(depthsFiltered, PDF_reach, 'r--', label='Exact (Convolution)', linewidth=2.5)
-
-plt.xlabel('x', fontsize=12)
-plt.ylabel('PDF', fontsize=12)
-plt.legend(fontsize=11)
-plt.grid(True, alpha=0.3)
-plt.tight_layout()
-plt.show()
-
