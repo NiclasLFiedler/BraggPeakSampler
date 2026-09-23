@@ -244,8 +244,8 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
     fCheckOverlaps);                         // checking overlaps
 
   
-  G4double phantomX = 200 * cm;
-  G4double phantomY = 200 * cm;
+  G4double phantomX = 10 * cm;
+  G4double phantomY = 10 * cm;
   G4double phantomZ = 32*cm;
   // if(detectorType == "pbwo4"){
   //   phantomZ = 8*cm;
