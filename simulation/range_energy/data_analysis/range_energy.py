@@ -336,81 +336,81 @@ def main():
     )
 
     h2o_data = load_range_data("h2o", name="H2O", colors=colors["H2O"], UseSumFit=UseSumFit)
+    pbwo4_data = load_range_data("pbwo4", name="PbWO4", colors=colors["PbWO4"], UseSumFit=True)
     # lung_data = load_range_data("lung", name="lung", colors=colors["H2O"], UseSumFit=False)
-    # pbwo4_data = load_range_da    ta("pbwo4", name="PbWO4", colors=colors["PbWO4"], UseSumFit=UseSumFit)
 
     h2o_data = fit_range_energy(h2o_data)
+    pbwo4_data = fit_range_energy(pbwo4_data)
     # lung_data = fit_range_energy(lung_data)
-    # pbwo4_data = fit_range_energy(pbwo4_data)
 
-    ICRU_H2O_data = fit_range_energy(ICRU_H2O_data, output=True)
-    ICRU_H2O_data_pow = fit_range_energy(ICRU_H2O_data_pow)
-    ICRU_AIR_data = fit_range_energy(ICRU_AIR_data)
-    ICRU_ALU_data = fit_range_energy(ICRU_ALU_data)
+    # ICRU_H2O_data = fit_range_energy(ICRU_H2O_data, output=True)
+    # ICRU_H2O_data_pow = fit_range_energy(ICRU_H2O_data_pow)
+    # ICRU_AIR_data = fit_range_energy(ICRU_AIR_data)
+    # ICRU_ALU_data = fit_range_energy(ICRU_ALU_data)
 
     # ICRU_H2O_data.alpha = [6.94656e-3, 8.13116e-4, -1.21068e-6, 1.053e-9] #paper fit paramas
-    plotInit()
+    # plotInit()
     # plot_range_energy(pbwo4_data)
-    plot_range_energy(ICRU_H2O_data)
-    plot_range_energy(ICRU_H2O_data_pow)
+    # plot_range_energy(ICRU_H2O_data)
+    # plot_range_energy(ICRU_H2O_data_pow)
     # plot_range_energy(lung_data)
     # plot_range_energy(ICRU_H2O_data)
 
-    # pbwo4_data_alt = deepcopy(pbwo4_data)
-    # pbwo4_data_alt.useSumFit = not pbwo4_data_alt.useSumFit
-    # pbwo4_data_alt.colors = colors["ICRU_AIR"]
-    # pbwo4_data_alt = fit_range_energy(pbwo4_data_alt, output=True)
+    pbwo4_data_alt = deepcopy(pbwo4_data)
+    pbwo4_data_alt.useSumFit = not pbwo4_data_alt.useSumFit
+    pbwo4_data_alt.colors = colors["ICRU_AIR"]
+    pbwo4_data_alt = fit_range_energy(pbwo4_data_alt, output=True)
 
     h2o_data_alt = deepcopy(h2o_data)
     h2o_data_alt.useSumFit = not h2o_data_alt.useSumFit
     h2o_data_alt.colors = colors["ICRU_AIR"]
     h2o_data_alt = fit_range_energy(h2o_data_alt, output=True)
-    # plot_range_energy(pbwo4_data_alt)
-    # plot_range_energy(h2o_data_alt)
-    plt.legend()
-    plt.savefig(
-        "range_comparison.svg",
-        format="svg",
-        bbox_inches="tight"
-    )
-    plt.close()
-    # plotEnd()
-
+    
     plotInit()
-    plot_residuals(ICRU_H2O_data)
-    plot_residuals(ICRU_H2O_data_pow)
-    plt.tight_layout()
-
+    plot_range_energy(pbwo4_data_alt)
+    plot_range_energy(h2o_data_alt)
     plt.legend()
-    plt.savefig(
-        "residuals.svg",
-        format="svg",
-        bbox_inches="tight"
-    )
-    plt.close()
+    # plt.savefig(
+        # "range_comparison.svg",
+        # format="svg",
+        # bbox_inches="tight"
+    # )
+    # plt.close()
+    plotEnd()
+
+    # plotInit()
+    # plot_residuals(ICRU_H2O_data)
+    # plot_residuals(ICRU_H2O_data_pow)
+    # plt.tight_layout()
+
+    # plt.legend()
+    # plt.savefig(
+        # "residuals.svg",
+        # format="svg",
+        # bbox_inches="tight"
+    # )
+    # plt.close()
     # plotEnd()
 
     # save_range_data(lung_data, "lung_range_energy.npz")
     save_range_data(h2o_data, "h2o_range_energy.npz")
     save_range_data(h2o_data_alt, "h2o_alt_range_energy.npz")
-    # save_range_data(pbwo4_data, "pbwo4_range_energy.npz")
-    save_range_data(ICRU_H2O_data, "ICRU_H2O_range_energy.npz")
-    save_range_data(ICRU_ALU_data, "ICRU_ALU_range_energy.npz")
-    save_range_data(ICRU_AIR_data, "ICRU_AIR_range_energy.npz")
+    save_range_data(pbwo4_data, "pbwo4_range_energy.npz")
+    save_range_data(pbwo4_data_alt, "pbwo4_alt_range_energy.npz")
+    # save_range_data(ICRU_H2O_data, "ICRU_H2O_range_energy.npz")
+    # save_range_data(ICRU_ALU_data, "ICRU_ALU_range_energy.npz")
+    # save_range_data(ICRU_AIR_data, "ICRU_AIR_range_energy.npz")
 
     # S_lung_220 = stoppingPower(lung_data, 220)
-    S_a_220 = stoppingPower(ICRU_AIR_data, 220)
-    S_h2o_220 = stoppingPower(h2o_data_alt, 220)
-    # print(f"Lung {S_lung_220}")
-    print(f"H2O {S_h2o_220}")
-
+    # S_a_220 = stoppingPower(ICRU_AIR_data, 220)
+    # S_h2o_220 = stoppingPower(h2o_data_alt, 220)
+    
     # S_lung_90 = stoppingPower(lung_data, 90)
-    S_a_90 = stoppingPower(ICRU_AIR_data, 90)
-    S_h2o_90 = stoppingPower(h2o_data_alt, 90)
+    # S_a_90 = stoppingPower(ICRU_AIR_data, 90)
+    # S_h2o_90 = stoppingPower(h2o_data_alt, 90)
 
     # print(f"S Ratio 220 MeV: {(S_lung_220)/S_h2o_220}")
     # print(f"S Ratio 90 MeV:  {(S_lung_90)/S_h2o_90}")
-    print(f"Density ratio: {1.05/1.0}")
-
+    
 if __name__ == "__main__":
     main()

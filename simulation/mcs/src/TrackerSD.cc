@@ -77,7 +77,7 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
 
 
         G4double deltaThetaX = thetaXOut - thetaXIn;
-        G4double layerThickness = 0.8; // mm
+        G4double layerThickness = 0.4; // mm
         
         G4double depth = (layerID+1)* layerThickness / 10.;
         postpos = post->GetPosition().z();

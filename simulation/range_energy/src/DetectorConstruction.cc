@@ -215,10 +215,10 @@ void DetectorConstruction::DefineMaterials()
   PMMA->AddElement(elC, 5);
   PMMA->AddElement(elH, 8);
   PMMA->AddElement(elO, 2);
-  // detMaterial = nistManager->FindOrBuildMaterial("G4_PbWO4");
-  // detMaterial->GetIonisation()->SetMeanExcitationEnergy(600.7*eV);
+  detMaterial = nistManager->FindOrBuildMaterial("G4_PbWO4");
+  detMaterial->GetIonisation()->SetMeanExcitationEnergy(600.7*eV);
   
-  detMaterial = nistManager->FindOrBuildMaterial("G4_WATER");
+  // detMaterial = nistManager->FindOrBuildMaterial("G4_WATER");
 
   // detMaterial = water;
   G4cout <<"Mean excitation Energy: " << detMaterial->GetIonisation()->GetMeanExcitationEnergy() << G4endl;
