@@ -329,20 +329,38 @@ with uproot.open("h2oproj.root") as f:
     deltaX =        tree["deltaX"].array(library="np")
 
 
+event_ids, event_index = np.unique(event, return_inverse=True)
+
+layers_int = layerID.astype(np.int64)
+if not np.all(layerID == layers_int):
+    raise ValueError("layerID contains noninteger values.")
+
+max_layer = np.full(len(event_ids), -1, dtype=np.int64)
+np.maximum.at(max_layer, event_index, layers_int)
+
+last_row = np.r_[event[1:] != event[:-1], True]
+
+print("Unique recorded events:", len(event_ids))
+print("Contiguous event blocks:", np.count_nonzero(last_row))
+print("Blocks ending below their event's maximum layer:",  np.count_nonzero(layers_int[last_row] < max_layer[event_index[last_row]])
+)
+
+del event_index
+
 G4depths = np.unique(depth)
 layerThickness  = G4depths[1] - G4depths[0]
 print("Layer thickness:", layerThickness)
 
-last = np.r_[event[1:] != event[:-1], True]
-last_event = event[last]
-last_layer = layerID[last]
-last_depth = depth[last]
-layers, counts = np.unique(last_layer, return_counts=True)
-print("Number of total events:", len(event), " Number of last events:", len(last_event), "Number of layers:", len(last_layer), "Number of depths:", len(last_depth))
+boundary_layers = np.arange(max_layer.max() + 1)
+g4_reach_depths = (boundary_layers + 1) * layerThickness
 
-reach_analytical_g4 = np.array([np.mean(last_depth >= d) for d in G4depths])
+max_layer_sorted = np.sort(max_layer)
 
-stopping_probability_g4 = -np.gradient(reach_analytical_g4, G4depths)
+n_reaching = (len(max_layer_sorted) - np.searchsorted( max_layer_sorted, boundary_layers, side="left"))
+
+reach_analytical_g4 = n_reaching / len(event_ids)
+
+stopping_probability_g4 = -np.gradient(reach_analytical_g4, g4_reach_depths)
 stopping_probability_g4 = np.maximum(stopping_probability_g4, 0)
 # normalization = np.trapezoid(stopping_probability_g4, G4depths)
 
@@ -461,6 +479,12 @@ if useHighland:
     reach_rng = np.r_[1.0, reach_rng, 0.0]
     reach_rng_error = np.r_[0.0, reach_rng_error, 0.0]
 
+
+if useHighland:
+    depthsFiltered = depths.copy()
+else:
+    depthsFiltered = G4depths[valid_mask]
+
 storeEigenvalues = False
 
 all_weights = []
@@ -530,8 +554,8 @@ plt.plot(depthsFiltered, reach_analytical, linewidth=2, label="Analytical reach 
 plt.plot(depthsFiltered, stopping_probability, linewidth=2, label="Analytical stopping probability")
 plt.plot(depthsFiltered, reach_rng, "--", linewidth=2, label="RNG reach probability")
 plt.plot(depthsFiltered, reach_geometry, "--", label="RNG CDF without approximations", linewidth=2)
-plt.plot(G4depths, reach_analytical_g4, label="G4 Reach probability")
-plt.plot(G4depths, stopping_probability_g4, color="red", linewidth=2, label="G4 Stopping probability")
+plt.plot(g4_reach_depths, reach_analytical_g4, label="G4 Reach probability")
+plt.plot(g4_reach_depths, stopping_probability_g4, color="red", linewidth=2, label="G4 Stopping probability")
 
 plt.xlabel("Stopping depth / cm")
 plt.ylabel(r"$P_{\mathrm{stop}}(x)$")
