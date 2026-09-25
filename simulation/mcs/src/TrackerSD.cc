@@ -5,6 +5,9 @@
 #include "G4SDManager.hh"
 #include "G4ios.hh"
 #include <algorithm>
+#include "G4EmCalculator.hh"
+#include "G4ParticleTable.hh"
+#include "G4ParticleDefinition.hh"
 
 namespace B2
 {
@@ -77,9 +80,9 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
 
 
         G4double deltaThetaX = thetaXOut - thetaXIn;
-        G4double layerThickness = 0.4; // mm
+        G4double layerThickness = 0.08; // cm
         
-        G4double depth = (layerID+1)* layerThickness / 10.;
+        G4double depth = (layerID+1)* layerThickness;
         postpos = post->GetPosition().z();
         G4double deltaX = post->GetPosition().x();
         G4double energy =

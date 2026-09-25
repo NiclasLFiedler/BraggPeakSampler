@@ -90,8 +90,8 @@ def fit_and_plot(ranges, energy, output_dir="./results", output=False):
 
     if output:
         plt.savefig(output_dir / f"range_{energy}MeV.pdf", bbox_inches='tight', format='pdf')
+    # plt.show()
     plt.close()
-    
     print(f"{energy} MeV: Range = {mean:.3f} ± {mean_err:.3f} mm, σ = {sigma:.3f} ± {sigma_err:.3f} mm")
     
     return {
@@ -102,10 +102,93 @@ def fit_and_plot(ranges, energy, output_dir="./results", output=False):
         'sigma_err': sigma_err
     }
 
+def max_range_and_plot(ranges, energy, output_dir="./results", output=False):
+    """
+    Determine projected range from the histogram maximum.
 
-def main():
-    PDFoutput = True
-    energies = [3, 5, 10, 15, 20, 30, 40, 50, 60, 70, 80, 90, 100, 125, 150, 175, 200, 225, 250]
+    A parabola through the maximum bin and its two neighbours is used
+    to obtain a sub-bin estimate of the peak position.
+    """
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Histogram
+    counts, bin_edges = np.histogram(ranges, bins=500)
+    bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
+
+    # Maximum bin
+    peak_idx = np.argmax(counts)
+
+    # Parabolic interpolation around maximum
+    if 0 < peak_idx < len(counts) - 1:
+        x = bin_centers[peak_idx-1:peak_idx+2]
+        y = counts[peak_idx-1:peak_idx+2]
+
+        a, b, c = np.polyfit(x, y, 2)
+
+        if a < 0:
+            range_max = -b / (2 * a)
+        else:
+            range_max = bin_centers[peak_idx]
+    else:
+        range_max = bin_centers[peak_idx]
+
+    # Plot
+    fig, ax = plt.subplots(figsize=(12, 9))
+
+    ax.step(
+        bin_centers,
+        counts,
+        where="mid",
+        linewidth=1.5,
+        alpha=0.7,
+        label="Data"
+    )
+
+    ax.axvline(
+        range_max,
+        linestyle="--",
+        linewidth=2,
+        label=f"Range = {range_max:.3f} mm"
+    )
+
+    ax.set_xlabel("Position (mm)", fontsize=12)
+    ax.set_ylabel("Counts", fontsize=12)
+    ax.set_title(
+        f"Projected Range - {energy} MeV",
+        fontsize=13,
+        fontweight="bold"
+    )
+
+    ax.legend(fontsize=11)
+    ax.grid(True, alpha=0.3)
+
+    if output:
+        plt.savefig(
+            output_dir / f"range_{energy}MeV.pdf",
+            bbox_inches="tight",
+            format="pdf"
+        )
+
+    # plt.show()
+    plt.close()
+
+    print(
+        f"{energy} MeV: Range maximum = {range_max:.3f} mm"
+    )
+
+    return {
+        "energy": energy,
+        "range": range_max,
+        "range_err": 0,
+        "sigma": 0,
+        "sigma_err": 0
+    }
+
+def main():         
+    PDFoutput = False
+    useGaussianFit = False
+    energies = [3, 5, 10, 15, 20, 30, 40, 50, 60, 70, 80, 90, 100, 125, 150, 175, 200, 225]#, 250, 275, 300]
 
     name = "pbwo4"
 
@@ -125,7 +208,11 @@ def main():
         ranges = load_and_extract_ranges(filename)
         print(f"  Found {len(ranges)} events")
         
-        result = fit_and_plot(ranges, energy, output_dir, output=PDFoutput)
+        if useGaussianFit:
+            result = fit_and_plot(ranges, energy, output_dir, output=PDFoutput)
+        else:
+            result = max_range_and_plot(ranges, energy, output_dir, output=PDFoutput)
+
         results.append(result)
     
     # Save results
@@ -155,7 +242,7 @@ def main():
     ax.grid(True, alpha=0.3)
     if PDFoutput:
         plt.savefig(Path(output_dir) / "range_vs_energy.pdf", bbox_inches='tight', format='pdf')
-    plt.close()
+    plt.show()
 
 
 if __name__ == "__main__":

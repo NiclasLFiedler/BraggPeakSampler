@@ -318,15 +318,17 @@ def gaussian_core_sigma(data):
 
     return 0.5 * (q_high - q_low)
 
+usePbWO4 = False
+
 with uproot.open("h2oproj.root") as f:
     tree = f["braggsampler"]
 
-    event = tree["event"].array(library="np")
-    layerID = tree["layerID"].array(library="np")
-    depth = tree["depth"].array(library="np")
-    CumScatteringAngle =   np.degrees(tree["CumScatteringAngle"].array(library="np"))
-    ScatteringAngle =   np.degrees(tree["SingleScatteringAngle"].array(library="np"))
-    deltaX =        tree["deltaX"].array(library="np")
+    event = tree["event"].array(library="np").astype(np.float32)
+    layerID = tree["layerID"].array(library="np").astype(np.float32)
+    depth = tree["depth"].array(library="np").astype(np.float32)
+    CumScatteringAngle =   np.degrees(tree["CumScatteringAngle"].array(library="np")).astype(np.float32)
+    ScatteringAngle =   np.degrees(tree["SingleScatteringAngle"].array(library="np")).astype(np.float32)
+    deltaX =        tree["deltaX"].array(library="np").astype(np.float32)
 
 
 event_ids, event_index = np.unique(event, return_inverse=True)
@@ -344,33 +346,54 @@ print("Unique recorded events:", len(event_ids))
 print("Contiguous event blocks:", np.count_nonzero(last_row))
 print("Blocks ending below their event's maximum layer:",  np.count_nonzero(layers_int[last_row] < max_layer[event_index[last_row]])
 )
-
 del event_index
+del event
+
 
 G4depths = np.unique(depth)
 layerThickness  = G4depths[1] - G4depths[0]
 print("Layer thickness:", layerThickness)
 
-boundary_layers = np.arange(max_layer.max() + 1)
+boundary_layers = np.arange(max_layer.max() + 2)
 g4_reach_depths = (boundary_layers + 1) * layerThickness
 
 max_layer_sorted = np.sort(max_layer)
 
 n_reaching = (len(max_layer_sorted) - np.searchsorted( max_layer_sorted, boundary_layers, side="left"))
+del max_layer_sorted
 
 reach_analytical_g4 = n_reaching / len(event_ids)
+del event_ids
 
-stopping_probability_g4 = -np.gradient(reach_analytical_g4, g4_reach_depths)
-stopping_probability_g4 = np.maximum(stopping_probability_g4, 0)
-# normalization = np.trapezoid(stopping_probability_g4, G4depths)
+stop_bin_probabilityg4 = (
+    reach_analytical_g4[:-1] - reach_analytical_g4[1:]
+)
+
+stop_bin_densityg4 = (
+    stop_bin_probabilityg4 / np.diff(g4_reach_depths)
+)
+
+stop_bin_centresg4 = (
+    g4_reach_depths[:-1] + g4_reach_depths[1:]
+) / 2
+
+
+grad_stopping_probability_g4 = -np.gradient(reach_analytical_g4, g4_reach_depths)
+grad_stopping_probability_g4 = np.maximum(grad_stopping_probability_g4, 0)
+
+# normalization = np.trapezoid(grad_stopping_probability_g4, G4depths)
 
 # if normalization > 0:
-#     stopping_probability_g4 /= normalization
+#     grad_stopping_probability_g4 /= normalization
 
 plt.figure(figsize=(10, 6))
 
-plt.plot(G4depths, reach_analytical_g4, label="G4 Reach probability")
-plt.plot(G4depths, stopping_probability_g4, color="red", linewidth=2, label="G4 Stopping probability")
+plt.plot(g4_reach_depths, reach_analytical_g4, label="G4 Reach probability")
+plt.plot(g4_reach_depths, grad_stopping_probability_g4, color="red", linewidth=2, label="G4 Stopping probability")
+plt.plot(stop_bin_centresg4, stop_bin_probabilityg4, color="orange", linewidth=2, label="G4 Stopping bin differences")
+plt.plot(stop_bin_centresg4, stop_bin_densityg4, color="green", linewidth=2, label="G4 stopping density — gradient")
+
+
 
 plt.xlabel("Stopping depth / cm")
 plt.ylabel(r"$P_{\mathrm{stop}}(x)$")
@@ -388,29 +411,35 @@ print("Calculating Gaussian core sigma for each depth")
 
 for i, d in enumerate(G4depths):
     print(f"Depth {d} cm of {G4depths[-1]} cm")
-    selected = CumScatteringAngle[np.abs(depth - d) < 0.001]
-    CumSigmaCore[i] = gaussian_core_sigma(selected)
+   
+    mask = np.abs(depth - d) < 0.001
 
-    selected = ScatteringAngle[np.abs(depth - d) < 0.001]
-    SingleSigmaCore[i] = gaussian_core_sigma(selected)
+    CumSigmaCore[i] = gaussian_core_sigma(CumScatteringAngle[mask])
+    SingleSigmaCore[i] = gaussian_core_sigma(ScatteringAngle[mask])
+    CumDeltaXSigmaCore[i] = gaussian_core_sigma(deltaX[mask])
 
-    selected = deltaX[np.abs(depth - d) < 0.001]
-    CumDeltaXSigmaCore[i] = gaussian_core_sigma(selected)
+del CumScatteringAngle
+del ScatteringAngle
+del deltaX
+del depth
 
 CumVarCore = CumSigmaCore**2
 
 # ============================================================================
 print("Calculating Depth-dependent generalized chi-square distribution")
 # ============================================================================
-# data = analysisFunctions.load_EnergyRange("../../range_energy/data_analysis/h2o_alt_range_energy.npz")
-data = analysisFunctions.load_EnergyRange("../../range_energy/data_analysis/pbwo4_alt_range_energy.npz")
+data = analysisFunctions.load_EnergyRange("../../range_energy/data_analysis/h2o_alt_range_energy.npz") if not usePbWO4 else analysisFunctions.load_EnergyRange("../../range_energy/data_analysis/pbwo4_alt_range_energy.npz")
+
+E0 = 220 
 p_exp = data.p
 alpha = data.alpha[0]
 
 print(f"Alpha: {alpha}, p: {p_exp}")
 
-E0 = 220
 R0 = analysisFunctions.range_energy(data, E0)
+# R0 = 6.73398
+R0 = 30.719
+R0 = 30.75
 
 SingleAngleVarianceFromCum = np.empty_like(CumVarCore)
 SingleAngleVarianceFromCum[0] = CumVarCore[0]
@@ -434,8 +463,8 @@ if useMask:
     CumDeltaXSigmaCore = CumDeltaXSigmaCore[mask]
 
 m_p = 938.272
-X0 = 36.08 #water
-X0 = 0.89 #pbwo4
+X0 = 36.08 if not usePbWO4 else 0.89
+
 layerThickness = (G4depths[1] - G4depths[0])
 dx = layerThickness
 depths = np.arange(dx, R0, dx)
@@ -555,8 +584,8 @@ plt.plot(depthsFiltered, stopping_probability, linewidth=2, label="Analytical st
 plt.plot(depthsFiltered, reach_rng, "--", linewidth=2, label="RNG reach probability")
 plt.plot(depthsFiltered, reach_geometry, "--", label="RNG CDF without approximations", linewidth=2)
 plt.plot(g4_reach_depths, reach_analytical_g4, label="G4 Reach probability")
-plt.plot(g4_reach_depths, stopping_probability_g4, color="red", linewidth=2, label="G4 Stopping probability")
-
+plt.plot(g4_reach_depths, grad_stopping_probability_g4, color="red", linewidth=2, label="G4 Stopping probability")
+plt.axvline(R0, linestyle="--", color="black")
 plt.xlabel("Stopping depth / cm")
 plt.ylabel(r"$P_{\mathrm{stop}}(x)$")
 
@@ -616,8 +645,7 @@ if useMask:
     CumDeltaXSigmaCore = CumDeltaXSigmaCore[mask]
 
 m_p = 938.272
-X0 = 36.08
-dx = 1
+
 x_max = 0.999 * R0
 depths = np.arange(dx, x_max, dx)
 

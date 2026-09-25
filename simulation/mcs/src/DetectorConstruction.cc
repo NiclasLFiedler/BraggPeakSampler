@@ -89,10 +89,10 @@ void DetectorConstruction::DefineMaterials()
   // Air defined using NIST Manager
   worldMat = nistManager->FindOrBuildMaterial("G4_AIR"); 
 
-  detMaterial = nistManager->FindOrBuildMaterial("G4_PbWO4");
-  detMaterial->GetIonisation()->SetMeanExcitationEnergy(600.7*eV);
+  // detMaterial = nistManager->FindOrBuildMaterial("G4_PbWO4");
+  // detMaterial->GetIonisation()->SetMeanExcitationEnergy(600.7*eV);
   
-  // detMaterial = nistManager->FindOrBuildMaterial("G4_WATER");
+  detMaterial = nistManager->FindOrBuildMaterial("G4_WATER");
 
   G4Material *SiO2 = new G4Material("SiO2", 2.65*g/cm3, 2);
   SiO2->AddElement(elSi, 1);
@@ -242,11 +242,11 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   
   G4double phantomX = 10 * cm;
   G4double phantomY = 10 * cm;
-  G4double phantomZ = 8*cm;
+  G4double phantomZ = 32*cm;
   // if(detectorType == "pbwo4"){
   //   phantomZ = 8*cm;
   // }
-  G4double fLayers = 200;
+  G4double fLayers = 400;
   G4double detSizeZ = phantomZ/fLayers;
 
   G4Box* solidPhantom = new G4Box("solidPhantom", phantomX/2, phantomY/2, phantomZ/2);

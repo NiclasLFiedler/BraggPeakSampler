@@ -17,6 +17,8 @@
 #include "G4IonTable.hh"
 #include "G4VUserPrimaryGeneratorAction.hh"
 #include "G4UserLimits.hh"
+#include "G4EmCalculator.hh"
+#include "G4ParticleTable.hh"
 
 namespace B2
 {
@@ -50,7 +52,8 @@ PrimaryGeneratorAction::~PrimaryGeneratorAction()
 
 void PrimaryGeneratorAction::SetBeamEnergy(G4double energy) {
     fBeamEnergy = 220*MeV;
-     fParticleGun->SetParticleEnergy(fBeamEnergy);
+    fParticleGun->SetParticleEnergy(fBeamEnergy);
+    
 }
 
 void PrimaryGeneratorAction::GeneratePrimaries(G4Event* anEvent)

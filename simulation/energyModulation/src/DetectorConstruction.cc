@@ -140,6 +140,7 @@ void DetectorConstruction::DefineMaterials()
   worldMat = nistManager->FindOrBuildMaterial("G4_Galactic"); 
   detMaterial = nistManager->FindOrBuildMaterial("G4_PbWO4");
   detMaterial->GetIonisation()->SetMeanExcitationEnergy(600.7*eV);
+
   water = nistManager->FindOrBuildMaterial("G4_WATER");
   water->GetIonisation()->SetMeanExcitationEnergy(75*eV);
   air = nistManager->FindOrBuildMaterial("G4_AIR");

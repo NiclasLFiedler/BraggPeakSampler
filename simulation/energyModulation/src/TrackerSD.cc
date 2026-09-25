@@ -53,7 +53,7 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
     G4ParticleDefinition* particle =aStep->GetTrack()->GetDefinition();
     G4EmCalculator emCalc;
     G4Material* material = aStep->GetPreStepPoint()->GetMaterial();
-
+    eKin = 220;
     G4double residualRange = emCalc.GetRange(
     eKin,
     particle,
@@ -65,7 +65,7 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
     particle,
     material
     );
-    // G4cout << "Res " << residualRange << " csda " << residualCSDARange << G4endl;
+    G4cout << "Res " << residualRange << " csda " << residualCSDARange << G4endl;
 
     newHit->SetTrackID(trackid);
     newHit->SetEkin(eKin);
