@@ -239,33 +239,76 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
     0,                                       // copy number
     fCheckOverlaps);                         // checking overlaps
 
+  ////////////
+  const G4double phantomX = 10.0 * cm;
+  const G4double phantomY = 10.0 * cm;
   
-  G4double phantomX = 10 * cm;
-  G4double phantomY = 10 * cm;
-  G4double phantomZ = 32*cm;
-  // if(detectorType == "pbwo4"){
-  //   phantomZ = 8*cm;
-  // }
-  G4double fLayers = 400;
-  G4double detSizeZ = phantomZ/fLayers;
-
-  G4Box* solidPhantom = new G4Box("solidPhantom", phantomX/2, phantomY/2, phantomZ/2);
-  G4LogicalVolume* logicPhantom = new G4LogicalVolume(solidPhantom, worldMat, "logPhantom");
-  new G4PVPlacement(nullptr, G4ThreeVector(0,0, -phantomZ/2), logicPhantom, "physPhantom", logicalworld, false, 60);
-
-  G4Box* solidLayer = new G4Box("solidLayer", phantomX/2, phantomY/2, detSizeZ/2);
-  G4LogicalVolume* logicLayer = new G4LogicalVolume(solidLayer, detMaterial, "logLayer");
+  G4double phantomZ = 7.0 * cm;
   
-  auto PhantomVisAttr = new G4VisAttributes(G4Colour(0.0, 0.0, 1.0)); // Blue
-  PhantomVisAttr->SetVisibility(true);
-  PhantomVisAttr->SetForceSolid(true);
+  // Depth measured from the phantom entrance along the beam.
+  G4double switchDepth = 6.3 * cm;
+  // Requested maximum layer widths.
+  G4double coarseWidth = 0.10  * cm;  // 1 mm
+  G4double fineWidth   = 0.01 * cm;  // 0.05 mm
+  
+  bool useH2O = true;
+  if(useH2O){
+    phantomZ = 31.5*cm;
+    switchDepth = 30 * cm;
+    coarseWidth = 0.5 * cm;
+    fineWidth   = 0.01 * cm;
+  }
+  if (switchDepth <= 0.0 || switchDepth >= phantomZ ||
+      coarseWidth <= 0.0 || fineWidth <= 0.0)
+  {
+      G4Exception("DetectorConstruction::DefineVolumes", "InvalidGrid", FatalException, "Invalid switch depth or layer widths.");
+  }
 
-  auto* parameterisationPhantom = new HeteroParameterisation(1, 1, fLayers, 0, 0, detSizeZ, detMaterial, detMaterial, PhantomVisAttr, PhantomVisAttr);
+  const G4int nCoarse = static_cast<G4int>(std::ceil(switchDepth / coarseWidth));
+  const G4int nFine = static_cast<G4int>(std::ceil((phantomZ - switchDepth) / fineWidth));
 
-  new G4PVParameterised(
-    "Layer", logicLayer, logicPhantom, kUndefined, fLayers, parameterisationPhantom
-  );
+  const G4double dzCoarse = switchDepth / nCoarse;
+  const G4double dzFine   = (phantomZ - switchDepth) / nFine;
 
+  // Phantom entrance remains at global z = 0.
+  // Its downstream end is at global z = -phantomZ.
+  auto solidPhantom = new G4Box( "solidPhantom", phantomX / 2, phantomY / 2, phantomZ / 2);
+
+  auto logicPhantom = new G4LogicalVolume(solidPhantom, worldMat, "logPhantom");
+
+  new G4PVPlacement( nullptr, G4ThreeVector(0, 0, -phantomZ / 2), logicPhantom, "physPhantom", logicalworld, false, 60, fCheckOverlaps);
+
+  auto solidCoarse = new G4Box( "solidCoarse", phantomX / 2, phantomY / 2, dzCoarse / 2);
+  auto logicCoarse = new G4LogicalVolume(solidCoarse, detMaterial, "logLayerCoarse");
+  
+  auto solidFine = new G4Box( "solidFine", phantomX / 2, phantomY / 2, dzFine / 2);
+  auto logicFine = new G4LogicalVolume(solidFine, detMaterial, "logLayerFine");
+
+  // Place one region, assigning globally consecutive layer IDs.
+  auto placeRegion = [&](G4LogicalVolume* logical,
+                         G4double startDepth,
+                         G4double width,
+                         G4int count,
+                         G4int firstID){
+
+      for (G4int i = 0; i < count; ++i){
+          const G4double centreDepth = startDepth + (i + 0.5) * width;
+          const G4double localZ = phantomZ / 2 - centreDepth;
+
+          new G4PVPlacement( nullptr, G4ThreeVector(0, 0, localZ), logical, "Layer", logicPhantom, false, firstID + i, fCheckOverlaps);
+      }
+  };
+
+  placeRegion(logicCoarse, 0.0,         dzCoarse, nCoarse, 0);
+  placeRegion(logicFine,   switchDepth, dzFine,   nFine,   nCoarse);
+
+  G4cout
+  << "Coarse layers: " << nCoarse
+  << ", width: " << dzCoarse / cm << " cm\n"
+  << "Fine layers: " << nFine
+  << ", width: " << dzFine / cm << " cm\n"
+  << "Switch depth: " << switchDepth / cm << " cm"
+  << G4endl;
 
   return physworld;
 }
@@ -281,7 +324,8 @@ void DetectorConstruction::ConstructSDandField()
   G4SDManager::GetSDMpointer()->AddNewDetector(aTrackerSD);
   // Setting aTrackerSD to all logical volumes with the same name
   // of "Chamber_LV".
-  SetSensitiveDetector("logLayer", aTrackerSD, true);
+  SetSensitiveDetector("logLayerCoarse", aTrackerSD, true);
+  SetSensitiveDetector("logLayerFine",   aTrackerSD, true);
 
   // Create global magnetic field messenger.
   // Uniform magnetic field is then created automatically if

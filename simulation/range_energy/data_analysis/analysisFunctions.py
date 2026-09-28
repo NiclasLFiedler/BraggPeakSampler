@@ -64,7 +64,6 @@ def load_range_data(file_folder, name=None, colors=None, UseSumFit=False):
         useSumFit=UseSumFit
     )
 
-
 def load_EnergyRange(filename):
     data = np.load(filename, allow_pickle=True)
 

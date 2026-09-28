@@ -8,6 +8,13 @@
 #include "G4EmCalculator.hh"
 #include "G4ParticleTable.hh"
 #include "G4ParticleDefinition.hh"
+#include "G4Box.hh"
+#include "G4LogicalVolume.hh"
+#include "G4TouchableHistory.hh"
+#include "G4AffineTransform.hh"
+#include "G4GeometryTolerance.hh"
+#include "G4SystemOfUnits.hh"
+#include <cmath>
 
 namespace B2
 {
@@ -25,22 +32,21 @@ TrackerSD::TrackerSD(const G4String& name,
 
 void TrackerSD::Initialize(G4HCofThisEvent* hce)
 {
-  // Create hits collection
+    layerID = -1;
+    thetaXIn = 0.0;
+    thetaXOut = 0.0;
+    prepos = 0.0;
+    postpos = 0.0;
+    fHitsCollection = new TrackerHitsCollection(SensitiveDetectorName, collectionName[0]);
 
-  fHitsCollection
-    = new TrackerHitsCollection(SensitiveDetectorName, collectionName[0]);
-
-  // Add this collection in hce
-
-  G4int hcID
-    = G4SDManager::GetSDMpointer()->GetCollectionID(collectionName[0]);
-  hce->AddHitsCollection( hcID, fHitsCollection );
+    G4int hcID = G4SDManager::GetSDMpointer()->GetCollectionID(collectionName[0]);
+    hce->AddHitsCollection( hcID, fHitsCollection );
 }
 
 G4bool TrackerSD::ProcessHits(G4Step* aStep,
                               G4TouchableHistory*)
 {
-    G4double trackid = aStep->GetTrack()->GetTrackID();
+    const G4int trackid = aStep->GetTrack()->GetTrackID();
 
     if (trackid != 1)
         return true;
@@ -70,45 +76,60 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
             return true;
         }
 
-        auto newHit = new TrackerHit();
+        /////////
+        // Use the PRE-step touchable: it describes the layer being left.
+        const auto touchable = pre->GetTouchableHandle();
 
-        const G4ThreeVector& dirOut =
-            post->GetMomentumDirection();
+        const auto* box = dynamic_cast<const G4Box*>(touchable->GetVolume()->GetLogicalVolume()->GetSolid());
 
-        thetaXOut =
-            std::atan2(dirOut.x(), -dirOut.z());
+        if (!box){
+            G4Exception( "TrackerSD::ProcessHits", "UnexpectedSolid", FatalException, "Expected a G4Box layer.");
+            return true;
+        }
+
+        const auto globalToLocal = touchable->GetHistory()->GetTopTransform();
+        const G4ThreeVector localExit = globalToLocal.TransformPoint(post->GetPosition());
+        const G4double halfZ = box->GetZHalfLength();
+
+        const G4double tolerance = 10.0 * G4GeometryTolerance::GetInstance()->GetSurfaceTolerance();
+
+        // Beam travels along -z, so the downstream face is local z = -halfZ.
+        const G4bool downstreamExit = std::abs(localExit.z() + halfZ) <= tolerance;
+
+        if (!downstreamExit){
+            layerID = -1; thetaXIn = 0.0; thetaXOut = 0.0; return true;
+        }
+
+        // Nominal downstream-face position, identical for every hit in this layer.
+        const G4ThreeVector downstreamWorld = globalToLocal.Inverse().TransformPoint(G4ThreeVector(0, 0, -halfZ));
+        
+        // Phantom entrance is at global z = 0.
+        const G4double depth = -downstreamWorld.z() / cm;
+
+        /////////
+
+        const G4ThreeVector& dirOut = post->GetMomentumDirection();
+        thetaXOut = std::atan2(dirOut.x(), -dirOut.z());
 
 
         G4double deltaThetaX = thetaXOut - thetaXIn;
-        G4double layerThickness = 0.08; // cm
         
-        G4double depth = (layerID+1)* layerThickness;
         postpos = post->GetPosition().z();
         G4double deltaX = post->GetPosition().x();
-        G4double energy =
-            pre->GetTotalEnergy();
+        const G4double energy = post->GetTotalEnergy();
+        const G4double eKin = post->GetKineticEnergy();
 
-        G4double eKin =
-            pre->GetKineticEnergy();
-        if (prepos == postpos){
-          layerID = -1;
-          thetaXIn = 0.;
-          thetaXOut = 0;
-          return true;
-        }
-
+        auto newHit = new TrackerHit();
         newHit->SetTrackID(trackid);
         newHit->SetEkin(eKin);
         newHit->SetEtot(energy);
         newHit->SetDepth(depth);
 
-        // Cumulative angle relative to original z direction
         newHit->SetCumAngle(thetaXOut);
 
-        // Angular change accumulated over this entire layer
         newHit->SetScatteringAngle(deltaThetaX);
         newHit->SetLayerID(layerID);
-        newHit->SetDeltaX(deltaX/10);
+        newHit->SetDeltaX(deltaX/cm);
         
         fHitsCollection->insert(newHit);
 

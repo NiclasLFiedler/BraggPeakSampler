@@ -1,722 +1,302 @@
-import uproot
-import numpy as np
-#import matplotlib
-#matplotlib.use("QtAgg")
-import matplotlib.pyplot as plt
-from scipy.optimize import curve_fit
-from scipy.special import gamma as gamma_func
-from scipy.stats import chi2, gamma
-from scipy.integrate import quad
+"""One Geant4 boundary grid for reach, scattering and lateral plots.
 
-from dataclasses import dataclass
-
+Requires your existing analysisFunctions.py, mcs_helper.py, ROOT input and
+range calibration. All depth coordinates are cm; input angles are radians.
+Scoring must identify actual downstream crossings, with one nominal depth
+per layer and contiguous layer IDs starting at zero. No interpolation.
+"""
 import sys
+import warnings
+
+import matplotlib.pyplot as plt
+import numpy as np
+import uproot
+
 sys.path.append("../../range_energy/data_analysis")
 import analysisFunctions
+import mcs_helper as mcs
 
-@dataclass
-class TargetParameters:
-    Thickness: float
-    Pmod_theo: float
-    range: float
-    sigma: float
-    sigma_t: float
-    t: float
-    resRange: float
-    sigma_res: float
-    sigma_t_res: float
-    t_res: float
-    Pmod_res: float
-    Pmod_sim: float
-    energy: float
-    sigma_E: float
-    sigma_T_E: float
-    t_E: float
-    Pmod_E: float
-
-
-
-def calculate_coefficients(weights):
-    weights = np.asarray(weights, dtype=float)
-
-    coefficients = np.ones(len(weights))
-
-    for i, wi in enumerate(weights):
-        for j, wj in enumerate(weights):
-            if i != j:
-                coefficients[i] *= wi / (wi - wj)
-
-    return coefficients
-
-def pdf_chi2_scaled(x, w):
-    """PDF of scaled chi²_2: w * chi²_2"""
-    return chi2.pdf(x / w, df=2) / w
- 
-def conv_two_pdfs(pdf1, pdf2, x, a, b):
-    """Convolve two PDFs numerically"""
-    def integrand(t):
-        return pdf1(t, a) * pdf2(x - t, b)
-    
-    result, _ = quad(integrand, 0, max(x, 1e-10), limit=100)
-    return result
- 
-# ============================================================================
-# Method 1: Satterthwaite Approximation
-# ============================================================================
-def gchi2_satterthwaite(x, weights):
-    """PDF using Satterthwaite approximation (scaled chi²)"""
-    w_sum = np.sum(weights)
-    w_sum_sq = np.sum(np.array(weights) ** 2)
-    
-    # Effective DOF and scale
-    nu = 2 * w_sum**2 / w_sum_sq
-    c = w_sum_sq / w_sum
-    
-    return chi2.pdf(x / c, df=nu) / c
- 
-# ============================================================================
-# Method 2: Welch-Welford (Gamma Approximation)
-# ============================================================================
-def gchi2_welch_welford(x, weights):
-    """PDF using Welch-Welford approximation (gamma distribution)"""
-    w_sum = np.sum(weights)
-    w_sum_sq = np.sum(np.array(weights) ** 2)
-    
-    # Gamma parameters
-    alpha = w_sum**2 / w_sum_sq
-    beta = 2*w_sum_sq / w_sum
-    
-    return gamma.pdf(x, a=alpha, scale=beta)
- 
-# ============================================================================
-# Method 3: Exact (via successive convolution)
-# ============================================================================
-def gchi2_exact_pdf(x, weights):
-    weights = np.asarray(weights, dtype=float)
-    weights = weights[weights > 0]
-
-    coefficients = calculate_coefficients(weights)
-
-    x = np.asarray(x, dtype=float)
-    pdf = np.zeros_like(x)
-
-    for wi, Ai in zip(weights, coefficients):
-        pdf += Ai / (2 * wi) * np.exp(-x / (2 * wi))
-
-    return pdf
-
-def gchi2_exact_cdf(x, weights):
-    weights = np.asarray(weights, dtype=float)
-    weights = weights[weights > 0]
-
-    coefficients = calculate_coefficients(weights)
-
-    x = np.asarray(x, dtype=float)
-
-    cdf = np.ones_like(x)
-
-    for wi, Ai in zip(weights, coefficients):
-        cdf -= Ai * np.exp(-x / (2 * wi))
-
-    return cdf
-
-def gchi2_cdf_rng(x, weights, rng, n_samples=50_000, batch_size=1000):
-    
-    weights = np.asarray(weights, dtype=float)
-
-    if np.any(~np.isfinite(weights)) or np.any(weights < 0):
-        raise ValueError("Weights must be finite and nonnegative.")
-
-    weights = weights[weights > 0]
-
-    if x < 0:
-        return 0.0, 0.0
-
-    if weights.size == 0:
-        return 1.0, 0.0
-
-    n_reach = 0
-
-    for start in range(0, n_samples, batch_size):
-        size = min(batch_size, n_samples - start)
-
-        samples = rng.chisquare( df=2, size=(size, len(weights)))
-
-        delta_R = samples @ weights
-        n_reach += np.count_nonzero(delta_R <= x)
-
-    probability = n_reach / n_samples
-
-    error = np.sqrt(probability * (1.0 - probability) / n_samples)
-
-    return probability, error
-
-def reach_probability_rng_geometry( remaining_range, cumulative_variance, dz, rng, n_samples=50_000, batch_size=1000):
-    """
-    Sample correlated projected angles and nonlinear path excess.
-
-    Parameters
-    ----------
-    remaining_range : float
-        R0 - evaluation_depth, in cm.
-    cumulative_variance : 1D array
-        Cumulative variance of ONE projected angle, in rad².
-        Must be finite, nonnegative, and nondecreasing.
-    dz : float or 1D array
-        Integration interval widths, in cm.
-    rng : numpy.random.Generator
-
-    Returns
-    -------
-    probability : float
-    standard_error : float
-    invalid_fraction : float
-        Fraction of samples leaving the forward-angle domain.
-        If appreciable, the calculation raises an error instead.
-    """
-    V = np.asarray(cumulative_variance, dtype=float)
-
-    if V.ndim != 1 or V.size == 0:
-        raise ValueError("Provide a nonempty 1D variance array.")
-
-    if np.any(~np.isfinite(V)) or np.any(V < 0):
-        raise ValueError("Variances must be finite and nonnegative.")
-
-    widths = np.broadcast_to(np.asarray(dz, dtype=float), V.shape)
-
-    if np.any(~np.isfinite(widths)) or np.any(widths <= 0):
-        raise ValueError("Interval widths must be finite and positive.")
-
-    if n_samples <= 0 or batch_size <= 0:
-        raise ValueError("Sample and batch counts must be positive.")
-
-    # Variance of each independent angular increment
-    increment_variance = np.diff(np.r_[0.0, V])
-
-    if np.any(increment_variance < 0):
-        raise ValueError(
-            "Cumulative variance must be nondecreasing."
-        )
-
-    increment_sigma = np.sqrt(increment_variance)
-
-    n_reach = 0
-    n_invalid = 0
-
-    for start in range(0, n_samples, batch_size):
-        size = min(batch_size, n_samples - start)
-
-        # Independent increments within each projection.
-        # x and y are also independent of each other.
-        kicks_x = rng.normal(
-            size=(size, V.size)
-        ) * increment_sigma
-
-        kicks_y = rng.normal(
-            size=(size, V.size)
-        ) * increment_sigma
-
-        # Cumulative angles retain correlations between depths
-        theta_x = np.cumsum(kicks_x, axis=1)
-        theta_y = np.cumsum(kicks_y, axis=1)
-
-        # This depth-parametrized geometry assumes forward motion.
-        invalid = np.any(
-            (np.abs(theta_x) >= np.pi / 2)
-            | (np.abs(theta_y) >= np.pi / 2),
-            axis=1
-        )
-
-        n_invalid += np.count_nonzero(invalid)
-
-        # Do not wrap invalid angles through tan().
-        theta_x = theta_x[~invalid]
-        theta_y = theta_y[~invalid]
-
-        slope_squared = (
-            np.tan(theta_x)**2 + np.tan(theta_y)**2
-        )
-
-        # Stable equivalent of sqrt(1 + slope_squared) - 1
-        excess_factor = slope_squared / (
-            np.sqrt(1.0 + slope_squared) + 1.0
-        )
-
-        delta_R = excess_factor @ widths
-
-        n_reach += np.count_nonzero(
-            delta_R <= remaining_range
-        )
-
-    if n_invalid:
-        raise ValueError(
-            f"{n_invalid}/{n_samples} trajectories leave the "
-            "forward-angle domain. This model cannot describe "
-            "them reliably; do not discard or wrap them."
-        )
-
-    probability = n_reach / n_samples
-    error = np.sqrt(
-        probability * (1.0 - probability) / n_samples
-    )
-
-    return probability, error, 0.0
-
-def gaussian(x, A, mu, sigma):
-    return A * np.exp(-(x - mu)**2 / (2 * sigma**2))
-
-def gaussian_sigma_vs_depth(depth, angles, depths, bins=100):
-    sigma_fit = np.full(len(depths), np.nan)
-    variance_fit = np.full(len(depths), np.nan)
-
-    std_data = np.full(len(depths), np.nan)
-    variance_data = np.full(len(depths), np.nan)
-
-    for i, d in enumerate(depths):
-
-        selected = angles[np.abs(depth - d) < 0.001]
-        selected = selected[np.isfinite(selected)]
-
-        if len(selected) < 10:
-            continue
-
-        counts, bin_edges = np.histogram(selected, bins=bins, density=True)
-        bin_centers = (0.5 * (bin_edges[:-1] + bin_edges[1:]))
-
-        A0 = np.max(counts)
-        mu0 = np.mean(selected)
-        sigma0 = np.std(selected)
-
-        try:
-            popt, pcov = curve_fit(gaussian, bin_centers, counts, p0=[A0, mu0, sigma0], maxfev=10000)
-            A, mu, sigma = popt
-            sigma = abs(sigma)
-            sigma_fit[i] = sigma
-            variance_fit[i] = sigma**2
-
-        except RuntimeError:
-            continue
-
-        std_data[i] = np.std(selected)
-        variance_data[i] = np.var(selected)
-
-    return (sigma_fit, variance_fit, std_data, variance_data)
-
-def plotSingleThickness(target_depth, depth, deltaX, label):
-    selected_deltaX = deltaX[np.abs(depth - target_depth) < 0.001]
-    selected_deltaX = selected_deltaX[np.isfinite(selected_deltaX)]
-
-    plt.hist(selected_deltaX, bins=1000, density=True, alpha=0.7, label=label)
-
-def gaussian_core_sigma(data):
-    data = data[np.isfinite(data)]
-
-    if len(data) < 10:
-        return np.nan
-
-    q_low, q_high = np.percentile( data, [15.8655, 84.1345])
-
-    return 0.5 * (q_high - q_low)
-
+# Configuration: preserve the settings in the supplied script.
 usePbWO4 = False
-
-with uproot.open("h2oproj.root") as f:
-    tree = f["braggsampler"]
-
-    event = tree["event"].array(library="np").astype(np.float32)
-    layerID = tree["layerID"].array(library="np").astype(np.float32)
-    depth = tree["depth"].array(library="np").astype(np.float32)
-    CumScatteringAngle =   np.degrees(tree["CumScatteringAngle"].array(library="np")).astype(np.float32)
-    ScatteringAngle =   np.degrees(tree["SingleScatteringAngle"].array(library="np")).astype(np.float32)
-    deltaX =        tree["deltaX"].array(library="np").astype(np.float32)
-
-
-event_ids, event_index = np.unique(event, return_inverse=True)
-
-layers_int = layerID.astype(np.int64)
-if not np.all(layerID == layers_int):
-    raise ValueError("layerID contains noninteger values.")
-
-max_layer = np.full(len(event_ids), -1, dtype=np.int64)
-np.maximum.at(max_layer, event_index, layers_int)
-
-last_row = np.r_[event[1:] != event[:-1], True]
-
-print("Unique recorded events:", len(event_ids))
-print("Contiguous event blocks:", np.count_nonzero(last_row))
-print("Blocks ending below their event's maximum layer:",  np.count_nonzero(layers_int[last_row] < max_layer[event_index[last_row]])
-)
-del event_index
-del event
-
-
-G4depths = np.unique(depth)
-layerThickness  = G4depths[1] - G4depths[0]
-print("Layer thickness:", layerThickness)
-
-boundary_layers = np.arange(max_layer.max() + 2)
-g4_reach_depths = (boundary_layers + 1) * layerThickness
-
-max_layer_sorted = np.sort(max_layer)
-
-n_reaching = (len(max_layer_sorted) - np.searchsorted( max_layer_sorted, boundary_layers, side="left"))
-del max_layer_sorted
-
-reach_analytical_g4 = n_reaching / len(event_ids)
-del event_ids
-
-stop_bin_probabilityg4 = (
-    reach_analytical_g4[:-1] - reach_analytical_g4[1:]
-)
-
-stop_bin_densityg4 = (
-    stop_bin_probabilityg4 / np.diff(g4_reach_depths)
-)
-
-stop_bin_centresg4 = (
-    g4_reach_depths[:-1] + g4_reach_depths[1:]
-) / 2
-
-
-grad_stopping_probability_g4 = -np.gradient(reach_analytical_g4, g4_reach_depths)
-grad_stopping_probability_g4 = np.maximum(grad_stopping_probability_g4, 0)
-
-# normalization = np.trapezoid(grad_stopping_probability_g4, G4depths)
-
-# if normalization > 0:
-#     grad_stopping_probability_g4 /= normalization
-
-plt.figure(figsize=(10, 6))
-
-plt.plot(g4_reach_depths, reach_analytical_g4, label="G4 Reach probability")
-plt.plot(g4_reach_depths, grad_stopping_probability_g4, color="red", linewidth=2, label="G4 Stopping probability")
-plt.plot(stop_bin_centresg4, stop_bin_probabilityg4, color="orange", linewidth=2, label="G4 Stopping bin differences")
-plt.plot(stop_bin_centresg4, stop_bin_densityg4, color="green", linewidth=2, label="G4 stopping density — gradient")
-
-
-
-plt.xlabel("Stopping depth / cm")
-plt.ylabel(r"$P_{\mathrm{stop}}(x)$")
-
-plt.grid(True)
-plt.legend()
-plt.tight_layout()
-plt.show()
-
-CumSigmaCore = np.full(len(G4depths), np.nan)
-SingleSigmaCore = np.full(len(G4depths), np.nan)
-CumDeltaXSigmaCore = np.full(len(G4depths), np.nan)
-
-print("Calculating Gaussian core sigma for each depth")
-
-for i, d in enumerate(G4depths):
-    print(f"Depth {d} cm of {G4depths[-1]} cm")
-   
-    mask = np.abs(depth - d) < 0.001
-
-    CumSigmaCore[i] = gaussian_core_sigma(CumScatteringAngle[mask])
-    SingleSigmaCore[i] = gaussian_core_sigma(ScatteringAngle[mask])
-    CumDeltaXSigmaCore[i] = gaussian_core_sigma(deltaX[mask])
-
-del CumScatteringAngle
-del ScatteringAngle
-del deltaX
-del depth
-
-CumVarCore = CumSigmaCore**2
-
-# ============================================================================
-print("Calculating Depth-dependent generalized chi-square distribution")
-# ============================================================================
-data = analysisFunctions.load_EnergyRange("../../range_energy/data_analysis/h2o_alt_range_energy.npz") if not usePbWO4 else analysisFunctions.load_EnergyRange("../../range_energy/data_analysis/pbwo4_alt_range_energy.npz")
-
-E0 = 220 
-p_exp = data.p
-alpha = data.alpha[0]
-
-print(f"Alpha: {alpha}, p: {p_exp}")
-
-R0 = analysisFunctions.range_energy(data, E0)
-# R0 = 6.73398
-R0 = 30.719
-R0 = 30.75
-
-SingleAngleVarianceFromCum = np.empty_like(CumVarCore)
-SingleAngleVarianceFromCum[0] = CumVarCore[0]
-SingleAngleVarianceFromCum[1:] = np.maximum(CumVarCore[1:] - CumVarCore[:-1], 0)
-SingleAngleRMSFromCum = np.sqrt(SingleAngleVarianceFromCum)
-
-useMask = True
-if useMask:
-    N = len(CumSigmaCore)
-    G4depths = G4depths[:N]
-    SingleAngleRMSFromCum = SingleAngleRMSFromCum[:N]
-    SingleSigmaCore = SingleSigmaCore [:N]
-    CumDeltaXSigmaCore = CumDeltaXSigmaCore [:N]
-    
-    mask = G4depths < R0 + 1
-
-    G4depths = G4depths[mask]
-    CumSigmaCore = CumSigmaCore[mask]
-    SingleAngleRMSFromCum = SingleAngleRMSFromCum[mask]
-    SingleSigmaCore = SingleSigmaCore[mask]
-    CumDeltaXSigmaCore = CumDeltaXSigmaCore[mask]
-
-m_p = 938.272
-X0 = 36.08 if not usePbWO4 else 0.89
-
-layerThickness = (G4depths[1] - G4depths[0])
-dx = layerThickness
-depths = np.arange(dx, R0, dx)
-depth_mid = depths - 0.5 * dx
-
-E_k = E0 * (1.0 - depth_mid / R0)**(1.0 / p_exp)
-betaPc = E_k * (E_k + 2.0 * m_p) / (E_k + m_p)
-integrand = (13.6 / betaPc)**2 * dx / X0
-log_factor = 1.0 + 0.038 * np.log(depths / X0)
-CumVarHighland = log_factor**2 * np.cumsum(integrand)
-CumRMSHighland = np.sqrt(CumVarHighland)
-
-print(f"Projected Max Range: {R0:.3f} cm")
-
-CumVarRad = np.radians(CumSigmaCore)**2
-valid_mask = np.isfinite(CumVarRad)
-
-depthsFiltered = G4depths[:len(CumVarRad)][valid_mask]
-CumVarRad_filtered = CumVarRad[valid_mask]
-
-rng = np.random.default_rng(12345)
-reach_analytical = np.zeros(len(depthsFiltered))
-reach_rng = np.zeros(len(depthsFiltered))
-reach_rng_error = np.zeros(len(depthsFiltered))
-reach_geometry = np.zeros(len(depthsFiltered))
-reach_geometry_error = np.zeros(len(depthsFiltered))
-
 useHighland = False
-if useHighland:
-    print(
-        f"Last calculated depth: {depthsFiltered[-1]:.6f} cm\n"
-        f"R0: {R0:.6f} cm\n"
-        f"Unresolved final interval: "
-        f"{R0 - depthsFiltered[-1]:.6f} cm\n"
-        f"Last reach probability: {reach_analytical[-1]:.6f}"
-    )
-
-    # Known boundary values for the fixed-range MCS model
-    depthsFiltered = np.r_[0.0, depthsFiltered, R0]
-    reach_analytical = np.r_[1.0, reach_analytical, 0.0]
-    reach_rng = np.r_[1.0, reach_rng, 0.0]
-    reach_rng_error = np.r_[0.0, reach_rng_error, 0.0]
+ROOT_FILE = "h2oproj.root"
+E0 = 220.0
+# Set to None to use range_energy(data, E0). These are your current overrides.
+R0_OVERRIDE = 6.73398 if usePbWO4 else None #30.72
+# Set to the generated-primary count to include events with no recorded hit.
+# None preserves your original normalization to recorded events only.
+N_PRIMARIES = None
+N_RNG = 100_000
+N_GEOMETRY = 100_000
+# Confirm against your scorer: convert deltaX to cm if it was stored in mm.
+DELTA_X_TO_CM = 1.0
 
 
-if useHighland:
-    depthsFiltered = depths.copy()
-else:
-    depthsFiltered = G4depths[valid_mask]
-
-storeEigenvalues = False
-
-all_weights = []
-all_eigenvalues = []
+def gaussian_core_sigma(values, latestSigma):
+    values = values[np.isfinite(values)]
+    if len(values) < 100:
+        return latestSigma*1.01
+    low, high = np.percentile(values, [15.8655, 84.1345])
+    return 0.5 * (high - low)
 
 
-for j, d in enumerate(depthsFiltered):
-    deltaR_max = R0 - d
+def integer_ids(values, name):
+    values = np.asarray(values)
+    if np.any(~np.isfinite(values)) or np.any(values < 0):
+        raise ValueError(f"{name} must contain finite nonnegative IDs.")
+    ids = values.astype(np.int64)
+    if not np.all(values == ids):
+        raise ValueError(f"{name} contains noninteger values.")
+    return ids
 
-    if deltaR_max <= 0:
-        continue
+def main():
+    with uproot.open(ROOT_FILE) as f:
+        tree = f["braggsampler"]
+        event = integer_ids(tree["event"].array(library="np"), "event")
+        layerID = integer_ids(tree["layerID"].array(library="np"), "layerID")
+        # Per-hit coordinates used only to construct z, not a second model grid.
+        hit_depth = tree["depth"].array(library="np").astype(float)
+        CumScatteringAngle = tree["CumScatteringAngle"].array(library="np")
+        ScatteringAngle = tree["SingleScatteringAngle"].array(library="np")
+        deltaX = tree["deltaX"].array(library="np") * DELTA_X_TO_CM
 
-    V = CumVarHighland[:j+1] if useHighland else CumVarRad_filtered[:j+1]
+    if event.size == 0:
+        raise ValueError("No recorded hits.")
+    if not all(a.shape == event.shape for a in
+               (layerID, hit_depth, CumScatteringAngle, ScatteringAngle, deltaX)):
+        raise ValueError("ROOT branches must have matching shapes.")
 
-    C_j = np.minimum.outer(V, V)
-    eigenvalues = np.linalg.eigvalsh(C_j)
-    eigenvalues = eigenvalues[eigenvalues > 0]
+    event_ids, event_index = np.unique(event, return_inverse=True)
+    max_layer = np.full(len(event_ids), -1, dtype=np.int64)
+    np.maximum.at(max_layer, event_index, layerID)
+    last_row = np.r_[event[1:] != event[:-1], True]
+    print("Unique recorded events:", len(event_ids))
+    print("Contiguous event blocks:", np.count_nonzero(last_row))
+    print("Blocks ending below their event's maximum layer:",
+          np.count_nonzero(layerID[last_row] < max_layer[event_index[last_row]]))
+    n_recorded = len(event_ids)
+    del event, event_ids, event_index, last_row
 
-    integration_step = dx   if useHighland else layerThickness
-
-    weights = eigenvalues * integration_step / 2
-
-    if storeEigenvalues:
-        all_eigenvalues.append(eigenvalues)
-        all_weights.append(weights)
-
-    reach_analytical[j] = gchi2_exact_cdf(deltaR_max, weights)
-
-    reach_rng[j], reach_rng_error[j] = gchi2_cdf_rng( deltaR_max, weights, rng, n_samples=100_000)
-
-    reach_geometry[j], reach_geometry_error[j], _ = (reach_probability_rng_geometry( remaining_range=R0 - d, cumulative_variance=V, dz=dx, rng=rng, n_samples=50_000))
-
-stopping_probability = -np.gradient(reach_analytical, depthsFiltered)
-stopping_probability = np.maximum(stopping_probability, 0)
-# normalization = np.trapezoid(stopping_probability, depthsFiltered)
-# if normalization > 0:
-#     stopping_probability /= normalization
-
-ig, (ax, ax_diff) = plt.subplots( 2, 1, figsize=(10, 8), sharex=True, gridspec_kw={"height_ratios": [3, 1]})
-
-ax.plot( depthsFiltered, reach_analytical, label="Analytical CDF", linewidth=2)
-ax.plot( depthsFiltered, reach_rng, "--", label="RNG CDF", linewidth=2)
-ax.plot( depthsFiltered, reach_geometry, "--", label="RNG CDF without approximations", linewidth=2)
-ax.fill_between( depthsFiltered, np.maximum(0, reach_rng - 2 * reach_rng_error), np.minimum(1, reach_rng + 2 * reach_rng_error), alpha=0.25, label="RNG ±2 standard errors")
-ax.set_ylabel("Reach probability")
-ax.legend()
-ax.grid()
-
-difference = reach_rng - reach_analytical
-
-ax_diff.plot(depthsFiltered, difference, color="black")
-ax_diff.fill_between( depthsFiltered, -2 * reach_rng_error, 2 * reach_rng_error, alpha=0.25)
-
-ax_diff.axhline(0, color="gray", linestyle="--")
-ax_diff.set_xlabel("Depth / cm")
-ax_diff.set_ylabel("RNG - analytical")
-ax_diff.grid()
-
-plt.tight_layout()
-plt.show()
-
-##########################
-
-
-plt.figure(figsize=(10, 6))
-plt.plot(depthsFiltered, reach_analytical, linewidth=2, label="Analytical reach probability")
-plt.plot(depthsFiltered, stopping_probability, linewidth=2, label="Analytical stopping probability")
-plt.plot(depthsFiltered, reach_rng, "--", linewidth=2, label="RNG reach probability")
-plt.plot(depthsFiltered, reach_geometry, "--", label="RNG CDF without approximations", linewidth=2)
-plt.plot(g4_reach_depths, reach_analytical_g4, label="G4 Reach probability")
-plt.plot(g4_reach_depths, grad_stopping_probability_g4, color="red", linewidth=2, label="G4 Stopping probability")
-plt.axvline(R0, linestyle="--", color="black")
-plt.xlabel("Stopping depth / cm")
-plt.ylabel(r"$P_{\mathrm{stop}}(x)$")
-
-plt.grid(True)
-plt.legend()
-plt.tight_layout()
-plt.show()
-
-#########################
-
-plt.figure(figsize=(12, 9))
-
-plt.plot(G4depths, SingleAngleRMSFromCum, "o-", label="Gaussian fit single scattering rms")
-plt.plot(G4depths, SingleSigmaCore, "s--", label=r"Geant4")
-
-plt.xlabel("Depth / cm")
-plt.ylabel("Single scattering angle RMS / degree")
-plt.grid(True, alpha=0.3)
-plt.legend()
-plt.tight_layout()
-plt.show()
-
-################################################################################# gaussian test 
-
-# target_depth = 20.0
-# angles = ScatteringAngle[np.abs(depth - target_depth) < 0.001]
-# counts, bin_edges = np.histogram(angles, bins=500, density=True)
-# bin_centers = 0.5 * (bin_edges[:-1] + bin_edges[1:])
-# A0 = np.max(counts)
-# mu0 = np.mean(angles)
-# sigma0 = np.std(angles)
-# popt, pcov = curve_fit(gaussian, bin_centers, counts, p0=[A0, mu0, sigma0], maxfev=100000)
-# A, mu, sigma = popt
-# x_fit = np.linspace( bin_edges[0], bin_edges[-1], 500)
-# y_fit = gaussian(x_fit, A, mu, sigma)
-
-alpha = data.alpha[0]
-p_exp = data.p
-E0 = 220
-
-R0 = analysisFunctions.range_energy(data, E0)
-
-useMask = True
-if useMask:
-    N = len(CumSigmaCore)
-    G4depths = G4depths[:N]
-    SingleAngleRMSFromCum = SingleAngleRMSFromCum[:N]
-    SingleSigmaCore = SingleSigmaCore [:N]
-    CumDeltaXSigmaCore = CumDeltaXSigmaCore [:N]
+    # Group once by layer ID. This avoids repeatedly scanning all hits and
+    # prevents a fixed depth tolerance from mixing neighbouring fine layers.
+    order = np.argsort(layerID, kind="stable")
     
-    mask = G4depths < R0 + 1
+    boundary_layers, starts, counts = np.unique(layerID[order], return_index=True, return_counts=True) 
 
-    G4depths = G4depths[mask]
-    CumSigmaCore = CumSigmaCore[mask]
-    SingleAngleRMSFromCum = SingleAngleRMSFromCum[mask]
-    SingleSigmaCore = SingleSigmaCore[mask]
-    CumDeltaXSigmaCore = CumDeltaXSigmaCore[mask]
+    if not np.array_equal(boundary_layers, np.arange(len(boundary_layers))):
+        raise ValueError("Missing layer IDs: need a complete consecutive prefix from 0.")
 
-m_p = 938.272
+    # The only depth grid: z[i] = downstream boundary of layer i.
+    z = np.empty(len(boundary_layers), dtype=float)
+    CumSigmaCore = np.full(len(z), np.nan)
+    SingleSigmaCore = np.full(len(z), np.nan)
+    CumDeltaXSigmaCore = np.full(len(z), np.nan)
+    
+    print("Calculating angular core widths by layer")
+    
+    for i, (start, count) in enumerate(zip(starts, counts)):
+        rows = order[start:start + count]
+        recorded_depth = hit_depth[rows]
+        if not np.all(np.isfinite(recorded_depth)):
+            raise ValueError(f"Nonfinite depths in layer {i}.")
+        z[i] = recorded_depth[0]
+        if not np.allclose(recorded_depth, z[i], rtol=1e-7, atol=1e-8):
+            raise ValueError(f"Layer {i} has inconsistent downstream depths; check scoring.")
+        CumSigmaCore[i] = gaussian_core_sigma(CumScatteringAngle[rows], CumSigmaCore[i-1])
+        SingleSigmaCore[i] = gaussian_core_sigma(ScatteringAngle[rows], SingleSigmaCore[i-1])
+        CumDeltaXSigmaCore[i] = gaussian_core_sigma(deltaX[rows], CumDeltaXSigmaCore[i-1])
+        
+        if i % 10 == 0:
+            print(f"Layer {i}, depth {z[i]:.6f} cm")
+            
+    del order, starts, counts, layerID, hit_depth
+    del CumScatteringAngle, ScatteringAngle, deltaX
+    
+    if np.any(z <= 0) or np.any(np.diff(z) <= 0):
+        raise ValueError("z must contain positive increasing downstream boundaries.")
+    # Include the interval from the material entrance (depth 0) to z[0].
+    dz = np.diff(np.r_[0.0, z])
+    print(f"Intervals: {len(z)}, dz min/max: {dz.min():.6g}/{dz.max():.6g} cm")
 
-x_max = 0.999 * R0
-depths = np.arange(dx, x_max, dx)
+    # Geant4 reach at exactly the same z entries. Do not invent an extra
+    # boundary or infer its width from the preceding layer.
+    max_layer.sort()
+    n_reaching = len(max_layer) - np.searchsorted(max_layer, boundary_layers, side="left")
+    n_primaries = n_recorded if N_PRIMARIES is None else N_PRIMARIES
+    if not np.isfinite(n_primaries) or n_primaries < n_recorded or int(n_primaries) != n_primaries:
+        raise ValueError("N_PRIMARIES must be an integer >= recorded event count.")
+    reach_analytical_g4 = n_reaching / n_primaries
+    
+    del max_layer
+    
+    if N_PRIMARIES is None:
+        print("Geant4 reach is normalized to recorded events (N_PRIMARIES=None).")
 
-E_k = E0 * (1 - depths/R0)**(1/p_exp)
-betaPc = E_k * (E_k + 2*m_p)/(E_k + m_p)
+    data_file = ("../../range_energy/data_analysis/pbwo4_alt_range_energy.npz"
+                 if usePbWO4 else "../../range_energy/data_analysis/h2o_alt_range_energy.npz")
+    data = analysisFunctions.load_EnergyRange(data_file)
+    p_exp = float(data.p)
+    fitted_R0 = float(analysisFunctions.range_energy(data, E0))
+    R0 = fitted_R0 if R0_OVERRIDE is None else float(R0_OVERRIDE)
+    X0 = 0.89 if usePbWO4 else 36.08
+    if not np.isfinite(R0) or R0 <= 0:
+        raise ValueError("R0 must be finite and positive.")
+    print(f"Fitted R0: {fitted_R0:.8f} cm; used R0: {R0:.8f} cm")
 
-integrand = (13.6/betaPc)**2 * dx/X0
-log_factor = 1 + 0.038*np.log(depths/X0)
-CumRMSHighland = log_factor * np.sqrt(np.cumsum(integrand))
-theta_integrated_deg = np.degrees(CumRMSHighland)
+    # Keep z and every per-depth array at their full original length.
+    # The fixed-range model is evaluated only on this contiguous prefix.
+    
+    n_model = np.searchsorted(z, R0, side="left") #use left
+    if n_model == 0:
+        raise ValueError("No scored boundary lies below R0.")
+    
+    CumVarCore = CumSigmaCore**2  # Input angles are already radians.
+    CumVarHighland = np.full(len(z), np.nan)
+    CumVarHighland[:n_model] = mcs.highland_variance(
+        z=z[:n_model], dz=dz[:n_model], R0=R0,
+        E0=E0, p_exp=p_exp, X0=X0,
+    )
+    # Above retains your existing power-law energy profile. For your polynomial
+    # law, pass the consistent inverse as energy_at_depth to the helper.
+    V = CumVarHighland if useHighland else CumVarCore
+    # Validate without replacing/truncating the master z/dz arrays.
+    mcs.simulation_grid(z[:n_model], V[:n_model], R0,
+                        layer_ids=boundary_layers[:n_model])
 
-varianceHigh = CumRMSHighland**2
-SingleAngleVarianceHigh = np.empty_like(theta_integrated_deg)
-SingleAngleVarianceHigh[0] = varianceHigh[0]
-SingleAngleVarianceHigh[1:] = (varianceHigh[1:] - varianceHigh[:-1])
-SingleAngleHigh = np.degrees(np.sqrt(SingleAngleVarianceHigh))
+    rng = np.random.default_rng(12345)
+    reach_analytical = np.zeros(len(z))
+    stop_analytical = np.zeros(len(z))
+    reach_rng = np.zeros(len(z))
+    reach_rng_error = np.zeros(len(z))
+    reach_geometry = np.zeros(len(z))
+    reach_geometry_error = np.zeros(len(z))
+    
+    for j in range(n_model):
+        remaining_range = R0 - z[j]
+        V_j, dz_j = V[:j+1], dz[:j+1]
+        weights = mcs.weighted_eigenvalues(V_j, dz_j)
+        probability = float(mcs.gchi2_exact_cdf(remaining_range, weights))
+        stoppProbability = float(mcs.gchi2_exact_pdf(remaining_range, weights))
+        if not np.isfinite(probability) or not 0 <= probability <= 1:
+            raise FloatingPointError(
+                f"Analytical CDF={probability} at z={z[j]}; check residue cancellation.")
+        reach_analytical[j] = probability
+        stop_analytical[j] = stoppProbability
+        reach_rng[j], reach_rng_error[j] = mcs.gchi2_cdf_rng(
+            remaining_range, weights, rng, n_samples=N_RNG)
+        # Indexing the first two results also accepts your two-return variant.
+        geometry_result = mcs.reach_probability_rng_geometry(
+            remaining_range, V_j, dz_j, rng, n_samples=N_GEOMETRY)
+        reach_geometry[j], reach_geometry_error[j] = geometry_result
 
-plt.rcParams.update({'font.size': 26})
-plt.figure(figsize=(12, 9))
+    z_plot = np.r_[z, z[-1] + dz[-1]]
+    dz_plot = np.r_[dz, dz[-1]]
 
-plt.plot(depths, theta_integrated_deg, color="navy", linewidth=2, label="Integral Highland global log")
+    reach_g4_plot = np.r_[reach_analytical_g4, 0.0]
+    reach_analytical_plot = np.r_[reach_analytical, 0.0]
+    stop_analytical_plot = np.r_[stop_analytical, 0.0]
+    reach_rng_plot = np.r_[reach_rng, 0.0]
+    reach_geometry_plot = np.r_[reach_geometry, 0.0]
 
-# plt.plot(depths, theta_integrated_deg14, color="green", linewidth=2, label="Integral Highland global log 14.1")
-#plt.plot(depths, theta_naive_deg, color="orange", linewidth=2, label="Integral Highland local log")
-# plt.plot(depths, theta, color="red", linewidth=2, label="Simple Highland")
-#plt.plot(depths, SingleAngleHigh, color="black", linewidth=2.5, label="Single Highland Angle")
+    reach_rng_error_plot = np.r_[reach_rng_error, 0.0]
+    reach_geometry_error_plot = np.r_[reach_geometry_error, 0.0]
 
-plt.scatter(G4depths, CumSigmaCore, s=10, color="green", label="Geant4 Theta")
-plt.scatter(G4depths, SingleAngleRMSFromCum, s=10, label="SingleAngleRMSFromCum")
-plt.scatter(G4depths, SingleSigmaCore, s=10, label="SingleSigmaCore")
+    # Values at z >= R0 remain the fixed-range model's zero boundary values.
+    print(f"Last model evaluation: {z[n_model-1]:.8f} cm; "
+          f"gap to R0: {R0-z[n_model-1]:.8f} cm; "
+          f"reach there: {reach_analytical[n_model-1]:.6g}")
+    print(f"Geant4 reach at last recorded boundary: {reach_analytical_g4[-1]:.6g}")
 
-plt.xlabel("Depth / cm")
-plt.ylabel("RMS projected angle / degree")
-plt.title("Multiple Coulomb Scattering")
-plt.grid(True)
-plt.legend()
-plt.tight_layout()
-plt.savefig("multiple_coulomb_scattering.svg", format="svg", bbox_inches="tight")
-plt.show()
+    fig, (ax, ax_diff) = plt.subplots(
+        2, 1, figsize=(10, 8), sharex=True, gridspec_kw={"height_ratios": [3, 1]})
+    ax.plot(z_plot, reach_analytical_plot, label="Analytical CDF")
+    ax.plot(z_plot, reach_rng_plot, "--", label="Chi-squared RNG")
+    ax.plot(z_plot, reach_geometry_plot, ":", label="Nonlinear-geometry RNG")
+    ax.plot(z_plot, reach_g4_plot, ".-", label="Geant4 reach")
+    ax.fill_between(z_plot, np.maximum(0, reach_rng_plot-2*reach_rng_error_plot),
+                    np.minimum(1, reach_rng_plot+2*reach_rng_error_plot), alpha=.25,
+                    label="RNG ±2 standard errors")
+    ax.axvline(R0, color="gray", linestyle="--", label="R0")
+    ax.set_ylabel("Reach probability")
+    ax.legend()
+    ax.grid()
+    ax_diff.plot(z_plot, reach_rng_plot-reach_analytical_plot, color="black")
+    ax_diff.fill_between(z_plot, -2*reach_rng_error_plot, 2*reach_rng_error_plot, alpha=.25)
+    ax_diff.axhline(0, color="gray", linestyle="--")
+    ax_diff.set(xlabel="Depth / cm", ylabel="RNG − analytical")
+    ax_diff.grid()
+    fig.tight_layout()
+    plt.show()
 
-layerThickness  = G4depths[1] - G4depths[0]
-lateralVariance = np.zeros(len(G4depths))
+    # Densities live on the intervals between measured boundaries. Use these
+    # exact same z edges; no centre grid, extra G4 edge, or normalization.
+    # The first interval and the unobserved tail are deliberately not inferred.
+    stop_bin_probabilityg4 = -np.diff(reach_g4_plot)
+    stop_bin_densityg4 = stop_bin_probabilityg4 / dz_plot[1:]
+    stop_bin_probability = -np.diff(reach_analytical_plot)
+    stop_bin_density = stop_bin_probability / dz_plot[1:]
+    if np.any(stop_bin_probability < -1e-8):
+        warnings.warn("Analytical reach rises with depth; inspect CDF numerical stability.")
+    plt.figure(figsize=(10, 6))
+    plt.stairs(stop_bin_density, z_plot, baseline=None, label="Analytical stopping density")
+    #plt.stairs(stop_analytical_plot, z_plot, baseline=None, label="Analytical PDF")
+    plt.stairs(stop_bin_densityg4, z_plot, baseline=None, label="G4 last-crossing interval density")
+    plt.xlabel("Depth / cm")
+    plt.ylabel(r"Density / cm$^{-1}$")
+    plt.legend()
+    plt.grid()
+    plt.tight_layout()
+    plt.show()
 
-for j, d in enumerate(G4depths):
-    lever_arm = layerThickness+d - G4depths[:j+1]
-    lateralVariance[j] = np.maximum(np.sum((lever_arm * np.tan(np.radians(SingleAngleRMSFromCum[:j+1])))**2),0)
+    # Diagnostic increments: leave negative estimates undefined rather than
+    # silently clipping them to zero. They can arise from noisy/core widths.
+    increment_variance = np.diff(np.r_[0.0, CumVarCore])
+    SingleAngleRMSFromCum = np.full(len(z), np.nan)
+    good = np.isfinite(increment_variance) & (increment_variance >= 0)
+    SingleAngleRMSFromCum[good] = np.sqrt(increment_variance[good])
 
-plt.rcParams.update({'font.size': 26})
-plt.figure(figsize=(12, 9))
+    plt.figure(figsize=(12, 9))
+    plt.plot(z, np.degrees(SingleAngleRMSFromCum), "o-", label="From cumulative core variance")
+    plt.plot(z, np.degrees(SingleSigmaCore), "s--", label="Direct Geant4 single-angle core width")
+    plt.xlabel("Depth / cm")
+    plt.ylabel("Single projected angle / degree")
+    plt.legend()
+    plt.grid(alpha=.3)
+    plt.tight_layout()
+    plt.show()
 
-plt.scatter(G4depths, np.sqrt(lateralVariance), marker="o", s=10, color="orange", label="Geant4")
-plt.plot(G4depths, CumDeltaXSigmaCore, color="navy", linewidth=2, label="Geant4 Lateral Scattering RMS")
-plt.xlabel("Depth / cm")
-plt.ylabel("Lateral Scattering / cm")
-plt.grid(True)
-plt.legend()
-plt.tight_layout()
-plt.savefig("lateral_scattering.svg", format="svg", bbox_inches="tight")
-plt.show()
+    plt.figure(figsize=(12, 9))
+    plt.plot(z, np.degrees(np.sqrt(CumVarHighland)), label="Integrated Highland, global log")
+    plt.scatter(z, np.degrees(CumSigmaCore), s=10, label="Geant4 cumulative core width")
+    plt.scatter(z, np.degrees(SingleAngleRMSFromCum), s=10, label="From cumulative variance")
+    plt.scatter(z, np.degrees(SingleSigmaCore), s=10, label="Geant4 single-angle core width")
+    plt.xlabel("Depth / cm")
+    plt.ylabel("Projected angle / degree")
+    plt.legend()
+    plt.grid()
+    plt.tight_layout()
+    plt.savefig("multiple_coulomb_scattering.svg", bbox_inches="tight")
+    plt.show()
+
+    # Retain your lever-arm diagnostic on unequal intervals. With right-end
+    # angles held over each interval, kick i acts over z[j]-(z[i]-dz[i]).
+    # This is a SMALL-ANGLE variance estimate: use Var(theta), not tan(RMS)^2.
+    lateralVariance = np.full(len(z), np.nan)
+    for j, d in enumerate(z):
+        if np.all(good[:j+1]):
+            lever_arm = d-z[:j+1]+dz[:j+1]
+            lateralVariance[j] = np.sum(lever_arm**2 * increment_variance[:j+1])
+    plt.figure(figsize=(12, 9))
+    plt.plot(z, np.sqrt(lateralVariance), "o-", label="Gaussian increment model")
+    plt.plot(z, CumDeltaXSigmaCore, label="Geant4 lateral core width")
+    plt.xlabel("Depth / cm")
+    plt.ylabel("Lateral width / cm")
+    plt.legend()
+    plt.grid()
+    plt.tight_layout()
+    plt.savefig("lateral_scattering.svg", bbox_inches="tight")
+    plt.show()
 
 
-pdf_sat = np.array([gchi2_satterthwaite(xi, weights) for xi in depthsFiltered])
-pdf_ww = np.array([gchi2_welch_welford(xi, weights) for xi in depthsFiltered])
-
-plt.figure(figsize=(10, 6))
-plt.plot(depthsFiltered, pdf_sat, 'b-', label='Satterthwaite (χ²)', linewidth=2)
-plt.plot(depthsFiltered, pdf_ww, 'g-', label='Welch-Welford (Gamma)', linewidth=2)
-
-plt.xlabel('x', fontsize=12)
-plt.ylabel('PDF', fontsize=12)
-plt.legend(fontsize=11)
-plt.grid(True, alpha=0.3)
-plt.tight_layout()
-plt.show()
+if __name__ == "__main__":
+    main()
