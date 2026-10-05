@@ -230,8 +230,10 @@ def gchi2_exact_cdf(x, weights):
         return np.asarray(x >= 0, dtype=float)
     coefficients = calculate_coefficients(weights)
     cdf = np.ones_like(x)
+    
     for wi, Ai in zip(weights, coefficients):
         cdf -= Ai * np.exp(-np.maximum(x, 0) / (2 * wi))
+    
     return np.where(x <= 0, 0.0, cdf)
 
 def reach_cdf_grid(z, dz, V, R0, cdf, indices=None):

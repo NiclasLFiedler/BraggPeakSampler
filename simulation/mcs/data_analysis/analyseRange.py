@@ -16,7 +16,7 @@ sys.path.append("../../range_energy/data_analysis")
 import analysisFunctions
 import mcs_helper as mcs
 from plotter import plot_scattering_core
-plt.rcParams.update({'font.size': 32})
+plt.rcParams.update({'font.size': 18})
 
 # Configuration: preserve the settings in the supplied script.
 usePbWO4 = True
@@ -33,6 +33,7 @@ N_GEOMETRY = 100_000
 # Confirm against your scorer: convert deltaX to cm if it was stored in mm.
 DELTA_X_TO_CM = 1.0
 PLOT_LAYER_INDEX = 90
+X_LIM = 5
 
 def gaussian_core_sigma(values, latestSigma):
     values = values[np.isfinite(values)]
@@ -238,13 +239,13 @@ def main():
 
     fig, (ax, ax_diff) = plt.subplots(
         2, 1, figsize=(12, 9), sharex=True, gridspec_kw={"height_ratios": [3, 1]})
-    ax.plot(z_plot, reach_analytical_plot, label="Analytical CDF")
-    ax.plot(z_plot, reach_rng_plot, "--", label="Chi-squared RNG")
-    ax.plot(z_plot, reach_geometry_plot, ":", label="Nonlinear-geometry RNG")
-    ax.plot(z_plot, reach_g4_plot, ".-", label="Geant4 reach")
-    ax.fill_between(z_plot, np.maximum(0, reach_rng_plot-2*reach_rng_error_plot),
-                    np.minimum(1, reach_rng_plot+2*reach_rng_error_plot), alpha=.25,
-                    label="RNG ±2 standard errors")
+    ax.plot(z_plot, reach_analytical_plot, label="Reach Prob. - Analytical CDF")
+    #ax.plot(z_plot, reach_rng_plot, ":", label="Reach Prob. - Chi-squared RNG")
+    ax.plot(z_plot, reach_geometry_plot, "--", label="Reach Prob. - RNG")
+    ax.plot(z_plot, reach_g4_plot, ".-", label="Reach Prob. - Geant4")
+    # ax.fill_between(z_plot, np.maximum(0, reach_rng_plot-2*reach_rng_error_plot),
+                    # np.minimum(1, reach_rng_plot+2*reach_rng_error_plot), alpha=.25,
+                    # label="RNG ±2 standard errors")
     ax.axvline(R0, color="gray", linestyle="--", label="R0")
     ax.set_ylabel("Reach probability")
     ax.legend()
@@ -258,20 +259,22 @@ def main():
     ax_diff.plot(z, residuals, ".-", color="black", label="Geant4 - Analytical")
     ax_diff.plot(z_plot, reach_rng_plot-reach_analytical_plot, color="red", label="RNG - Analytical")
     ax_diff.fill_between(z_plot, -2*reach_rng_error_plot, 2*reach_rng_error_plot, alpha=.25, label="RNG - Analytical error band")
-    ax_diff.axhline(0, color="gray", linestyle="--")
+    ax_diff.axvline(R0, color="gray", linestyle="--", label="R0")
     ax_diff.set(xlabel="Depth / cm", ylabel="Residuals")
     ax_diff.grid()
     ax_diff.legend()
     fig.tight_layout()
+    plt.xlim(left=X_LIM)
     plt.show()
 
     # Densities live on the intervals between measured boundaries. Use these
     # exact same z edges; no centre grid, extra G4 edge, or normalization.
     # The first interval and the unobserved tail are deliberately not inferred.
     stop_bin_probabilityg4 = -np.diff(reach_g4_plot)
-    stop_bin_densityg4 = stop_bin_probabilityg4 / dz_plot[1:]
+    stop_bin_densityg4 = stop_bin_probabilityg4 / dz_plot[1:] / 100
+    print(f"Sum: {np.sum(stop_bin_probabilityg4)}")
     stop_bin_probability = -np.diff(reach_analytical_plot)
-    stop_bin_density = stop_bin_probability / dz_plot[1:]
+    stop_bin_density = stop_bin_probability / dz_plot[1:] / 100
     if np.any(stop_bin_probability < -1e-8):
         warnings.warn("Analytical reach rises with depth; inspect CDF numerical stability.")
     plt.figure(figsize=(12, 9))
@@ -279,7 +282,7 @@ def main():
     #plt.stairs(stop_analytical_plot, z_plot, baseline=None, label="Analytical PDF")
     plt.stairs(stop_bin_densityg4, z_plot, baseline=None, label="G4 last-crossing interval density")
     plt.xlabel("Depth / cm")
-    plt.ylabel(r"Density / cm$^{-1}$")
+    plt.ylabel(r"Stop Probability")# / cm$^{-1}$")
     plt.legend()
     plt.grid()
     plt.tight_layout()

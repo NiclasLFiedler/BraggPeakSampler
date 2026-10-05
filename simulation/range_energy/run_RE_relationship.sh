@@ -11,7 +11,7 @@ for energy in "${beam_energies[@]}"; do
     sed -i "s/\/set\/beamenergy [0-9]* MeV/\/set\/beamenergy $energy MeV/" run_p.mac
 
     # Set a unique output filename based on the energy
-    output_file="h2o/range_${energy}.root"
+    output_file="pbwo4/range_${energy}.root"
 
     # Run the simulation with the modified macro file
     ./braggtheory run_p.mac

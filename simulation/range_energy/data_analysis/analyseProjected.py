@@ -156,7 +156,7 @@ def main():
     useMaxRange = False
     energies = [3, 5, 10, 15, 20, 30, 40, 50, 60, 70, 80, 90, 100, 125, 150, 175, 200, 220]#, 275, 300]
 
-    name = "h2o"
+    name = "pbwo4"
 
     files_and_energies = []
     for energy in energies:
