@@ -50,7 +50,7 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
     G4double energy = aStep->GetPreStepPoint()->GetTotalEnergy();
     G4double eKin = aStep->GetPreStepPoint()->GetKineticEnergy();
     
-    G4ParticleDefinition* particle =aStep->GetTrack()->GetDefinition();
+    G4ParticleDefinition* particle = aStep->GetTrack()->GetDefinition();
     G4EmCalculator emCalc;
     G4Material* material = aStep->GetPreStepPoint()->GetMaterial();
     eKin = 220;

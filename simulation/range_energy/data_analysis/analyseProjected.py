@@ -11,11 +11,6 @@ def gaussian(x, amplitude, mean, sigma):
 
 
 def load_and_extract_ranges(filename):
-    """
-    Load ROOT file and extract projected ranges (last z-position of trackid 0).
-    
-    Returns array of final positions for each event.
-    """
     with uproot.open(filename) as file:
         tree = file["braggsampler"]
         
@@ -103,12 +98,6 @@ def fit_and_plot(ranges, energy, output_dir="./results", output=False):
     }
 
 def max_range_and_plot(ranges, energy, output_dir="./results", output=False):
-    """
-    Determine projected range from the histogram maximum.
-
-    A parabola through the maximum bin and its two neighbours is used
-    to obtain a sub-bin estimate of the peak position.
-    """
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -136,59 +125,36 @@ def max_range_and_plot(ranges, energy, output_dir="./results", output=False):
     # Plot
     fig, ax = plt.subplots(figsize=(12, 9))
 
-    ax.step(
-        bin_centers,
-        counts,
-        where="mid",
-        linewidth=1.5,
-        alpha=0.7,
-        label="Data"
-    )
+    ax.step( bin_centers, counts, where="mid", linewidth=1.5, alpha=0.7, label="Data")
 
-    ax.axvline(
-        range_max,
-        linestyle="--",
-        linewidth=2,
-        label=f"Range = {range_max:.3f} mm"
-    )
+    ax.axvline( range_max, linestyle="--", linewidth=2, label=f"Range = {range_max:.3f} mm")
 
     ax.set_xlabel("Position (mm)", fontsize=12)
     ax.set_ylabel("Counts", fontsize=12)
-    ax.set_title(
-        f"Projected Range - {energy} MeV",
-        fontsize=13,
-        fontweight="bold"
-    )
+    ax.set_title( f"Projected Range - {energy} MeV", fontsize=13, fontweight="bold")
 
     ax.legend(fontsize=11)
     ax.grid(True, alpha=0.3)
 
     if output:
-        plt.savefig(
-            output_dir / f"range_{energy}MeV.pdf",
-            bbox_inches="tight",
-            format="pdf"
-        )
+        plt.savefig( output_dir / f"range_{energy}MeV.pdf", bbox_inches="tight", format="pdf")
 
     # plt.show()
     plt.close()
 
-    print(
-        f"{energy} MeV: Range maximum = {range_max:.3f} mm"
-    )
+    print(f"{energy} MeV: Range maximum = {range_max:.3f} mm")
 
-    return {
-        "energy": energy,
-        "range": range_max,
-        "range_err": 0,
-        "sigma": 0,
-        "sigma_err": 0
-    }
+    return { "energy": energy, "range": range_max, "range_err": 0, "sigma": 0, "sigma_err": 0}
+
+def CSDARange(ranges, energy, output_dir="./results", output=False):
+    print(f"{energy} MeV: Using CSDA range = {ranges[0]:.3f} mm")
+    return { "energy": energy, "range": ranges[0], "range_err": 0, "sigma": 0, "sigma_err": 0}
 
 def main():         
     PDFoutput = False
     useGaussianFit = False
-    energies = [3, 5, 10, 15, 20, 30, 40, 50, 60, 70, 80, 90, 100, 125, 150, 175, 200, 225]#, 250, 275, 300]
+    useMaxRange = False
+    energies = [3, 5, 10, 15, 20, 30, 40, 50, 60, 70, 80, 90, 100, 125, 150, 175, 200, 220]#, 275, 300]
 
     name = "h2o"
 
@@ -210,8 +176,10 @@ def main():
         
         if useGaussianFit:
             result = fit_and_plot(ranges, energy, output_dir, output=PDFoutput)
-        else:
+        elif useMaxRange:
             result = max_range_and_plot(ranges, energy, output_dir, output=PDFoutput)
+        else:
+            result = CSDARange(ranges, energy, output_dir, output=PDFoutput)
 
         results.append(result)
     
@@ -221,6 +189,10 @@ def main():
     range_errors = np.array([r['range_err'] for r in results])
     sigmas = np.array([r['sigma'] for r in results])
     sigma_errors = np.array([r['sigma_err'] for r in results])
+    
+    print(len(energies))
+    print(len(ranges))
+    print(len(range_errors))
     
     output_file = Path(output_dir) / "ranges.npz"
     np.savez(output_file, 
@@ -234,8 +206,7 @@ def main():
     
     # Summary plot
     fig, ax = plt.subplots(figsize=(12, 9))
-    ax.errorbar(energies, ranges, yerr=range_errors, fmt='o-', markersize=8,
-               capsize=5, linewidth=2)
+    ax.errorbar(energies, ranges, yerr=range_errors, fmt='o-', markersize=8, capsize=5, linewidth=2)
     ax.set_xlabel('Beam Energy (MeV)', fontsize=12)
     ax.set_ylabel('Projected Range (mm)', fontsize=12)
     ax.set_title('Proton Projected Range vs Energy', fontsize=13, fontweight='bold')

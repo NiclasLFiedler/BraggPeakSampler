@@ -273,7 +273,7 @@ void DetectorConstruction::DefineMaterials()
   lungTissue->AddElement(elFe, 0.000370);
   lungTissue->AddElement(elZn, 0.000010);
   
-  detMaterial = water;
+  // detMaterial = water;
   
   heteroMaterial1 = water;
   heteroMaterial2 = air;

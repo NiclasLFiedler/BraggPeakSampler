@@ -15,14 +15,16 @@ import uproot
 sys.path.append("../../range_energy/data_analysis")
 import analysisFunctions
 import mcs_helper as mcs
+from plotter import plot_scattering_core
+plt.rcParams.update({'font.size': 32})
 
 # Configuration: preserve the settings in the supplied script.
-usePbWO4 = False
+usePbWO4 = True
 useHighland = False
 ROOT_FILE = "h2oproj.root"
 E0 = 220.0
 # Set to None to use range_energy(data, E0). These are your current overrides.
-R0_OVERRIDE = 6.73398 if usePbWO4 else None #30.72
+R0_OVERRIDE = None if usePbWO4 else 30.73 #30.72, 6.73398 6.736
 # Set to the generated-primary count to include events with no recorded hit.
 # None preserves your original normalization to recorded events only.
 N_PRIMARIES = None
@@ -30,7 +32,7 @@ N_RNG = 100_000
 N_GEOMETRY = 100_000
 # Confirm against your scorer: convert deltaX to cm if it was stored in mm.
 DELTA_X_TO_CM = 1.0
-
+PLOT_LAYER_INDEX = 90
 
 def gaussian_core_sigma(values, latestSigma):
     values = values[np.isfinite(values)]
@@ -106,6 +108,32 @@ def main():
         SingleSigmaCore[i] = gaussian_core_sigma(ScatteringAngle[rows], SingleSigmaCore[i-1])
         CumDeltaXSigmaCore[i] = gaussian_core_sigma(deltaX[rows], CumDeltaXSigmaCore[i-1])
         
+        if i == PLOT_LAYER_INDEX:
+            angles = CumScatteringAngle[rows]
+            angles = angles[np.isfinite(angles)] * 1000  # mrad
+            sigma = CumSigmaCore[i] * 1000
+
+            theta = np.linspace(angles.min(), angles.max(), 2000)
+            gaussian = np.exp(-0.5 * (theta / sigma)**2)
+            gaussian /= np.sqrt(2 * np.pi) * sigma
+
+            fig, ax = plt.subplots(figsize=(12, 9))
+
+            ax.hist(angles, bins=150, density=True, histtype="step", linewidth=1.5, color="#21618C", label="Geant4")
+            ax.plot(theta, gaussian, linewidth=2, color="#D55E00", label="Gaussian core")
+
+            ax.set_yscale("log")
+            ax.set_ylim(bottom=0.1 / (len(angles) * sigma))
+            ax.set_xlabel(r"Cumulative angle $\theta_x$ / mrad")
+            ax.set_ylabel(r"Probability density / mrad$^{-1}$")
+            ax.set_title(f"Layer {i} — depth {z[i]:.2f} cm")
+            ax.legend()
+            ax.grid(alpha=0.5)
+
+            fig.tight_layout()
+            fig.savefig(f"scattering_core_layer_{i}.svg")
+            plt.show()
+        
         if i % 10 == 0:
             print(f"Layer {i}, depth {z[i]:.6f} cm")
             
@@ -136,6 +164,7 @@ def main():
                  if usePbWO4 else "../../range_energy/data_analysis/h2o_alt_range_energy.npz")
     data = analysisFunctions.load_EnergyRange(data_file)
     p_exp = float(data.p)
+    data = analysisFunctions.load_EnergyRange("../../range_energy/data_analysis/pbwo4_range_energy.npz") if usePbWO4 else analysisFunctions.load_EnergyRange("../../range_energy/data_analysis/h2o_range_energy.npz")
     fitted_R0 = float(analysisFunctions.range_energy(data, E0))
     R0 = fitted_R0 if R0_OVERRIDE is None else float(R0_OVERRIDE)
     X0 = 0.89 if usePbWO4 else 36.08
@@ -177,9 +206,9 @@ def main():
         weights = mcs.weighted_eigenvalues(V_j, dz_j)
         probability = float(mcs.gchi2_exact_cdf(remaining_range, weights))
         stoppProbability = float(mcs.gchi2_exact_pdf(remaining_range, weights))
-        if not np.isfinite(probability) or not 0 <= probability <= 1:
-            raise FloatingPointError(
-                f"Analytical CDF={probability} at z={z[j]}; check residue cancellation.")
+        # if not np.isfinite(probability) or not 0 <= probability <= 1:
+        #     raise FloatingPointError(
+        #         f"Analytical CDF={probability} at z={z[j]}; check residue cancellation.")
         reach_analytical[j] = probability
         stop_analytical[j] = stoppProbability
         reach_rng[j], reach_rng_error[j] = mcs.gchi2_cdf_rng(
@@ -208,7 +237,7 @@ def main():
     print(f"Geant4 reach at last recorded boundary: {reach_analytical_g4[-1]:.6g}")
 
     fig, (ax, ax_diff) = plt.subplots(
-        2, 1, figsize=(10, 8), sharex=True, gridspec_kw={"height_ratios": [3, 1]})
+        2, 1, figsize=(12, 9), sharex=True, gridspec_kw={"height_ratios": [3, 1]})
     ax.plot(z_plot, reach_analytical_plot, label="Analytical CDF")
     ax.plot(z_plot, reach_rng_plot, "--", label="Chi-squared RNG")
     ax.plot(z_plot, reach_geometry_plot, ":", label="Nonlinear-geometry RNG")
@@ -219,12 +248,20 @@ def main():
     ax.axvline(R0, color="gray", linestyle="--", label="R0")
     ax.set_ylabel("Reach probability")
     ax.legend()
+    
+    # ax.set_xscale("log")
     ax.grid()
-    ax_diff.plot(z_plot, reach_rng_plot-reach_analytical_plot, color="black")
-    ax_diff.fill_between(z_plot, -2*reach_rng_error_plot, 2*reach_rng_error_plot, alpha=.25)
+    
+    residuals = reach_analytical_g4 - reach_analytical
+
+            
+    ax_diff.plot(z, residuals, ".-", color="black", label="Geant4 - Analytical")
+    ax_diff.plot(z_plot, reach_rng_plot-reach_analytical_plot, color="red", label="RNG - Analytical")
+    ax_diff.fill_between(z_plot, -2*reach_rng_error_plot, 2*reach_rng_error_plot, alpha=.25, label="RNG - Analytical error band")
     ax_diff.axhline(0, color="gray", linestyle="--")
-    ax_diff.set(xlabel="Depth / cm", ylabel="RNG − analytical")
+    ax_diff.set(xlabel="Depth / cm", ylabel="Residuals")
     ax_diff.grid()
+    ax_diff.legend()
     fig.tight_layout()
     plt.show()
 
@@ -237,7 +274,7 @@ def main():
     stop_bin_density = stop_bin_probability / dz_plot[1:]
     if np.any(stop_bin_probability < -1e-8):
         warnings.warn("Analytical reach rises with depth; inspect CDF numerical stability.")
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(12, 9))
     plt.stairs(stop_bin_density, z_plot, baseline=None, label="Analytical stopping density")
     #plt.stairs(stop_analytical_plot, z_plot, baseline=None, label="Analytical PDF")
     plt.stairs(stop_bin_densityg4, z_plot, baseline=None, label="G4 last-crossing interval density")
@@ -268,8 +305,8 @@ def main():
     plt.figure(figsize=(12, 9))
     plt.plot(z, np.degrees(np.sqrt(CumVarHighland)), label="Integrated Highland, global log")
     plt.scatter(z, np.degrees(CumSigmaCore), s=10, label="Geant4 cumulative core width")
-    plt.scatter(z, np.degrees(SingleAngleRMSFromCum), s=10, label="From cumulative variance")
-    plt.scatter(z, np.degrees(SingleSigmaCore), s=10, label="Geant4 single-angle core width")
+    # plt.scatter(z, np.degrees(SingleAngleRMSFromCum), s=10, label="From cumulative variance")
+    # plt.scatter(z, np.degrees(SingleSigmaCore), s=10, label="Geant4 single-angle core width")
     plt.xlabel("Depth / cm")
     plt.ylabel("Projected angle / degree")
     plt.legend()
@@ -278,7 +315,7 @@ def main():
     plt.savefig("multiple_coulomb_scattering.svg", bbox_inches="tight")
     plt.show()
 
-    # Retain your lever-arm diagnostic on unequal intervals. With right-end
+    # Retain your lever-arm diagnostic on unequal intervals. With right-end 
     # angles held over each interval, kick i acts over z[j]-(z[i]-dz[i]).
     # This is a SMALL-ANGLE variance estimate: use Var(theta), not tan(RMS)^2.
     lateralVariance = np.full(len(z), np.nan)

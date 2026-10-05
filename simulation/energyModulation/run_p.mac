@@ -1,6 +1,11 @@
 /run/numberOfThreads 16
 /process/eLoss/CSDARange true
+#/run/setCutForAGivenParticle e- 100 km
 /run/initialize
+#/process/eLoss/fluct false
+#/process/inactivate protonInelastic
+#/process/inactivate hadElastic
+#/process/inactivate msc
 /run/verbose 1
 /gun/particle proton
 /set/beamenergy 220 MeV

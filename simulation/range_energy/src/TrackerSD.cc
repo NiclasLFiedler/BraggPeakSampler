@@ -4,6 +4,9 @@
 #include "G4ThreeVector.hh"
 #include "G4SDManager.hh"
 #include "G4ios.hh"
+#include "G4EmCalculator.hh"
+#include "G4ParticleTable.hh"
+#include "G4ParticleDefinition.hh"
 
 namespace B2
 {
@@ -38,28 +41,37 @@ void TrackerSD::Initialize(G4HCofThisEvent* hce)
 G4bool TrackerSD::ProcessHits(G4Step* aStep,
                                      G4TouchableHistory*)
 {
-  auto newHit = new TrackerHit();
-	if (aStep->GetTrack()->GetTrackID() == 1){
-  G4double eDep = aStep->GetTotalEnergyDeposit();
-  G4ThreeVector PPos = aStep->GetPostStepPoint()->GetPosition();
-  // Get the particle's momentum and mass
-  G4double momentum = aStep->GetTrack()->GetMomentum().mag();  // in MeV/c
-  G4double energy = aStep->GetPreStepPoint()->GetTotalEnergy();
-  G4double eKin = aStep->GetPreStepPoint()->GetKineticEnergy();
-  G4double StepLength = aStep->GetStepLength();
-  G4double dEdX = eDep/StepLength;
-  G4ThreeVector momentumDirection = aStep->GetTrack()->GetMomentumDirection();
-  double theta = std::atan2(momentumDirection.x(), momentumDirection.z());
+  if (aStep->GetTrack()->GetTrackID() == 1){
+    auto newHit = new TrackerHit();
+    G4double eDep = aStep->GetTotalEnergyDeposit();
+    G4ThreeVector PPos = aStep->GetPostStepPoint()->GetPosition();
+    
+    G4ParticleDefinition* particle = aStep->GetTrack()->GetDefinition();
+    G4EmCalculator emCalc;
+    G4Material* material = aStep->GetPreStepPoint()->GetMaterial();
+    G4double initialEKin = aStep->GetTrack()->GetVertexKineticEnergy();
+    
 
-  newHit->SetTrackID(aStep->GetTrack()->GetTrackID());
-  newHit->SetEkin(eKin);
-  newHit->SetEdep(eDep);
-  newHit->SetPos(PPos);
-  newHit->SetdEdX(dEdX);
-  newHit->SetEtot(energy);
-  newHit->SetStepLength(StepLength);
-  fHitsCollection->insert( newHit );
+    G4double Range = emCalc.GetRange( initialEKin, particle, material);
+
+    G4double momentum = aStep->GetTrack()->GetMomentum().mag();  // in MeV/c
+    G4double energy = aStep->GetPreStepPoint()->GetTotalEnergy();
+    G4double eKin = aStep->GetPreStepPoint()->GetKineticEnergy();
+    G4double StepLength = aStep->GetStepLength();
+    G4double dEdX = eDep/StepLength;
+    G4ThreeVector momentumDirection = aStep->GetTrack()->GetMomentumDirection();
+    double theta = std::atan2(momentumDirection.x(), momentumDirection.z());
+
+    newHit->SetTrackID(aStep->GetTrack()->GetTrackID());
+    newHit->SetEkin(eKin);
+    newHit->SetEdep(eDep);
+    newHit->SetPos(G4ThreeVector(0, 0, Range));
+    newHit->SetdEdX(dEdX);
+    newHit->SetEtot(energy);
+    newHit->SetStepLength(StepLength);
+    fHitsCollection->insert( newHit );
   }
+  aStep->GetTrack()->SetTrackStatus(fStopAndKill);
   return true;
 }
 

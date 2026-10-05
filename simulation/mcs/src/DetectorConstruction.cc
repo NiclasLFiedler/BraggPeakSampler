@@ -89,10 +89,10 @@ void DetectorConstruction::DefineMaterials()
   // Air defined using NIST Manager
   worldMat = nistManager->FindOrBuildMaterial("G4_AIR"); 
 
-  // detMaterial = nistManager->FindOrBuildMaterial("G4_PbWO4");
-  // detMaterial->GetIonisation()->SetMeanExcitationEnergy(600.7*eV);
+  detMaterial = nistManager->FindOrBuildMaterial("G4_PbWO4");
+  detMaterial->GetIonisation()->SetMeanExcitationEnergy(600.7*eV);
   
-  detMaterial = nistManager->FindOrBuildMaterial("G4_WATER");
+  // detMaterial = nistManager->FindOrBuildMaterial("G4_WATER");
 
   G4Material *SiO2 = new G4Material("SiO2", 2.65*g/cm3, 2);
   SiO2->AddElement(elSi, 1);
@@ -248,10 +248,10 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   // Depth measured from the phantom entrance along the beam.
   G4double switchDepth = 6.3 * cm;
   // Requested maximum layer widths.
-  G4double coarseWidth = 0.10  * cm;  // 1 mm
+  G4double coarseWidth = 0.1  * cm;  // 1 mm
   G4double fineWidth   = 0.01 * cm;  // 0.05 mm
   
-  bool useH2O = true;
+  bool useH2O = false;
   if(useH2O){
     phantomZ = 31.5*cm;
     switchDepth = 30 * cm;
