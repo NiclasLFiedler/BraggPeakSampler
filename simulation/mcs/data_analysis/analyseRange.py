@@ -16,15 +16,15 @@ sys.path.append("../../range_energy/data_analysis")
 import analysisFunctions
 import mcs_helper as mcs
 from plotter import plot_scattering_core
-plt.rcParams.update({'font.size': 18})
+plt.rcParams.update({'font.size': 16})
 
 # Configuration: preserve the settings in the supplied script.
-usePbWO4 = True
-useHighland = False
+usePbWO4 = False
+useHighland = True
 ROOT_FILE = "h2oproj.root"
 E0 = 220.0
 # Set to None to use range_energy(data, E0). These are your current overrides.
-R0_OVERRIDE = None if usePbWO4 else 30.73 #30.72, 6.73398 6.736
+R0_OVERRIDE = None if usePbWO4 else 30.732 #30.72, 6.73398 6.736
 # Set to the generated-primary count to include events with no recorded hit.
 # None preserves your original normalization to recorded events only.
 N_PRIMARIES = None
@@ -33,7 +33,7 @@ N_GEOMETRY = 100_000
 # Confirm against your scorer: convert deltaX to cm if it was stored in mm.
 DELTA_X_TO_CM = 1.0
 PLOT_LAYER_INDEX = 90
-X_LIM = 5
+X_LIM = 30
 
 def gaussian_core_sigma(values, latestSigma):
     values = values[np.isfinite(values)]
@@ -241,8 +241,8 @@ def main():
         2, 1, figsize=(12, 9), sharex=True, gridspec_kw={"height_ratios": [3, 1]})
     ax.plot(z_plot, reach_analytical_plot, label="Reach Prob. - Analytical CDF")
     #ax.plot(z_plot, reach_rng_plot, ":", label="Reach Prob. - Chi-squared RNG")
-    ax.plot(z_plot, reach_geometry_plot, "--", label="Reach Prob. - RNG")
     ax.plot(z_plot, reach_g4_plot, ".-", label="Reach Prob. - Geant4")
+    ax.plot(z_plot, reach_geometry_plot, "--", label="Reach Prob. - RNG")
     # ax.fill_between(z_plot, np.maximum(0, reach_rng_plot-2*reach_rng_error_plot),
                     # np.minimum(1, reach_rng_plot+2*reach_rng_error_plot), alpha=.25,
                     # label="RNG ±2 standard errors")
@@ -264,7 +264,8 @@ def main():
     ax_diff.grid()
     ax_diff.legend()
     fig.tight_layout()
-    plt.xlim(left=X_LIM)
+    plt.xlim(left=X_LIM, right=z_plot[-1]+0.05)
+    plt.savefig("MCSReachProbability.svg", bbox_inches="tight")
     plt.show()
 
     # Densities live on the intervals between measured boundaries. Use these
@@ -278,14 +279,16 @@ def main():
     if np.any(stop_bin_probability < -1e-8):
         warnings.warn("Analytical reach rises with depth; inspect CDF numerical stability.")
     plt.figure(figsize=(12, 9))
-    plt.stairs(stop_bin_density, z_plot, baseline=None, label="Analytical stopping density")
+    plt.stairs(np.r_[0, stop_bin_density, 0], np.r_[0, z_plot, 0], baseline=None, label="Analytical stopping probability")
     #plt.stairs(stop_analytical_plot, z_plot, baseline=None, label="Analytical PDF")
-    plt.stairs(stop_bin_densityg4, z_plot, baseline=None, label="G4 last-crossing interval density")
+    plt.stairs(np.r_[0, stop_bin_densityg4, 0], np.r_[0, z_plot, 0], baseline=None, label="Geant4 stopping probability")
     plt.xlabel("Depth / cm")
     plt.ylabel(r"Stop Probability")# / cm$^{-1}$")
     plt.legend()
     plt.grid()
+    plt.xlim(left=X_LIM, right=z_plot[-1]+0.05)
     plt.tight_layout()
+    plt.savefig("MCSStopProbability.svg", bbox_inches="tight")
     plt.show()
 
     # Diagnostic increments: leave negative estimates undefined rather than
