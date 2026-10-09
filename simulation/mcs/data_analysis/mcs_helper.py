@@ -74,6 +74,15 @@ Geant4 reach, map layer IDs to that same complete geometry boundary table.
 import operator
 import numpy as np
 
+def _beta(E0, T):
+    return np.sqrt(T * (T + 2 * E0) / (T + E0)**2)
+
+def _momentum(E0, T):
+    return np.sqrt(T * (T + 2 * E0))
+
+def _energy_at_depth(z, R0, E0, p_exp):
+    return E0 * (1-z/R0)**(1/p_exp)
+
 def two_grid(R0, switch_depth, coarse_step, fine_step): ##returns depths with 2 widths and dz
     """Return interior reach depths z and integration widths dz, starting at 0.
 
@@ -153,7 +162,7 @@ def simulation_grid(depths, cumulative_variance, R0, layer_ids=None):
     return z, dz, V
 
 
-def highland_variance(z, dz, R0, E0, p_exp, X0, energy_at_depth=None):
+def highland_variance(z, dz, R0, E0, p_exp, X0):
     """Regrid the ORIGINAL integrated-Highland/global-log prescription.
 
     This preserves that heuristic prescription; it does not establish its
@@ -165,9 +174,8 @@ def highland_variance(z, dz, R0, E0, p_exp, X0, energy_at_depth=None):
         raise ValueError('E0, p_exp and X0 must be finite and positive.')
     
     mid = z - dz/2
-    energy = (E0 * (1-mid/R0)**(1/p_exp) if energy_at_depth is None
-              else np.asarray(energy_at_depth(mid), float))
-    
+    energy = _energy_at_depth(mid, R0, E0, p_exp)
+        
     if energy.shape != z.shape or np.any(~np.isfinite(energy)) or np.any(energy <= 0):
         raise ValueError('Energy function must return finite positive energies.')
     mass = 938.272
@@ -175,6 +183,78 @@ def highland_variance(z, dz, R0, E0, p_exp, X0, energy_at_depth=None):
     V = (1+0.038*np.log(z/X0))**2 * np.cumsum((13.6/beta_pc)**2 * dz/X0)
     return _variance(V)
 
+def generalized_highland_variance(z, dz, R0, E0, p_exp, X0):
+    
+    z, dz = _grid(z, dz, R0)
+    if not np.all(np.isfinite([E0, p_exp, X0])) or min(E0, p_exp, X0) <= 0:
+        raise ValueError('E0, p_exp and X0 must be finite and positive.')
+    
+    mid = z - dz/2
+    energy = _energy_at_depth(mid, R0, E0, p_exp)
+    
+    if energy.shape != z.shape or np.any(~np.isfinite(energy)) or np.any(energy <= 0):
+        raise ValueError('Energy function must return finite positive energies.')
+    mass = 938.272
+    beta = _beta(mass, energy)
+    momentum = _momentum(mass, energy)
+    reduced_thickness = dz / (X0*beta**2)
+    reduced_totalthickness = z / (X0*beta**2)
+
+    V = (1+0.038*np.log(reduced_totalthickness))**2 * np.cumsum((13.6/momentum)**2 * reduced_thickness)
+    return _variance(V)
+
+def gaussian_mixture_model(z, dz, R0, E0, p_exp, X0, Z):
+    z, dz = _grid(z, dz, R0)
+    if not np.all(np.isfinite([E0, p_exp, X0])) or min(E0, p_exp, X0) <= 0:
+        raise ValueError('E0, p_exp and X0 must be finite and positive.')
+    
+    mid = z - dz/2
+    energy = _energy_at_depth(mid, R0, E0, p_exp)
+    
+    if energy.shape != z.shape or np.any(~np.isfinite(energy)) or np.any(energy <= 0):
+        raise ValueError('Energy function must return finite positive energies.')
+    mass = 938.272
+    beta = _beta(mass, energy)
+    
+    reduced_thickness = dz / (X0 * beta**2)
+    modified_reduced_thickness = Z**(2/3) * reduced_thickness
+
+    log_d = np.log(reduced_thickness)
+    log_d_modified = np.log(modified_reduced_thickness)
+
+    variance1 = 0.8471 + 0.03347*log_d - 0.001843*log_d**2
+
+    epsilon = np.where(
+        log_d_modified < 0.5,
+        0.04841 + 0.006348*log_d_modified + 0.0006096*log_d_modified**2,
+        -0.01908 + 0.1106*log_d_modified - 0.005729*log_d_modified**2,
+    )
+    # mask = log_d_modified < 0.5
+    
+    # import matplotlib.pyplot as plt
+    # plt.plot(z, epsilon, label='variance1 ')
+    # plt.plot(z, log_d_modified, label='log_d_modified ')
+    # plt.plot(z, mask, label='mask ')
+    # plt.show()
+
+    if (
+        np.any(~np.isfinite(variance1))
+        or np.any(~np.isfinite(epsilon))
+        or np.any((variance1 <= 0) | (variance1 >= 1))
+        or np.any((epsilon <= 0) | (epsilon >= 0.5))
+    ):
+        raise ValueError("Parametrization gives invalid core/tail parameters.")
+
+    variance2 = (1 - (1 - epsilon)*variance1) / epsilon
+
+    pc = np.sqrt(energy * (energy + 2 * mass))  # MeV
+
+    total_variance = (13.6 / (beta * pc))**2 * dz / X0  # rad²
+
+    variance1 = variance1 * total_variance  # core variance in rad²
+    variance2 = variance2 * total_variance  # tail variance in rad²
+
+    return variance1, variance2, epsilon
 
 def weighted_eigenvalues(V, dz):
     """Weights of sum_k w_k chi2_2 for nonuniform integration intervals.
@@ -219,7 +299,8 @@ def gchi2_exact_pdf(x, weights):
     coefficients = calculate_coefficients(weights)
     pdf = np.zeros_like(x)
     for wi, Ai in zip(weights, coefficients):
-        pdf += Ai * np.exp(-np.maximum(x, 0) / (2 * wi))
+        # pdf += Ai * np.exp(-np.maximum(x, 0) / (2 * wi)) // non-normalized
+        pdf += Ai / (2 * wi) * np.exp(-np.maximum(x, 0) / (2 * wi))
     return np.where(x <= 0, 0.0, pdf)
 
 def gchi2_exact_cdf(x, weights):
@@ -301,6 +382,54 @@ def gchi2_cdf_rng(x, weights, rng, n_samples=50_000, batch_size=1000):
     error = np.sqrt(probability*(1-probability)/n_samples)
     return probability, error
 
+def gchi2_cdf_rng_mixture(x, CoreWeights, TailWeights, core_probability, rng, n_samples=50_000, batch_size=1000):
+    core = np.asarray(CoreWeights, dtype=float)
+    tail = np.asarray(TailWeights, dtype=float)
+
+    for weights in (core, tail):
+        if (weights.ndim != 1
+                or np.any(~np.isfinite(weights))
+                or np.any(weights < 0)):
+            raise ValueError("Weights must be finite nonnegative 1D arrays.")
+
+    if not np.isfinite(x):
+        raise ValueError("Threshold must be finite.")
+
+    w = float(core_probability)
+    if not np.isfinite(w) or not 0 <= w <= 1:
+        raise ValueError("core_probability must be between 0 and 1.")
+
+    n_samples, batch_size = _sampling_counts(n_samples, batch_size)
+    core = core[core > 0]
+    tail = tail[tail > 0]
+
+    if x < 0:
+        return 0.0, 0.0
+
+    n_reach = 0
+
+    for start in range(0, n_samples, batch_size):
+        size = min(batch_size, n_samples - start)
+
+        # One component choice per complete sample.
+        n_core = np.count_nonzero(rng.random(size) < w)
+        n_tail = size - n_core
+
+        for count, weights in ((n_core, core), (n_tail, tail)):
+            if count == 0:
+                continue
+
+            if weights.size == 0:
+                n_reach += count
+                continue
+
+            samples = rng.chisquare(df=2, size=(count, weights.size))
+            delta_R = samples @ weights
+            n_reach += np.count_nonzero(delta_R <= x)
+
+    probability = n_reach / n_samples
+    error = np.sqrt(probability * (1 - probability) / n_samples)
+    return probability, error
 
 def reach_probability_rng_geometry(remaining_range, cumulative_variance, dz,
                                    rng, n_samples=50_000, batch_size=1000):
@@ -327,21 +456,89 @@ def reach_probability_rng_geometry(remaining_range, cumulative_variance, dz,
         return 0.0, 0.0
     increment_sigma = np.sqrt(np.diff(np.r_[0.0, V]))
     n_reach = 0
+    n_nonforward = 0
     for start in range(0, n_samples, batch_size):
         size = min(batch_size, n_samples-start)
         kicks_x = rng.normal(size=(size, V.size))*increment_sigma
         kicks_y = rng.normal(size=(size, V.size))*increment_sigma
         theta_x = np.cumsum(kicks_x, axis=1)
         theta_y = np.cumsum(kicks_y, axis=1)
-        invalid = np.any((np.abs(theta_x) >= np.pi/2)
-                         | (np.abs(theta_y) >= np.pi/2), axis=1)
-        if np.any(invalid):
-            raise ValueError('Sampled trajectories left the forward-angle domain; '
-                             'do not discard them or wrap angles through tan().')
+        forward = np.all(
+            (np.abs(theta_x) < np.pi / 2)
+            & (np.abs(theta_y) < np.pi / 2),
+            axis=1,
+        )
+
+        # Non-forward trajectories count as failures to reach.
+        # Evaluate tan() only for trajectories inside its valid domain.
+        theta_x = theta_x[forward]
+        theta_y = theta_y[forward]
+
         slope_squared = np.tan(theta_x)**2 + np.tan(theta_y)**2
-        excess_factor = slope_squared/(np.sqrt(1+slope_squared)+1)
+        excess_factor = slope_squared / (np.sqrt(1 + slope_squared) + 1)
         delta_R = excess_factor @ widths
+        
+        n_nonforward += np.count_nonzero(~forward)
         n_reach += np.count_nonzero(delta_R <= remaining_range)
+    # print(f"Non-forward trajectories: {n_nonforward}")
+    probability = n_reach/n_samples
+    error = np.sqrt(probability*(1-probability)/n_samples)
+    return probability, error
+
+def reach_probability_rng_geometry_mixture(remaining_range, epsilon, cumulative_core_variance, cumulative_tail_variance, dz,
+                                   rng, n_samples=50_000, batch_size=1000):
+    Vc = _variance(cumulative_core_variance)
+    Vt = _variance(cumulative_tail_variance)
+    widths = np.broadcast_to(np.asarray(dz, dtype=float), Vc.shape)
+
+    if np.any(~np.isfinite(widths)) or np.any(widths <= 0):
+        raise ValueError('Widths must be finite and positive.')
+    if not np.isfinite(remaining_range):
+        raise ValueError('Remaining range must be finite.')
+    n_samples, batch_size = _sampling_counts(n_samples, batch_size)
+    if remaining_range < 0:
+        return 0.0, 0.0
+    if not np.any(Vc) and not np.any(Vt):
+        return 1.0, 0.0
+    if remaining_range == 0:
+        return 0.0, 0.0
+    
+    increment_var_core = np.diff(np.r_[0.0, Vc])
+    increment_var_tail = np.diff(np.r_[0.0, Vt])
+    n_reach = 0
+    n_nonforward = 0
+    for start in range(0, n_samples, batch_size):
+        size = min(batch_size, n_samples-start)
+
+        shape = (size, len(Vc))
+
+        is_tail = rng.random(shape) < epsilon
+        kick_sigma = np.sqrt(np.where(is_tail, increment_var_tail, increment_var_core))
+
+        kicks_x = rng.normal(size=shape) * kick_sigma
+        kicks_y = rng.normal(size=shape) * kick_sigma
+
+        theta_x = np.cumsum(kicks_x, axis=1)
+        theta_y = np.cumsum(kicks_y, axis=1)
+        
+        forward = np.all(
+            (np.abs(theta_x) < np.pi / 2)
+            & (np.abs(theta_y) < np.pi / 2),
+            axis=1,
+        )
+
+        # Non-forward trajectories count as failures to reach.
+        # Evaluate tan() only for trajectories inside its valid domain.
+        theta_x = theta_x[forward]
+        theta_y = theta_y[forward]
+
+        slope_squared = np.tan(theta_x)**2 + np.tan(theta_y)**2
+        excess_factor = slope_squared / (np.sqrt(1 + slope_squared) + 1)
+        delta_R = excess_factor @ widths
+        
+        n_nonforward += np.count_nonzero(~forward)
+        n_reach += np.count_nonzero(delta_R <= remaining_range)
+    
     probability = n_reach/n_samples
     error = np.sqrt(probability*(1-probability)/n_samples)
     return probability, error
