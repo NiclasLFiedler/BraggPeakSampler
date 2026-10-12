@@ -1,76 +1,3 @@
-"""Nonuniform-depth helpers for analyseRange.py (cm, MeV, radians).
-
-Simulation mode uses scored cumulative variances at their ORIGINAL depths:
-no interpolation, resampling, smoothing, or automatic removal of invalid bins.
-Depths must be downstream boundaries of contiguous intervals starting at 0.
-Angles are signed projected angles; V is for ONE projection in rad^2.
-The two projections are assumed independent with the same covariance.
-
-Example replacing the original depth loop:
-
-    z, dz, V = simulation_grid(G4depths, np.deg2rad(CumSigmaCore)**2, R0)
-    # Alternatively, for Highland only:
-    # z, dz = two_grid(R0, R0-1.0, 0.10, 0.005)
-    # V = highland_variance(z, dz, R0, E0, p_exp, X0)
-
-    rng = np.random.default_rng(12345)
-    reach_analytical = np.zeros(z.size)
-    reach_rng = np.zeros(z.size)
-    reach_rng_error = np.zeros(z.size)
-    reach_geometry = np.zeros(z.size)
-    reach_geometry_error = np.zeros(z.size)
-
-    for j, d in enumerate(z):
-        V_j, dz_j = V[:j+1], dz[:j+1]
-        weights = weighted_eigenvalues(V_j, dz_j)
-        # Your existing analytical CDF, not supplied by this module:
-        reach_analytical[j] = (gchi2_exact_cdf(R0-d, weights)
-                               if weights.size else 1.0)
-        reach_rng[j], reach_rng_error[j] = gchi2_cdf_rng(
-            R0-d, weights, rng)
-        reach_geometry[j], reach_geometry_error[j], _ = (
-            reach_probability_rng_geometry(R0-d, V_j, dz_j, rng))
-
-    # Append endpoints AFTER all calculations, for each curve separately:
-    plot_z = np.r_[0.0, z, R0]
-    plot_p = np.r_[1.0, reach_analytical, 0.0]
-    stop_probability = -np.diff(plot_p)
-    stop_density = stop_probability / np.diff(plot_z)
-
-Independent RNG samples are used at each evaluation depth as in the original
-script. Small nonmonotonic fluctuations and negative finite differences can
-therefore occur; do not clip them and renormalize as if they were exact data.
-Errors are pointwise binomial plug-in standard errors only. A zero returned
-error for all/no successes does not establish an exact probability of 1/0.
-
-The geometry RNG still constructs correlated angles WITHIN a depth prefix;
-that correlation is needed physically. It no longer shares paths across
-separate depth evaluations. No grid-wide path-following function is provided.
-
-Integration uses interval RIGHT-end angles, matching the original script.
-Widths are folded into the covariance BEFORE diagonalization. The returned
-weights ALREADY contain the factor 1/2. Do not multiply by widths again.
-
-R0 is a fixed available path range. Its appended zero is a boundary condition,
-not a zero-energy evaluation. The interval between the final scored depth and
-R0 remains unresolved. This model omits energy straggling, nuclear effects,
-acceptance, and extra-path feedback on the prescribed energy profile.
-
-The user's product-of-residues CDF can suffer numerical cancellation or fail
-for repeated weights; compare it with RNG in the transition region.
-Nondecreasing V is required by the independent-increment model. Invalid or
-decreasing values below R0 raise instead of silently altering the data.
-
-For a polynomial range law, pass energy_at_depth=callable to highland_variance;
-it takes midpoint depths and returns R_inverse(R(E0)-depth), using a validated
-physical inverse branch and R0 consistent with that same relation.
-
-In the Geant4 scorer, replace any (layerID+1)*constant_width mapping with the
-actual downstream boundary depth. Group angle samples by integer layer ID:
-a fixed depth tolerance can mix bins on the new fine grid. For reconstructing
-Geant4 reach, map layer IDs to that same complete geometry boundary table.
-"""
-
 import operator
 import numpy as np
 
@@ -542,3 +469,97 @@ def reach_probability_rng_geometry_mixture(remaining_range, epsilon, cumulative_
     probability = n_reach/n_samples
     error = np.sqrt(probability*(1-probability)/n_samples)
     return probability, error
+
+def gchi2_cdf_checked(x, weights):
+    weights = np.asarray(weights, dtype=float)
+    if (weights.ndim != 1 or np.any(~np.isfinite(weights))
+            or np.any(weights < 0) or not np.isfinite(x)):
+        raise ValueError('Require finite nonnegative weights and finite x.')
+    weights = weights[weights > 0]
+    if x < 0:
+        return 0.0
+    if not weights.size:
+        return 1.0
+    if x == 0:
+        return 0.0
+    w = weights.astype(np.longdouble)
+    differences = w[:, None] - w[None, :]
+    np.fill_diagonal(differences, 1)
+    if np.all(differences != 0):
+        with np.errstate(over='ignore', invalid='ignore', divide='ignore'):
+            ratios = w[:, None] / differences
+            np.fill_diagonal(ratios, 1)
+            terms = np.prod(ratios, axis=1) * np.exp(-np.longdouble(x)/(2*w))
+            probability = 1 - np.sum(terms)
+            # Conservative roundoff screen; not a rigorous error bound.
+            roundoff = (100 * len(w) * np.finfo(np.longdouble).eps
+                        * (1 + np.sum(np.abs(terms))))
+        if (np.isfinite(probability) and roundoff < 1e-10
+                and 0 <= probability <= 1):
+            return float(probability)
+    ### secondary approach
+    from scipy.linalg import expm
+    print("First approach for CDF failed resorting to secondary approach")
+    rates = 1 / (2 * weights)
+    generator = np.zeros((len(weights) + 1, len(weights) + 1))
+    indices = np.arange(len(weights))
+    generator[indices, indices] = -rates
+    generator[indices, indices + 1] = rates
+    probability = float(expm(x * generator)[0, -1])
+    if not np.isfinite(probability) or not -1e-10 <= probability <= 1 + 1e-10:
+        raise FloatingPointError('Conditional CDF evaluation failed.')
+    return float(np.clip(probability, 0, 1))
+
+
+def reach_probability_sampled_mixture(z, dz, R0, var_core, var_tail,
+                                      p_tail, rng, n_configurations=500,
+                                      cdf=None, progress=None):
+    """Sample component choices; integrate Gaussian angles analytically.
+
+    Inputs var_core/var_tail are SINGLE-KICK projected variances (rad^2),
+    not cumulative fitted widths. p_tail is one probability per layer.
+    One component choice is shared by x/y; projections are independent
+    conditional on all choices. Complete paths are sampled once and their
+    prefixes reused at every depth. Integration uses right-end angles.
+
+    Returns mean reach and POINTWISE standard error due to configuration
+    sampling. Errors exclude CDF numerics and model uncertainty; errors at
+    different depths are correlated. Zero estimated error does not rule
+    out unsampled rare configurations. Increasing N reduces sampling error.
+    Duplicate prefixes are evaluated once, retaining their multiplicities.
+    Memory is O(N*n); at most N EVDs are required per depth.
+    Optional progress(done, total, unique_prefixes) is called per depth.
+    """
+    z, dz = _grid(z, dz, R0)
+    var_core, var_tail, p_tail = [np.asarray(a, dtype=float)
+                                for a in (var_core, var_tail, p_tail)]
+    if any(a.shape != z.shape or np.any(~np.isfinite(a))
+           for a in (var_core, var_tail, p_tail)):
+        raise ValueError('One finite variance/probability per layer required.')
+    if (np.any(var_core < 0) or np.any(var_tail < 0)
+            or np.any((p_tail < 0) | (p_tail > 1))):
+        raise ValueError('Variances must be nonnegative; probabilities in [0,1].')
+    n_configurations = operator.index(n_configurations)
+    if n_configurations < 2:
+        raise ValueError('Use at least two configurations to estimate an error.')
+    cdf = gchi2_cdf_checked if cdf is None else cdf
+    choices = rng.random((n_configurations, len(z))) < p_tail
+    mean = np.empty(len(z))
+    error = np.empty(len(z))
+    for j in range(len(z)):
+        patterns, counts = np.unique(choices[:, :j+1], axis=0, return_counts=True)
+        conditional = np.empty(len(patterns))
+        for k, pattern in enumerate(patterns):
+            cumulative = np.cumsum(np.where(pattern, var_tail[:j+1], var_core[:j+1]))
+            eigenvalues = weighted_eigenvalues(cumulative, dz[:j+1])
+            conditional[k] = float(cdf(R0-z[j], eigenvalues))
+        if (np.any(~np.isfinite(conditional))
+                or np.any((conditional < 0) | (conditional > 1))):
+            raise FloatingPointError(f'Invalid conditional CDF at depth {z[j]}.')
+        mean[j] = np.dot(counts / n_configurations, conditional)
+        error[j] = np.sqrt(np.dot(counts, (conditional - mean[j])**2)
+                           / (n_configurations * (n_configurations-1)))
+        if progress is not None:
+            progress(j+1, len(z), len(patterns))
+    return mean, error
+

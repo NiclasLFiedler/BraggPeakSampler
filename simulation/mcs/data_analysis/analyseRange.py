@@ -23,7 +23,7 @@ from scipy.special import expit
 plt.rcParams.update({'font.size': 16})
 
 # Configuration: preserve the settings in the supplied script.
-USEPWO = True
+USEPWO = False
 USEHIGHLAND = True
 SAVEDATA = False
 LARGEOUTPUT = False
@@ -38,6 +38,8 @@ Z = 74 if USEPWO else 7.4 # 73.6, 7.4 due to Mayneord’s formula
 N_PRIMARIES = None
 N_RNG = 100_000
 N_GEOMETRY = 100_000
+N_CONFIGURATIONS = 1000  # Increase and inspect the pointwise sampling error.
+CONFIGURATION_SEED = 20261012  # Separate stream from angle/geometry RNG.
 # Confirm against your scorer: convert deltaX to cm if it was stored in mm.
 DELTA_X_TO_CM = 1.0
 PLOT_LAYER_INDEX = 120
@@ -264,8 +266,8 @@ def comp_plot_mixture_parameters(z, weight, sigma_core, sigma_tail, z2, weight2,
     ax_weight.plot(z, weight, label="Narrow component", color="#009E73")
     ax_weight.plot(z, 1 - weight, label="Broad component", color="#CC79A7")
     
-    ax_weight.plot(z2, weight2, label="Narrow Compare", color="#FF0000")
-    ax_weight.plot(z2, 1 - weight2, label="Broad Compare", color="#3700FF")
+    ax_weight.plot(z2, weight2, label="Model: single-kick core probability", color="#FF0000")
+    ax_weight.plot(z2, 1 - weight2, label="Model: single-kick tail probability", color="#3700FF")
     
     ax_weight.set_ylabel("Mixture weight")
     ax_weight.set_ylim(0, 1)
@@ -274,8 +276,8 @@ def comp_plot_mixture_parameters(z, weight, sigma_core, sigma_tail, z2, weight2,
 
     ax_sigma.plot(z, sigma_core * 1000, label="Narrow component", color="#009E73")
     ax_sigma.plot(z, sigma_tail * 1000, label="Broad component", color="#CC79A7")
-    ax_sigma.plot(z2, sigma_core2 * 1000, label="Narrow Compare", color="#FF0000")
-    ax_sigma.plot(z2, sigma_tail2 * 1000, label="Broad Compare", color="#3700FF")
+    ax_sigma.plot(z2, sigma_core2 * 1000, label="Model: all-core cumulative width", color="#FF0000")
+    ax_sigma.plot(z2, sigma_tail2 * 1000, label="Model: all-tail cumulative width", color="#3700FF")
 
     ax_sigma.set_xlabel("Depth / cm")
     ax_sigma.set_ylabel(r"$\sigma$ / mrad")
@@ -395,9 +397,8 @@ def main():
                  sigma_core=CumMixtureSigmaCore, sigma_tail=CumMixtureSigmaTail,
                  variance=CumMixtureVariance)
             print("Saved mixture fits (angles in rad): cumulative_angular_mixture.npz")
-            print("Reach calculation still uses "
-              + ("Highland Gaussian variance." if USEHIGHLAND else "Gaussian core variance.")
-              + " Per-depth mixture fits alone do not define a joint trajectory model.")
+            print("Reach uses sampled single-kick mixtures when USEHIGHLAND is True. "
+                  "Per-depth cumulative mixture fits are diagnostics only.")
                 
     del order, starts, counts, layerID, hit_depth
     del CumScatteringAngle, ScatteringAngle, deltaX
@@ -456,7 +457,7 @@ def main():
         CumMixtureModelVarTail = np.cumsum(var2)
         CumMixtureModelSigmaCore = np.sqrt(CumMixtureModelVarCore)
         CumMixtureModelSigmaTail = np.sqrt(CumMixtureModelVarTail)
-    if ANGULAR_MODEL == "mixture":
+    if USEHIGHLAND and ANGULAR_MODEL == "mixture":
         comp_plot_mixture_parameters(
             z=z,
             weight=CumMixtureWeight,
@@ -486,41 +487,43 @@ def main():
     reach_geometry_error = np.zeros(len(z))
 
     mixture_reach_analytical = np.zeros(len(z))
-    mixture_stop_analytical = np.zeros(len(z))
-    mixture_reach_rng = np.zeros(len(z))
-    mixture_reach_rng_error = np.zeros(len(z))
+    mixture_reach_analytical_error = np.zeros(len(z))
     mixture_reach_geometry = np.zeros(len(z))
     mixture_reach_geometry_error = np.zeros(len(z))
     
     if USEHIGHLAND and ANGULAR_MODEL == "mixture":
+        def report_configuration_progress(done, total, unique):
+            if done == 1 or done % 10 == 0 or done == total:
+                print(f"Sampled mixture: depth {done}/{total}, "
+                      f"{unique} unique prefixes from {N_CONFIGURATIONS} configurations")
+
+        (mixture_reach_analytical[:n_model],
+         mixture_reach_analytical_error[:n_model]) = mcs.reach_probability_sampled_mixture(
+            z[:n_model], dz[:n_model], R0, var1, var2, weight,
+            np.random.default_rng(CONFIGURATION_SEED),
+            n_configurations=N_CONFIGURATIONS,
+            progress=report_configuration_progress)
+        print("Maximum configuration-sampling standard error: "
+              f"{mixture_reach_analytical_error[:n_model].max():.4g}")
+        if SAVEDATA:
+            np.savez("sampled_mixture_reach.npz", z=z[:n_model],
+                     reach=mixture_reach_analytical[:n_model],
+                     standard_error=mixture_reach_analytical_error[:n_model],
+                     n_configurations=N_CONFIGURATIONS, seed=CONFIGURATION_SEED,
+                     var_core=var1, var_tail=var2, p_tail=weight,
+                     dz=dz[:n_model], R0=R0)
         for j in range(n_model):
-            remaining_range = R0 - z[j]
-            Vc_j, Vt_j, dz_j = CumMixtureModelVarCore[:j+1], CumMixtureModelVarTail[:j+1], dz[:j+1]
-            wc, wt = CumMixtureModelWeight[j], 1-CumMixtureModelWeight[j]
-            CoreWeights = mcs.weighted_eigenvalues(Vc_j, dz_j)
-            TailWeights = mcs.weighted_eigenvalues(Vt_j, dz_j)
-
-            CoreProbability = float(mcs.gchi2_exact_cdf(remaining_range, CoreWeights))
-            TailProbability = float(mcs.gchi2_exact_cdf(remaining_range, TailWeights))
-            # CoreStoppProbability = float(mcs.gchi2_exact_pdf(remaining_range, CoreWeights))
-            # TailStoppProbability = float(mcs.gchi2_exact_pdf(remaining_range, TailWeights))
-
-            print(f"Core probability at depth {z[j]:.6f} cm: {CoreProbability:.6g}, Tail probability: {TailProbability:.6g}")
-
-            mixture_reach_analytical[j] = wc*CoreProbability+wt*TailProbability
-            # mixture_stop_analytical[j] = wc*CoreStoppProbability+wt*TailStoppProbability
-
-            mixture_reach_rng[j], mixture_reach_rng_error[j] = mcs.gchi2_cdf_rng_mixture(remaining_range, CoreWeights, TailWeights, wc, rng, n_samples=N_RNG)
-            mixture_reach_geometry[j], mixture_reach_geometry_error[j] = mcs.reach_probability_rng_geometry_mixture(remaining_range, wt, Vc_j, Vt_j, dz_j, rng, n_samples=N_GEOMETRY)
-    
+            mixture_reach_geometry[j], mixture_reach_geometry_error[j] = (
+                mcs.reach_probability_rng_geometry_mixture(
+                    R0-z[j], weight[:j+1],
+                    CumMixtureModelVarCore[:j+1], CumMixtureModelVarTail[:j+1],
+                    dz[:j+1], rng, n_samples=N_GEOMETRY))
     for j in range(n_model):
         remaining_range = R0 - z[j]
         V_j, dz_j = V[:j+1], dz[:j+1]
         weights = mcs.weighted_eigenvalues(V_j, dz_j)
         probability = float(mcs.gchi2_exact_cdf(remaining_range, weights))
-        stoppProbability = float(mcs.gchi2_exact_pdf(remaining_range, weights))
         reach_analytical[j] = probability
-        stop_analytical[j] = stoppProbability
         reach_rng[j], reach_rng_error[j] = mcs.gchi2_cdf_rng(remaining_range, weights, rng, n_samples=N_RNG)
         reach_geometry[j], reach_geometry_error[j] = mcs.reach_probability_rng_geometry(remaining_range, V_j, dz_j, rng, n_samples=N_GEOMETRY)
 
@@ -529,7 +532,6 @@ def main():
 
     reach_g4_plot = np.r_[reach_analytical_g4, 0.0]
     reach_analytical_plot = np.r_[reach_analytical, 0.0]
-    # stop_analytical_plot = np.r_[stop_analytical, 0.0]
     reach_rng_plot = np.r_[reach_rng, 0.0]
     reach_geometry_plot = np.r_[reach_geometry, 0.0]
 
@@ -537,11 +539,8 @@ def main():
     reach_geometry_error_plot = np.r_[reach_geometry_error, 0.0]
 
     mixture_reach_analytical_plot = np.r_[mixture_reach_analytical, 0.0]
-    # mixture_stop_analytical_plot = np.r_[mixture_stop_analytical, 0.0]
-    mixture_reach_rng_plot = np.r_[mixture_reach_rng, 0.0]
     mixture_reach_geometry_plot = np.r_[mixture_reach_geometry, 0.0]
 
-    mixture_reach_rng_error_plot = np.r_[mixture_reach_rng_error, 0.0]
     mixture_reach_geometry_error_plot = np.r_[mixture_reach_geometry_error, 0.0]
     
     print(f"Last model evaluation: {z[n_model-1]:.8f} cm; "
@@ -556,7 +555,15 @@ def main():
     
     
     if USEHIGHLAND and ANGULAR_MODEL == "mixture":
-        ax.plot(z_plot, mixture_reach_analytical_plot, label="MixtureReach Prob. - Analytical CDF")
+        line, = ax.plot(z_plot, mixture_reach_analytical_plot,
+                        label=f"Mixture: sampled CDF ({N_CONFIGURATIONS} configurations)")
+        ax.fill_between(z[:n_model],
+                        np.maximum(0, mixture_reach_analytical[:n_model]
+                                   - 2*mixture_reach_analytical_error[:n_model]),
+                        np.minimum(1, mixture_reach_analytical[:n_model]
+                                   + 2*mixture_reach_analytical_error[:n_model]),
+                        color=line.get_color(), alpha=.2,
+                        label="Configuration sampling ±2 SE (pointwise)")
         ax.plot(z_plot, mixture_reach_geometry_plot, label="Mixture Reach Prob. - RNG")
         ax.plot(z_plot, reach_geometry_plot, "--", label="Reach Prob. - RNG")
     else:
@@ -579,8 +586,8 @@ def main():
     ax_diff.plot(z_plot, reach_geometry_plot-reach_analytical_plot, color="orange", label="RNG - Analytical")
     # ax_diff.fill_between(z_plot, -2*reach_rng_error_plot, 2*reach_rng_error_plot, alpha=.25, label="RNG - Analytical error band")
     if USEHIGHLAND and ANGULAR_MODEL == "mixture":
-        ax_diff.plot(z, mixture_residuals, ".-", color="black", label="Geant4 - Mixture Analytical")
-        ax_diff.plot(z_plot, mixture_reach_geometry_plot-mixture_reach_analytical_plot, color="red", label="Mixture RNG - Analytical")
+        ax_diff.plot(z, mixture_residuals, ".-", color="black", label="Geant4 - Sampled mixture CDF")
+        ax_diff.plot(z_plot, mixture_reach_geometry_plot-mixture_reach_analytical_plot, color="red", label="Mixture geometry RNG - Sampled CDF")
     ax_diff.axvline(R0, color="gray", linestyle="--", label="R0")
     ax_diff.set(xlabel="Depth / cm", ylabel="Residuals")
     ax_diff.grid()
