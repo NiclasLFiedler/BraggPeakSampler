@@ -130,10 +130,28 @@ def generalized_highland_variance(z, dz, R0, E0, p_exp, X0):
     V = (1+0.038*np.log(reduced_totalthickness))**2 * np.cumsum((13.6/momentum)**2 * reduced_thickness)
     return _variance(V)
 
-def gaussian_mixture_model(z, dz, R0, E0, p_exp, X0, Z):
+def scattering_length_from_X0(X0, Z):
+    """Fruehwirth-Regler Eq. (37): Xs = X0*h(Z), in the units of X0.
+
+    This is an elemental-material relation. Using an effective Z for a
+    compound (e.g. the current PbWO4/water settings) is an approximation.
+    """
+    if not np.all(np.isfinite([X0, Z])) or min(X0, Z) <= 0:
+        raise ValueError('X0 and Z must be finite and positive.')
+    h = (Z + 1) / Z * np.log(287 * Z**(-1/2)) / np.log(159 * Z**(-1/3))
+    Xs = X0 * h
+    if not np.isfinite(Xs) or Xs <= 0:
+        raise ValueError('Invalid scattering length from X0 and Z.')
+    return float(Xs)
+
+
+def gaussian_mixture_model(z, dz, R0, E0, p_exp, X0, Z, Xs=None, KickVariance=None):
     z, dz = _grid(z, dz, R0)
-    if not np.all(np.isfinite([E0, p_exp, X0])) or min(E0, p_exp, X0) <= 0:
-        raise ValueError('E0, p_exp and X0 must be finite and positive.')
+    if not np.all(np.isfinite([E0, p_exp, X0, Z])) or min(E0, p_exp, X0, Z) <= 0:
+        raise ValueError('E0, p_exp, X0 and Z must be finite and positive.')
+    Xs = scattering_length_from_X0(X0, Z) if Xs is None else float(Xs)
+    if not np.isfinite(Xs) or Xs <= 0:
+        raise ValueError('Xs must be finite and positive.')
     
     mid = z - dz/2
     energy = _energy_at_depth(mid, R0, E0, p_exp)
@@ -143,26 +161,28 @@ def gaussian_mixture_model(z, dz, R0, E0, p_exp, X0, Z):
     mass = 938.272
     beta = _beta(mass, energy)
     
-    reduced_thickness = dz / (X0 * beta**2)
+    if Xs is not None:
+        reduced_thickness = dz / (Xs * beta**2)
+    else:
+        reduced_thickness = dz / (X0 * beta**2)
     modified_reduced_thickness = Z**(2/3) * reduced_thickness
-
     log_d = np.log(reduced_thickness)
     log_d_modified = np.log(modified_reduced_thickness)
 
-    variance1 = 0.8471 + 0.03347*log_d - 0.001843*log_d**2
-
-    epsilon = np.where(
-        log_d_modified < 0.5,
-        0.04841 + 0.006348*log_d_modified + 0.0006096*log_d_modified**2,
-        -0.01908 + 0.1106*log_d_modified - 0.005729*log_d_modified**2,
-    )
-    # mask = log_d_modified < 0.5
-    
-    # import matplotlib.pyplot as plt
-    # plt.plot(z, epsilon, label='variance1 ')
-    # plt.plot(z, log_d_modified, label='log_d_modified ')
-    # plt.plot(z, mask, label='mask ')
-    # plt.show()
+    if Xs is not None:
+        variance1 = 0.8471 + 0.03347*log_d - 0.001843*log_d**2
+        epsilon = np.where(
+            log_d_modified < 0.5,
+            0.04841 + 0.006348*log_d_modified + 0.0006096*log_d_modified**2,
+            -0.01908 + 0.1106*log_d_modified - 0.005729*log_d_modified**2,
+        )
+    else:
+        variance1 = 0.8510 + 0.03314*log_d - 0.001825*log_d**2
+        epsilon = np.where(
+            log_d_modified < 0.5,
+            0.05283 + 0.0077*log_d_modified + 0.00069*log_d_modified**2,
+            -0.01517 + 0.1151*log_d_modified - 0.00653*log_d_modified**2,
+        )
 
     if (
         np.any(~np.isfinite(variance1))
@@ -176,9 +196,15 @@ def gaussian_mixture_model(z, dz, R0, E0, p_exp, X0, Z):
 
     pc = np.sqrt(energy * (energy + 2 * mass))  # MeV
 
-    total_variance = (13.6 / (beta * pc))**2 * dz / X0  # rad²
+    if KickVariance is not None:
+        total_variance = KickVariance
+    elif Xs is not None:
+        total_variance = (15.0 / (beta * pc))**2 * dz / Xs  # rad²
+    else:
+        total_variance = (1+0.038*np.log(z/X0))**2*(13.6 / (beta * pc))**2 * dz / X0  # rad²
 
     variance1 = variance1 * total_variance  # core variance in rad²
+    # variance1 = total_variance  # core variance in rad²
     variance2 = variance2 * total_variance  # tail variance in rad²
 
     return variance1, variance2, epsilon
@@ -512,24 +538,8 @@ def gchi2_cdf_checked(x, weights):
 
 
 def reach_probability_sampled_mixture(z, dz, R0, var_core, var_tail,
-                                      p_tail, rng, n_configurations=500,
+                                      p_tail, rng, n_configurations=500, 
                                       cdf=None, progress=None):
-    """Sample component choices; integrate Gaussian angles analytically.
-
-    Inputs var_core/var_tail are SINGLE-KICK projected variances (rad^2),
-    not cumulative fitted widths. p_tail is one probability per layer.
-    One component choice is shared by x/y; projections are independent
-    conditional on all choices. Complete paths are sampled once and their
-    prefixes reused at every depth. Integration uses right-end angles.
-
-    Returns mean reach and POINTWISE standard error due to configuration
-    sampling. Errors exclude CDF numerics and model uncertainty; errors at
-    different depths are correlated. Zero estimated error does not rule
-    out unsampled rare configurations. Increasing N reduces sampling error.
-    Duplicate prefixes are evaluated once, retaining their multiplicities.
-    Memory is O(N*n); at most N EVDs are required per depth.
-    Optional progress(done, total, unique_prefixes) is called per depth.
-    """
     z, dz = _grid(z, dz, R0)
     var_core, var_tail, p_tail = [np.asarray(a, dtype=float)
                                 for a in (var_core, var_tail, p_tail)]
@@ -544,6 +554,24 @@ def reach_probability_sampled_mixture(z, dz, R0, var_core, var_tail,
         raise ValueError('Use at least two configurations to estimate an error.')
     cdf = gchi2_cdf_checked if cdf is None else cdf
     choices = rng.random((n_configurations, len(z))) < p_tail
+    
+    tail_count = np.count_nonzero(choices, axis=0)
+    ever_tail_count = np.count_nonzero(
+        np.logical_or.accumulate(choices, axis=1), axis=0
+    )
+    tails_per_configuration = np.count_nonzero(choices, axis=1)
+    cumulative_tails = np.cumsum(choices, axis=1)
+
+    for j in range(len(z)):
+        print(
+        f"Depth {z[j]:.5f} cm: "
+        f"tail in this layer = {tail_count[j]}/{n_configurations} "
+        f"({tail_count[j] / n_configurations:.2%}), "
+        #f"at least one tail so far = {ever_tail_count[j]}/{n_configurations} "
+        #f"({ever_tail_count[j] / n_configurations:.2%}), "
+        f"mean cumulative tail kicks per configuration = "
+        f"{cumulative_tails[:, j].mean():.2f}"
+    )
     mean = np.empty(len(z))
     error = np.empty(len(z))
     for j in range(len(z)):

@@ -23,7 +23,7 @@ from scipy.special import expit
 plt.rcParams.update({'font.size': 16})
 
 # Configuration: preserve the settings in the supplied script.
-USEPWO = False
+USEPWO = True
 USEHIGHLAND = True
 SAVEDATA = False
 LARGEOUTPUT = False
@@ -31,19 +31,20 @@ LARGEOUTPUT = False
 ROOT_FILE = "h2oproj.root"
 E0 = 220.0
 # Set to None to use range_energy(data, E0). These are your current overrides.
-R0_OVERRIDE = None if USEPWO else 30.732 #30.72, 6.73398 6.736 6.728
-Z = 74 if USEPWO else 7.4 # 73.6, 7.4 due to Mayneord’s formula
+R0_OVERRIDE = 6.735 if USEPWO else 30.726  #30.72, 6.73398 6.736 6.728
+Z = 73.6 if USEPWO else 7.4 # 73.6, 7.4 due to Mayneord’s formula
+X0 = 0.89 if USEPWO else 36.08
 # Set to the generated-primary count to include events with no recorded hit.
 # None preserves your original normalization to recorded events only.
 N_PRIMARIES = None
 N_RNG = 100_000
 N_GEOMETRY = 100_000
-N_CONFIGURATIONS = 1000  # Increase and inspect the pointwise sampling error.
-CONFIGURATION_SEED = 20261012  # Separate stream from angle/geometry RNG.
+N_CONFIGURATIONS = 10000  # Increase and inspect the pointwise sampling error.
+CONFIGURATION_SEED = 20120584  # Separate stream from angle/geometry RNG.
 # Confirm against your scorer: convert deltaX to cm if it was stored in mm.
 DELTA_X_TO_CM = 1.0
 PLOT_LAYER_INDEX = 120
-X_LIM = 0 if USEPWO else 0
+X_LIM = 6.0 if USEPWO else 30.3
 ANGULAR_MODEL = "mixture"  # "core" or "mixture"
 MIXTURE_FIT_METHOD = "curve_fit"  # "mle", "curve_fit", or "compare"
 MIXTURE_BINS = 200  # Used by curve_fit and the comparison histogram.
@@ -266,8 +267,8 @@ def comp_plot_mixture_parameters(z, weight, sigma_core, sigma_tail, z2, weight2,
     ax_weight.plot(z, weight, label="Narrow component", color="#009E73")
     ax_weight.plot(z, 1 - weight, label="Broad component", color="#CC79A7")
     
-    ax_weight.plot(z2, weight2, label="Model: single-kick core probability", color="#FF0000")
-    ax_weight.plot(z2, 1 - weight2, label="Model: single-kick tail probability", color="#3700FF")
+    ax_weight.plot(z2, 1 - weight2, label="Model: single-kick core probability", color="#FF0000")
+    ax_weight.plot(z2, weight2, label="Model: single-kick tail probability", color="#3700FF")
     
     ax_weight.set_ylabel("Mixture weight")
     ax_weight.set_ylim(0, 1)
@@ -430,7 +431,7 @@ def main():
     data = analysisFunctions.load_EnergyRange("../../range_energy/data_analysis/pbwo4_range_energy.npz") if USEPWO else analysisFunctions.load_EnergyRange("../../range_energy/data_analysis/h2o_range_energy.npz")
     fitted_R0 = float(analysisFunctions.range_energy(data, E0))
     R0 = fitted_R0 if R0_OVERRIDE is None else float(R0_OVERRIDE)
-    X0 = 0.89 if USEPWO else 36.08
+    
     if not np.isfinite(R0) or R0 <= 0:
         raise ValueError("R0 must be finite and positive.")
     print(f"Fitted R0: {fitted_R0:.8f} cm; used R0: {R0:.8f} cm")
@@ -449,10 +450,13 @@ def main():
     CumMixtureModelSigmaTail = np.full(len(z), np.nan)
     CumMixtureModelVarCore = np.full(len(z), np.nan)
     CumMixtureModelVarTail = np.full(len(z), np.nan)
-
+    KickVarCore = np.diff(np.r_[0.0, CumVarCore])[:n_model]
+ 
     if USEHIGHLAND and ANGULAR_MODEL == "mixture":
-        var1, var2, weight = mcs.gaussian_mixture_model(z=z[:n_model], dz=dz[:n_model], R0=R0, E0=E0, p_exp=p_exp, X0=X0, Z=Z)
-        CumMixtureModelWeight = 1-weight
+        Xs = mcs.scattering_length_from_X0(X0, Z)
+        Xs = None
+        var1, var2, weight = mcs.gaussian_mixture_model(z=z[:n_model], dz=dz[:n_model], R0=R0, E0=E0, p_exp=p_exp, X0=X0, Z=Z, Xs=Xs, KickVariance=KickVarCore)
+        CumMixtureModelWeight = weight
         CumMixtureModelVarCore = np.cumsum(var1)
         CumMixtureModelVarTail = np.cumsum(var2)
         CumMixtureModelSigmaCore = np.sqrt(CumMixtureModelVarCore)
@@ -474,6 +478,7 @@ def main():
     # Above retains your existing power-law energy profile. For your polynomial
     # law, pass the consistent inverse as energy_at_depth to the helper.
     V = CumVarHighland if USEHIGHLAND else CumVarCore
+    V = CumVarCore
     # Validate without replacing/truncating the master z/dz arrays.
     mcs.simulation_grid(z[:n_model], V[:n_model], R0,
                         layer_ids=boundary_layers[:n_model])
@@ -550,25 +555,27 @@ def main():
 
     fig, (ax, ax_diff) = plt.subplots(
         2, 1, figsize=(12, 9), sharex=True, gridspec_kw={"height_ratios": [3, 1]})
-    ax.plot(z_plot, reach_analytical_plot, label="Reach Prob. - Analytical CDF")
-    ax.plot(z_plot, reach_g4_plot, ".-", label="Reach Prob. - Geant4")
+    ax.set_title("Reach probability vs. depth")
+    ax.plot(z_plot, reach_g4_plot, ".-", color="black", label="Geant4")
+    ax.plot(z_plot, reach_analytical_plot, ".-", color="blue", label="Single Gaussian CDF")
     
     
     if USEHIGHLAND and ANGULAR_MODEL == "mixture":
-        line, = ax.plot(z_plot, mixture_reach_analytical_plot,
-                        label=f"Mixture: sampled CDF ({N_CONFIGURATIONS} configurations)")
-        ax.fill_between(z[:n_model],
-                        np.maximum(0, mixture_reach_analytical[:n_model]
-                                   - 2*mixture_reach_analytical_error[:n_model]),
-                        np.minimum(1, mixture_reach_analytical[:n_model]
-                                   + 2*mixture_reach_analytical_error[:n_model]),
-                        color=line.get_color(), alpha=.2,
-                        label="Configuration sampling ±2 SE (pointwise)")
-        ax.plot(z_plot, mixture_reach_geometry_plot, label="Mixture Reach Prob. - RNG")
-        ax.plot(z_plot, reach_geometry_plot, "--", label="Reach Prob. - RNG")
+        # ax.plot(z_plot, reach_geometry_plot, "-.", color="orange", label="Single Gaussian RNG")
+        line, = ax.plot(z_plot, mixture_reach_analytical_plot, "-^", color="red",
+                        label=f"Gaussian Mixture CDF ({N_CONFIGURATIONS} sampled configurations)")
+        # ax.fill_between(z[:n_model],
+        #                 np.maximum(0, mixture_reach_analytical[:n_model]
+        #                            - 2*mixture_reach_analytical_error[:n_model]),
+        #                 np.minimum(1, mixture_reach_analytical[:n_model]
+        #                            + 2*mixture_reach_analytical_error[:n_model]),
+        #                 color=line.get_color(), alpha=.2,
+        #                 label="Configuration sampling ±2 SE (pointwise)")
+        
+        # ax.plot(z_plot, mixture_reach_geometry_plot, "-^", color="lime", label="Gaussian Mixture RNG")
     else:
-        ax.plot(z_plot, reach_rng_plot, ":", label="Reach Prob. - Chi-squared RNG")
-        ax.plot(z_plot, reach_geometry_plot, "--", label="Reach Prob. - RNG")
+        # ax.plot(z_plot, reach_rng_plot, ":.", color="blue", label="Reach Prob. - Chi-squared RNG")
+        ax.plot(z_plot, reach_geometry_plot, "--o", color="orange", label="Reach Prob. - RNG")
         # ax.fill_between(z_plot, np.maximum(0, reach_rng_plot-2*reach_rng_error_plot),
                             # np.minimum(1, reach_rng_plot+2*reach_rng_error_plot), alpha=.25,
                             # label="RNG ±2 standard errors")
@@ -582,19 +589,19 @@ def main():
     residuals = reach_analytical_g4 - reach_analytical
     mixture_residuals = reach_analytical_g4 - mixture_reach_analytical
             
-    ax_diff.plot(z, residuals, ".-", color="grey", label="Geant4 - Analytical")
-    ax_diff.plot(z_plot, reach_geometry_plot-reach_analytical_plot, color="orange", label="RNG - Analytical")
+    ax_diff.plot(z, residuals, "-o", color="blue", label="Geant4 - Single Gaussian CDF")
+    # ax_diff.plot(z_plot, reach_geometry_plot-reach_analytical_plot, "-o", color="orange", label="RNG - Analytical")
     # ax_diff.fill_between(z_plot, -2*reach_rng_error_plot, 2*reach_rng_error_plot, alpha=.25, label="RNG - Analytical error band")
     if USEHIGHLAND and ANGULAR_MODEL == "mixture":
-        ax_diff.plot(z, mixture_residuals, ".-", color="black", label="Geant4 - Sampled mixture CDF")
-        ax_diff.plot(z_plot, mixture_reach_geometry_plot-mixture_reach_analytical_plot, color="red", label="Mixture geometry RNG - Sampled CDF")
+        ax_diff.plot(z, mixture_residuals, "-^", color="red", label="Geant4 - Gaussian Mixture sampled CDF")
+        # ax_diff.plot(z_plot, mixture_reach_geometry_plot-mixture_reach_analytical_plot, "-^", color="lime", label="Gaussian Mixture RNG - Sampled CDF")
     ax_diff.axvline(R0, color="gray", linestyle="--", label="R0")
     ax_diff.set(xlabel="Depth / cm", ylabel="Residuals")
     ax_diff.grid()
-    ax_diff.legend()
+    ax_diff.legend(loc='center left')
     fig.tight_layout()
-    plt.xlim(left=X_LIM, right=z_plot[-1]+0.05)
-    plt.savefig("MCSReachProbability.svg", bbox_inches="tight")
+    plt.xlim(left=X_LIM, right=z_plot[-1]+0.03)
+    plt.savefig("MCSReachProbabilityPWO_mixture.svg", bbox_inches="tight")
     plt.show()
 
     # Densities live on the intervals between measured boundaries. Use these
@@ -602,22 +609,29 @@ def main():
     # The first interval and the unobserved tail are deliberately not inferred.
     stop_bin_probabilityg4 = -np.diff(reach_g4_plot)
     stop_bin_densityg4 = stop_bin_probabilityg4 / dz_plot[1:] / 100
-    print(f"Sum: {np.sum(stop_bin_probabilityg4)}")
+    
     stop_bin_probability = -np.diff(reach_analytical_plot)
     stop_bin_density = stop_bin_probability / dz_plot[1:] / 100
+    
+    stop_bin_probability_mixture = -np.diff(mixture_reach_analytical_plot)
+    stop_bin_density_mixture = stop_bin_probability_mixture / dz_plot[1:] / 100
+    
     if np.any(stop_bin_probability < -1e-8):
         warnings.warn("Analytical reach rises with depth; inspect CDF numerical stability.")
     plt.figure(figsize=(12, 9))
-    plt.stairs(np.r_[0, stop_bin_density, 0], np.r_[0, z_plot, 0], baseline=None, label="Analytical stopping probability")
+    if USEHIGHLAND and ANGULAR_MODEL == "mixture":
+        plt.stairs(np.r_[0, stop_bin_density_mixture, 0], np.r_[0, z_plot, 0], baseline=None, label="Mixture stopping probability")
+    else:
+        plt.stairs(np.r_[0, stop_bin_density, 0], np.r_[0, z_plot, 0], baseline=None, label="Analytical stopping probability")
     #plt.stairs(stop_analytical_plot, z_plot, baseline=None, label="Analytical PDF")
     plt.stairs(np.r_[0, stop_bin_densityg4, 0], np.r_[0, z_plot, 0], baseline=None, label="Geant4 stopping probability")
     plt.xlabel("Depth / cm")
     plt.ylabel(r"Stop Probability")# / cm$^{-1}$")
     plt.legend()
     plt.grid()
-    plt.xlim(left=X_LIM, right=z_plot[-1]+0.05)
+    plt.xlim(left=X_LIM, right=z_plot[-1]+0.03)
     plt.tight_layout()
-    plt.savefig("MCSStopProbability.svg", bbox_inches="tight")
+    plt.savefig("MCSStopProbabilityPWO_mixture.svg", bbox_inches="tight")
     plt.show()
 
     # Diagnostic increments: leave negative estimates undefined rather than
