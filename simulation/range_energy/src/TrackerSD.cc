@@ -52,7 +52,7 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
     G4double initialEKin = aStep->GetTrack()->GetVertexKineticEnergy();
     
 
-    G4double Range = emCalc.GetRange( initialEKin, particle, material);
+    G4double Range = emCalc.GetCSDARange( initialEKin, particle, material);
 
     G4double momentum = aStep->GetTrack()->GetMomentum().mag();  // in MeV/c
     G4double energy = aStep->GetPreStepPoint()->GetTotalEnergy();

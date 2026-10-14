@@ -145,7 +145,7 @@ def scattering_length_from_X0(X0, Z):
     return float(Xs)
 
 
-def gaussian_mixture_model(z, dz, R0, E0, p_exp, X0, Z, Xs=None, KickVariance=None):
+def gaussian_mixture_model(z, dz, R0, E0, p_exp, X0, Z, Xs=None, KickVariance=None, MIXTURE_MODEL="rutherford"):
     z, dz = _grid(z, dz, R0)
     if not np.all(np.isfinite([E0, p_exp, X0, Z])) or min(E0, p_exp, X0, Z) <= 0:
         raise ValueError('E0, p_exp, X0 and Z must be finite and positive.')
@@ -169,28 +169,20 @@ def gaussian_mixture_model(z, dz, R0, E0, p_exp, X0, Z, Xs=None, KickVariance=No
     log_d = np.log(reduced_thickness)
     log_d_modified = np.log(modified_reduced_thickness)
 
-    if Xs is not None:
+    if MIXTURE_MODEL == "highland":
         variance1 = 0.8471 + 0.03347*log_d - 0.001843*log_d**2
         epsilon = np.where(
             log_d_modified < 0.5,
             0.04841 + 0.006348*log_d_modified + 0.0006096*log_d_modified**2,
             -0.01908 + 0.1106*log_d_modified - 0.005729*log_d_modified**2,
         )
-    else:
+    elif MIXTURE_MODEL == "rutherford":
         variance1 = 0.8510 + 0.03314*log_d - 0.001825*log_d**2
         epsilon = np.where(
             log_d_modified < 0.5,
             0.05283 + 0.0077*log_d_modified + 0.00069*log_d_modified**2,
             -0.01517 + 0.1151*log_d_modified - 0.00653*log_d_modified**2,
         )
-
-    if (
-        np.any(~np.isfinite(variance1))
-        or np.any(~np.isfinite(epsilon))
-        or np.any((variance1 <= 0) | (variance1 >= 1))
-        or np.any((epsilon <= 0) | (epsilon >= 0.5))
-    ):
-        raise ValueError("Parametrization gives invalid core/tail parameters.")
 
     variance2 = (1 - (1 - epsilon)*variance1) / epsilon
 
@@ -438,11 +430,10 @@ def reach_probability_rng_geometry(remaining_range, cumulative_variance, dz,
     error = np.sqrt(probability*(1-probability)/n_samples)
     return probability, error
 
-def reach_probability_rng_geometry_mixture(remaining_range, epsilon, cumulative_core_variance, cumulative_tail_variance, dz,
+def reach_probability_rng_geometry_mixture(remaining_range, epsilon, kick_core_variance, kick_tail_variance, dz,
                                    rng, n_samples=50_000, batch_size=1000):
-    Vc = _variance(cumulative_core_variance)
-    Vt = _variance(cumulative_tail_variance)
-    widths = np.broadcast_to(np.asarray(dz, dtype=float), Vc.shape)
+    
+    widths = np.broadcast_to(np.asarray(dz, dtype=float), kick_core_variance.shape)
 
     if np.any(~np.isfinite(widths)) or np.any(widths <= 0):
         raise ValueError('Widths must be finite and positive.')
@@ -451,23 +442,21 @@ def reach_probability_rng_geometry_mixture(remaining_range, epsilon, cumulative_
     n_samples, batch_size = _sampling_counts(n_samples, batch_size)
     if remaining_range < 0:
         return 0.0, 0.0
-    if not np.any(Vc) and not np.any(Vt):
-        return 1.0, 0.0
+    
     if remaining_range == 0:
         return 0.0, 0.0
     
-    increment_var_core = np.diff(np.r_[0.0, Vc])
-    increment_var_tail = np.diff(np.r_[0.0, Vt])
+    
     n_reach = 0
     n_nonforward = 0
     for start in range(0, n_samples, batch_size):
         size = min(batch_size, n_samples-start)
 
-        shape = (size, len(Vc))
+        shape = (size, len(kick_core_variance))
 
         is_tail = rng.random(shape) < epsilon
-        kick_sigma = np.sqrt(np.where(is_tail, increment_var_tail, increment_var_core))
 
+        kick_sigma = np.sqrt(np.where(is_tail, kick_tail_variance, kick_core_variance))
         kicks_x = rng.normal(size=shape) * kick_sigma
         kicks_y = rng.normal(size=shape) * kick_sigma
 
@@ -544,7 +533,22 @@ def reach_probability_sampled_mixture(z, dz, R0, var_core, var_tail,
     var_core, var_tail, p_tail = [np.asarray(a, dtype=float)
                                 for a in (var_core, var_tail, p_tail)]
     if any(a.shape != z.shape or np.any(~np.isfinite(a))
-           for a in (var_core, var_tail, p_tail)):
+        for a in (var_core, var_tail, p_tail)):
+        # print("z.shape:", z.shape)
+
+        # for name, a in (
+        #     ("var_core", var_core),
+        #     ("var_tail", var_tail),
+        #     ("p_tail", p_tail),
+        # ):
+        #     print(f"\n{name}: shape={a.shape}, expected={z.shape}")
+
+        #     bad = ~np.isfinite(a)
+        #     if np.any(bad):
+        #         print("Non-finite indices:", np.argwhere(bad))
+        #         print("Non-finite values:", a[bad])
+        # else:
+        #     print("All values are finite")
         raise ValueError('One finite variance/probability per layer required.')
     if (np.any(var_core < 0) or np.any(var_tail < 0)
             or np.any((p_tail < 0) | (p_tail > 1))):
