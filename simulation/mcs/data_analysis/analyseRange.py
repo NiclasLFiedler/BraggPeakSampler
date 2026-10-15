@@ -24,7 +24,8 @@ plt.rcParams.update({'font.size': 16})
 
 # Configuration: preserve the settings in the supplied script.
 USEPWO = False
-USEHIGHLAND = True
+USEHIGHLAND = False
+USEMODELMIXTURE = True
 SAVEDATA = False
 LARGEOUTPUT = False
 
@@ -47,7 +48,7 @@ PLOT_LAYER_INDEX = 60
 X_LIM = 6.0 if USEPWO else 30.3
 ANGULAR_MODEL = "mixture"  # "core" or "mixture"
 MIXTURE_MODEL = "rutherford" # "rutherford" or "highland"
-MIXTURE_FIT_METHOD = "mle"  # "mle", "curve_fit", or "compare"
+MIXTURE_FIT_METHOD = "curve_fit"  # "mle", "curve_fit", or "compare"
 MIXTURE_BINS = 500  # Used by curve_fit and the comparison histogram.
 
 def gaussian_core_sigma(values, latestSigma):
@@ -484,9 +485,13 @@ def main():
     CumMixtureModelSigmaTail = np.full(len(z), np.nan)
     CumMixtureModelVarCore = np.full(len(z), np.nan)
     CumMixtureModelVarTail = np.full(len(z), np.nan)
+    
+    CumVarHighland[:n_model] = mcs.highland_variance(z=z[:n_model], dz=dz[:n_model], R0=R0, E0=E0, p_exp=p_exp, X0=X0)
+    
+    KickVarCore = np.diff(np.r_[0.0, CumVarCore]) if not USEHIGHLAND else np.diff(np.r_[0.0, CumVarHighland])
     KickVarCore = np.diff(np.r_[0.0, CumVarCore])
- 
-    if USEHIGHLAND and ANGULAR_MODEL == "mixture":
+
+    if ANGULAR_MODEL == "mixture":
         Xs = mcs.scattering_length_from_X0(X0, Z)
         Xs = None
         var1, var2, weight = mcs.gaussian_mixture_model(z=z[:n_model], dz=dz[:n_model], R0=R0, E0=E0, p_exp=p_exp, X0=X0, Z=Z, Xs=Xs, KickVariance=KickVarCore[:n_model], MIXTURE_MODEL=MIXTURE_MODEL)
@@ -498,7 +503,7 @@ def main():
         CumMixtureModelSigmaCore = np.sqrt(CumMixtureModelVarCore)
         CumMixtureModelSigmaTail = np.sqrt(CumMixtureModelVarTail)
 
-    if USEHIGHLAND and ANGULAR_MODEL == "mixture":
+    if USEMODELMIXTURE and ANGULAR_MODEL == "mixture":
         comp_plot_mixture_parameters(
             z=z,
             weight=MixtureWeight,
@@ -515,13 +520,8 @@ def main():
         MixtureKickVarCore = MixtureModelKickVarCore
         MixtureKickVarTail = MixtureModelKickVarTail
 
-    CumVarHighland[:n_model] = mcs.highland_variance(z=z[:n_model], dz=dz[:n_model], R0=R0, E0=E0, p_exp=p_exp, X0=X0)
     
-    # Above retains your existing power-law energy profile. For your polynomial
-    # law, pass the consistent inverse as energy_at_depth to the helper.
     V = CumVarHighland if USEHIGHLAND else CumVarCore
-    
-    # Validate without replacing/truncating the master z/dz arrays.
     mcs.simulation_grid(z[:n_model], V[:n_model], R0,
                         layer_ids=boundary_layers[:n_model])
 
@@ -604,7 +604,7 @@ def main():
     ax.plot(z_plot, reach_analytical_plot, ".-", color="blue", label="Single Gaussian CDF")
     
     
-    if USEHIGHLAND and ANGULAR_MODEL == "mixture":
+    if  ANGULAR_MODEL == "mixture":
         # ax.plot(z_plot, reach_geometry_plot, "-.", color="orange", label="Single Gaussian RNG")
         line, = ax.plot(z_plot, mixture_reach_analytical_plot, "-^", color="red",
                         label=f"Gaussian Mixture CDF ({N_CONFIGURATIONS} sampled configurations)")
@@ -636,7 +636,7 @@ def main():
     ax_diff.plot(z, residuals, "-o", color="blue", label="Geant4 - Single Gaussian CDF")
     # ax_diff.plot(z_plot, reach_geometry_plot-reach_analytical_plot, "-o", color="orange", label="RNG - Analytical")
     # ax_diff.fill_between(z_plot, -2*reach_rng_error_plot, 2*reach_rng_error_plot, alpha=.25, label="RNG - Analytical error band")
-    if USEHIGHLAND and ANGULAR_MODEL == "mixture":
+    if ANGULAR_MODEL == "mixture":
         ax_diff.plot(z, mixture_residuals, "-^", color="red", label="Geant4 - Gaussian Mixture sampled CDF")
         # ax_diff.plot(z_plot, mixture_reach_geometry_plot-mixture_reach_analytical_plot, "-^", color="lime", label="Gaussian Mixture RNG - Sampled CDF")
     ax_diff.axvline(R0, color="gray", linestyle="--", label="R0")
@@ -663,7 +663,7 @@ def main():
     if np.any(stop_bin_probability < -1e-8):
         warnings.warn("Analytical reach rises with depth; inspect CDF numerical stability.")
     plt.figure(figsize=(12, 9))
-    if USEHIGHLAND and ANGULAR_MODEL == "mixture":
+    if  ANGULAR_MODEL == "mixture":
         plt.stairs(np.r_[0, stop_bin_density_mixture, 0], np.r_[0, z_plot, 0], baseline=None, label="Mixture stopping probability")
     else:
         plt.stairs(np.r_[0, stop_bin_density, 0], np.r_[0, z_plot, 0], baseline=None, label="Analytical stopping probability")

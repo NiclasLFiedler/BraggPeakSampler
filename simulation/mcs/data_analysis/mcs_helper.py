@@ -165,6 +165,7 @@ def gaussian_mixture_model(z, dz, R0, E0, p_exp, X0, Z, Xs=None, KickVariance=No
         reduced_thickness = dz / (Xs * beta**2)
     else:
         reduced_thickness = dz / (X0 * beta**2)
+        
     modified_reduced_thickness = Z**(2/3) * reduced_thickness
     log_d = np.log(reduced_thickness)
     log_d_modified = np.log(modified_reduced_thickness)
