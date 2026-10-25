@@ -41,7 +41,7 @@ int main(int argc,char** argv)
   G4PhysListFactory factory;
   // auto physicsList = new QBBC();
   auto physicsList = factory.GetReferencePhysList("QGSP_BIC_EMY");
-  // physicsList->ReplacePhysics(new G4EmStandardPhysics_option4());
+  physicsList->ReplacePhysics(new G4EmStandardPhysics_option4());
   
   G4StepLimiterPhysics* stepLimitPhys = new G4StepLimiterPhysics();
   stepLimitPhys->SetApplyToAll(true); // activates step limit for ALL particles

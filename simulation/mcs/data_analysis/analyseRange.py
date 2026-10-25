@@ -1,10 +1,3 @@
-"""One Geant4 boundary grid for reach, scattering and lateral plots.
-
-Requires your existing analysisFunctions.py, mcs_helper.py, ROOT input and
-range calibration. All depth coordinates are cm; input angles are radians.
-Scoring must identify actual downstream crossings, with one nominal depth
-per layer and contiguous layer IDs starting at zero. No interpolation.
-"""
 import sys
 import warnings
 from time import perf_counter
@@ -32,7 +25,7 @@ LARGEOUTPUT = False
 ROOT_FILE = "h2oproj.root"
 E0 = 220.0
 # Set to None to use range_energy(data, E0). These are your current overrides.
-R0_OVERRIDE = 6.74 if USEPWO else 30.726  #30.72, 6.73398 6.736 6.728
+R0_OVERRIDE = 6.74 if USEPWO else 30.75  #30.72, 6.73398 6.736 6.728
 Z = 73.6 if USEPWO else 7.4 # 73.6, 7.4 due to Mayneord’s formula
 X0 = 0.89 if USEPWO else 36.08
 # Set to the generated-primary count to include events with no recorded hit.
@@ -46,7 +39,7 @@ CONFIGURATION_SEED = 20120584  # Separate stream from angle/geometry RNG.
 DELTA_X_TO_CM = 1.0
 PLOT_LAYER_INDEX = 60
 X_LIM = 6.0 if USEPWO else 30.3
-ANGULAR_MODEL = "mixture"  # "core" or "mixture"
+ANGULAR_MODEL = "core"  # "core" or "mixture"
 MIXTURE_MODEL = "rutherford" # "rutherford" or "highland"
 MIXTURE_FIT_METHOD = "curve_fit"  # "mle", "curve_fit", or "compare"
 MIXTURE_BINS = 500  # Used by curve_fit and the comparison histogram.

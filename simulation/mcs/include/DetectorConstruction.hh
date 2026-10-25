@@ -40,34 +40,7 @@ class DetectorConstruction : public G4VUserDetectorConstruction
 
     // Set methods
     void SetCheckOverlaps(G4bool );
-    //G4double 
-    G4double sigx_film1 = 8.948*mm;
-    G4double sigy_film1 = 8.943*mm;
 
-    G4double sigx_film2 = 9.868*mm;
-    G4double sigy_film2 = 10.088*mm;
-
-    G4double sigx_film3 = 9.838*mm;
-    G4double sigy_film3 = 10.063*mm;
-
-    G4double beamFWHM_p_nozzle_x = 8.1*mm;
-    G4double beamFWHM_p_nozzle_y = 8.1*mm;
-    G4double beamFWHM_p_film_x = 8.1*mm;
-    G4double beamFWHM_p_film_y = 8.1*mm;
-
-    G4double beamFWHM_c12_nozzle_x = 6.6*mm;
-    G4double beamFWHM_c12_nozzle_y = 6.6*mm;
-    G4double beamFWHM_c12_film_x = 3.6*mm;
-    G4double beamFWHM_c12_film_y = 3.6*mm;
-    
-    G4double dis_film_nozzle = 104*cm;
-    G4double dis_det_film = 1*cm;
-    G4double x_off = 0*cm;
-    
-    G4String ftarget = "n/a"; // "homogeneous", "heterogeneous", "n/a";
-    
-    G4bool fuse_cone = true;
-    G4String fbeam_particle = "proton"; //proton or c12
     void SetBeamShape(G4bool use_cone) { G4cout << "Use Cone: " << use_cone << G4endl; fuse_cone = use_cone; };
     void SetBeamParticle(G4String beam_particle) { G4cout << "Particle Name: " << beam_particle << G4endl; fbeam_particle = beam_particle; };
 

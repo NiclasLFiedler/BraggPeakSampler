@@ -23,8 +23,6 @@
 namespace B2
 {
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
 PrimaryGeneratorAction::PrimaryGeneratorAction()
  : G4VUserPrimaryGeneratorAction(), fParticleGun(nullptr), fBeamEnergy(10.0*MeV)
 {
@@ -39,16 +37,11 @@ PrimaryGeneratorAction::PrimaryGeneratorAction()
   fPrimaryGeneratorMessenger = new PrimaryGeneratorMessenger(this);
 }
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
 PrimaryGeneratorAction::~PrimaryGeneratorAction()
 {
   delete fParticleGun;
   delete fPrimaryGeneratorMessenger;
 }
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
-
 
 void PrimaryGeneratorAction::SetBeamEnergy(G4double energy) {
     fBeamEnergy = 220*MeV;
@@ -58,7 +51,7 @@ void PrimaryGeneratorAction::SetBeamEnergy(G4double energy) {
 
 void PrimaryGeneratorAction::GeneratePrimaries(G4Event* anEvent)
 {
-  beamPos = G4ThreeVector(0,0,0.1*mm);
+  beamPos = G4ThreeVector(0,0,0.1*um);
   fParticleGun->SetParticleMomentumDirection(G4ThreeVector(0, 0, -1.));
   fParticleGun->SetParticlePosition(beamPos);
   fParticleGun->GeneratePrimaryVertex(anEvent);

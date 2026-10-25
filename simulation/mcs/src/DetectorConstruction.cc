@@ -25,6 +25,9 @@
 #include "DetectorParameterisationColour.hh"
 #include "HeteroParametrisation.cc"
 #include "G4VPVParameterisation.hh"
+#include "G4EmCalculator.hh"
+#include "G4ParticleTable.hh"
+#include "G4ParticleDefinition.hh"
 
 using namespace B2;
 
@@ -243,20 +246,27 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   const G4double phantomX = 200.0 * cm;
   const G4double phantomY = 200.0 * cm;
   
-  G4double phantomZ = 7 * cm;
+  G4ParticleDefinition* particle = G4ParticleTable::GetParticleTable()->FindParticle("proton");
+  G4EmCalculator emCalc;
+  
+  
+  G4double RangeWater220 = 30.719*cm; 
+  G4double RangePWO220 = 6.73398*cm;
+ 
+  G4double phantomZ = RangePWO220+0.01*RangePWO220;
   
   // Depth measured from the phantom entrance along the beam.
-  G4double switchDepth = 6.5 * cm;
-  // Requested maximum layer widths.
-  G4double coarseWidth = 0.2  * cm;  // 1 mm
-  G4double fineWidth   = 0.015 * cm;  // 0.01
+  G4double switchDepth = 0.95*RangePWO220;
+  
+  G4double coarseWidth = 0.01*RangePWO220;
+  G4double fineWidth   = 0.001*RangePWO220;
   
   bool useH2O = true;
   if(useH2O){
-    phantomZ = 31.5*cm;
-    switchDepth = 30.5 * cm;
-    coarseWidth = 0.5 * cm;
-    fineWidth   = 0.005 * cm;
+    phantomZ = RangeWater220+0.002*RangeWater220;
+    switchDepth = 0.98*RangeWater220;
+    coarseWidth = 0.01*RangeWater220;
+    fineWidth   = 0.0002*RangeWater220;
   }
   if (switchDepth <= 0.0 || switchDepth >= phantomZ ||
       coarseWidth <= 0.0 || fineWidth <= 0.0)
@@ -269,6 +279,8 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
 
   const G4double dzCoarse = switchDepth / nCoarse;
   const G4double dzFine   = (phantomZ - switchDepth) / nFine;
+  G4cout << "Phantom Z: " << phantomZ  << " cm" << G4endl;
+  G4cout << "Switch depth: " << switchDepth  << " cm" << G4endl;
 
   // Phantom entrance remains at global z = 0.
   // Its downstream end is at global z = -phantomZ.
