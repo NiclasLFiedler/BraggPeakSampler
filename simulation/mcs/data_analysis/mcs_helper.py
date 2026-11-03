@@ -1,5 +1,16 @@
 import operator
 import numpy as np
+from scipy.optimize import isotonic_regression
+
+
+def fit_cumulative_variance(variance, weights=None):
+    variance = np.asarray(variance, dtype=float)
+    if variance.ndim != 1 or not np.all(np.isfinite(variance)):
+        raise ValueError("Expected a finite 1D cumulative variance array.")
+    if np.any(variance < 0):
+        raise ValueError("Cumulative variance must be nonnegative.")
+
+    return isotonic_regression(variance, weights=weights, increasing=True).x
 
 def _beta(E0, T):
     return np.sqrt(T * (T + 2 * E0) / (T + E0)**2)

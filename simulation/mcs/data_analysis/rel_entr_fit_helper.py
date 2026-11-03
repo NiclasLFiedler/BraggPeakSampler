@@ -25,7 +25,6 @@ import numpy as np
 from scipy.optimize import minimize
 from scipy.special import ndtr, rel_entr
 
-
 def _normal_bin_probabilities(edges, variance):
     """Integrate N(0, variance) in each bin, retaining upper-tail precision."""
     lo = edges[:-1] / np.sqrt(variance)

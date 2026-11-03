@@ -251,7 +251,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   
   
   G4double RangeWater220 = 30.719*cm; 
-  G4double RangePWO220 = 6.73398*cm;
+  G4double RangePWO220 = 6.734*cm;
  
   G4double phantomZ = RangePWO220+0.01*RangePWO220;
   
@@ -263,9 +263,9 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   
   bool useH2O = true;
   if(useH2O){
-    phantomZ = RangeWater220+0.05;
+    phantomZ = RangeWater220+0.03;
     switchDepth = 0.995*RangeWater220;
-    coarseWidth = 0.005*RangeWater220;
+    coarseWidth = 0.01*RangeWater220;
     fineWidth   = 0.0001*RangeWater220;
   }
   if (switchDepth <= 0.0 || switchDepth >= phantomZ ||
