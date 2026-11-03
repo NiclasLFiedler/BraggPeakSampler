@@ -90,7 +90,7 @@ void DetectorConstruction::DefineMaterials()
   G4Element *elW = nistManager->FindOrBuildElement("W");    // 74
   G4Element *elPb = nistManager->FindOrBuildElement("Pb");  // 82
   // Air defined using NIST Manager
-  worldMat = nistManager->FindOrBuildMaterial("G4_AIR"); 
+  worldMat = nistManager->FindOrBuildMaterial("G4_Galactic"); 
 
   // detMaterial = nistManager->FindOrBuildMaterial("G4_PbWO4");
   // detMaterial->GetIonisation()->SetMeanExcitationEnergy(600.7*eV);
@@ -256,17 +256,17 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   G4double phantomZ = RangePWO220+0.01*RangePWO220;
   
   // Depth measured from the phantom entrance along the beam.
-  G4double switchDepth = 0.95*RangePWO220;
+  G4double switchDepth = 0.97*RangePWO220;
   
   G4double coarseWidth = 0.01*RangePWO220;
   G4double fineWidth   = 0.001*RangePWO220;
   
   bool useH2O = true;
   if(useH2O){
-    phantomZ = RangeWater220+0.002*RangeWater220;
-    switchDepth = 0.98*RangeWater220;
-    coarseWidth = 0.01*RangeWater220;
-    fineWidth   = 0.0002*RangeWater220;
+    phantomZ = RangeWater220+0.05;
+    switchDepth = 0.995*RangeWater220;
+    coarseWidth = 0.005*RangeWater220;
+    fineWidth   = 0.0001*RangeWater220;
   }
   if (switchDepth <= 0.0 || switchDepth >= phantomZ ||
       coarseWidth <= 0.0 || fineWidth <= 0.0)

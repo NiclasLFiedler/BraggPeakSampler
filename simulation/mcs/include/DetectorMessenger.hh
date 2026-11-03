@@ -31,11 +31,6 @@ class DetectorMessenger: public G4UImessenger
 
   private:
     DetectorConstruction*  fDetectorConstruction = nullptr;
-
-    G4UIdirectory*         fBeamshapDirectory = nullptr;
-
-    G4UIcmdWithABool* fBeamShape = nullptr;
-    G4UIcmdWithAString* fBeamParticle = nullptr;
 };
 
 }

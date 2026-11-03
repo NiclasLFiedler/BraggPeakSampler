@@ -41,9 +41,6 @@ class DetectorConstruction : public G4VUserDetectorConstruction
     // Set methods
     void SetCheckOverlaps(G4bool );
 
-    void SetBeamShape(G4bool use_cone) { G4cout << "Use Cone: " << use_cone << G4endl; fuse_cone = use_cone; };
-    void SetBeamParticle(G4String beam_particle) { G4cout << "Particle Name: " << beam_particle << G4endl; fbeam_particle = beam_particle; };
-
   private:
     // methods
     void DefineMaterials();

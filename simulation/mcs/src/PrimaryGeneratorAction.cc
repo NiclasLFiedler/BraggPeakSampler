@@ -51,6 +51,23 @@ void PrimaryGeneratorAction::SetBeamEnergy(G4double energy) {
 
 void PrimaryGeneratorAction::GeneratePrimaries(G4Event* anEvent)
 {
+  if (anEvent->GetEventID() == 0) {
+    auto* layer = G4LogicalVolumeStore::GetInstance()
+                      ->GetVolume("logLayerCoarse");
+
+    G4EmCalculator calc;
+    const auto energy = fParticleGun->GetParticleEnergy();
+
+    G4cout << "Beam energy: " << energy / MeV << " MeV"
+           << ", CSDA range: "
+           << calc.GetRange(
+                  energy,
+                  fParticleGun->GetParticleDefinition(),
+                  layer->GetMaterial()) / cm
+           << " cm" << G4endl;
+}
+
+
   beamPos = G4ThreeVector(0,0,0.1*um);
   fParticleGun->SetParticleMomentumDirection(G4ThreeVector(0, 0, -1.));
   fParticleGun->SetParticlePosition(beamPos);
