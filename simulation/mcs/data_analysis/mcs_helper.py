@@ -1,7 +1,7 @@
 import operator
 import numpy as np
 from scipy.optimize import isotonic_regression
-
+import matplotlib.pyplot as plt
 
 def fit_cumulative_variance(variance, weights=None):
     variance = np.asarray(variance, dtype=float)
@@ -247,32 +247,31 @@ def calculate_coefficients(weights):
                 coefficients[i] *= wi / (wi - wj)
     return coefficients
 
-def gchi2_exact_pdf(x, weights):
+def gchi2_exact_pdf(delta_r, weights):
     weights = np.asarray(weights, dtype=float)
     weights = weights[weights > 0]
-    x = np.asarray(x, dtype=float)
+    delta_r = np.asarray(delta_r, dtype=float)
     if not weights.size:
-        return np.asarray(x >= 0, dtype=float)
+        return np.asarray(delta_r >= 0, dtype=float)
     coefficients = calculate_coefficients(weights)
-    pdf = np.zeros_like(x)
+    pdf = np.zeros_like(delta_r)
     for wi, Ai in zip(weights, coefficients):
-        # pdf += Ai * np.exp(-np.maximum(x, 0) / (2 * wi)) // non-normalized
-        pdf += Ai / (2 * wi) * np.exp(-np.maximum(x, 0) / (2 * wi))
-    return np.where(x <= 0, 0.0, pdf)
+        pdf += Ai / (2 * wi) * np.exp(-np.maximum(delta_r, 0) / (2 * wi))
+    return pdf
 
-def gchi2_exact_cdf(x, weights):
+def gchi2_exact_cdf(delta_r, weights):
     weights = np.asarray(weights, dtype=float)
     weights = weights[weights > 0]
-    x = np.asarray(x, dtype=float)
+    delta_r = np.asarray(delta_r, dtype=float)
     if not weights.size:
-        return np.asarray(x >= 0, dtype=float)
+        return np.asarray(delta_r >= 0, dtype=float)
     coefficients = calculate_coefficients(weights)
-    cdf = np.ones_like(x)
+    cdf = np.ones_like(delta_r)
     
     for wi, Ai in zip(weights, coefficients):
-        cdf -= Ai * np.exp(-np.maximum(x, 0) / (2 * wi))
+        cdf -= Ai * np.exp(-np.maximum(delta_r, 0) / (2 * wi))
     
-    return np.where(x <= 0, 0.0, cdf)
+    return cdf
 
 def reach_cdf_grid(z, dz, V, R0, cdf, indices=None):
     """Optional analytical evaluation only at selected grid indices.
@@ -607,3 +606,230 @@ def reach_probability_sampled_mixture(z, dz, R0, var_core, var_tail,
             progress(j+1, len(z), len(patterns))
     return mean, error
 
+def plot_excess_pathlength_layers(z, dz, layers, cumulative_variance=None, *, mixture=None, x_max_mm=None, n_configurations=2000, seed=20120584, geant4=None, bins=150,n_geometry=None, R0 =None,ax=None, ax_res=None, show_geant4=True,): 
+    if (cumulative_variance is None) == (mixture is None):
+        raise ValueError("Supply either cumulative_variance or mixture.")
+    layers = np.asarray(layers)
+    if (layers.ndim != 1 or layers.size == 0 or layers.dtype.kind not in "iu"
+            or np.any(layers < 0) or np.any(layers >= len(z))):
+        raise ValueError("layers must contain valid zero-based integer indices.")
+    if x_max_mm is not None and (not np.isfinite(x_max_mm) or x_max_mm <= 0):
+        raise ValueError("x_max_mm must be finite and positive.")
+    if n_geometry is not None:
+        if not isinstance(n_geometry, (int, np.integer)) or n_geometry < 1:
+            raise ValueError("n_geometry must be a positive integer.")
+        rng_geometry = np.random.default_rng(np.random.SeedSequence(seed).spawn(1)[0])
+
+    if mixture is not None:
+        core, tail, p_tail = map(np.asarray, mixture)
+        if n_configurations < 1:
+            raise ValueError("n_configurations must be positive.")
+        if np.any(~np.isfinite(p_tail)) or np.any((p_tail < 0) | (p_tail > 1)):
+            raise ValueError("Tail probabilities must lie in [0, 1].")
+        rng = np.random.default_rng(seed)
+        choices = rng.random((n_configurations, max(layers) + 1)) < p_tail[:max(layers) + 1]
+
+
+    g4color = "#000000"
+    singularColor ="#0072B2" 
+    mixtureColor = "#D55E00"
+
+    if ax is None:
+        fig, ax = plt.subplots(
+            figsize=(15 / 2.54, 11 / 2.54),
+            constrained_layout=True,
+        )
+    else:
+        fig = ax.figure
+
+
+    if mixture is None:
+        model_name = "Single Gaussian"
+        model_color = singularColor
+        analytical_style = "-"
+        sampled_style = "--"
+    else:
+        model_name = "Gaussian mixture"
+        model_color = mixtureColor
+        analytical_style = "-."
+        sampled_style = ":"
+
+    for layer in layers:
+        if layer % 10 == 0:
+            print(f"Layer {layer}")
+        n = layer + 1
+        if mixture is None:
+            weights = [weighted_eigenvalues(cumulative_variance[:n], dz[:n])]
+            probabilities = np.array([1.0])
+        else:
+            patterns, counts = np.unique(choices[:, :n], axis=0, return_counts=True)
+            weights = [weighted_eigenvalues(
+                np.cumsum(np.where(pattern, tail[:n], core[:n])), dz[:n]
+            ) for pattern in patterns]
+            probabilities = counts / n_configurations
+
+        means = np.array([2 * values.sum() for values in weights])
+        variances = np.array([4 * np.sum(values**2) for values in weights])
+        mean = probabilities @ means
+        variance = probabilities @ (variances + (means - mean)**2)
+        upper_cm = mean + 12 * np.sqrt(variance) if x_max_mm is None else x_max_mm / 10
+        remaining_range = None if R0 is None else R0 - z[layer]
+
+        if remaining_range is not None:
+            if remaining_range <= 0:
+                raise ValueError(f"Layer {layer} is at or beyond R0.")
+            upper_cm = min(upper_cm, remaining_range)
+        
+        x_cm = upper_cm * np.linspace(0, 1, 1000)**2
+        
+        density = np.zeros_like(x_cm)
+        for probability, values in zip(probabilities, weights):
+            pdf = gchi2_exact_pdf(x_cm, values)
+            if values.size == 1:
+                pdf[0] = 1 / (2 * values[0])  # Exponential endpoint. corrects nan
+            density += probability * pdf
+
+        if remaining_range is not None:
+            reach_probability = sum(
+                probability * float(gchi2_exact_cdf(remaining_range, values))
+                for probability, values in zip(probabilities, weights)
+            )
+            if not np.isfinite(reach_probability) or reach_probability <= 0:
+                raise ValueError(f"Invalid reach probability for layer {layer}.")
+        
+            density /= reach_probability
+
+        ax.plot(
+            x_cm * 10, density / 10,
+            color=model_color,
+            linestyle=analytical_style,
+            label=f"{model_name}, z = {z[layer]:.4g} cm",
+        )
+
+        if n_geometry is not None:
+            theta_x = np.zeros(n_geometry)
+            theta_y = np.zeros(n_geometry)
+            excess_cm = np.zeros(n_geometry)
+
+            if mixture is None:
+                kick_variances = np.diff(np.r_[0.0, cumulative_variance[:n]])
+                if np.any(kick_variances < 0):
+                    raise ValueError("Cumulative variances produce negative kick variances.")
+
+            for i in range(n):
+                if mixture is None:
+                    sigma = np.sqrt(kick_variances[i])
+                else:
+                    # One component selection per kick, shared by x and y.
+                    is_tail = rng_geometry.random(n_geometry) < p_tail[i]
+                    sigma = np.sqrt(np.where(is_tail, tail[i], core[i]))
+
+                theta_x += rng_geometry.normal(size=n_geometry) * sigma
+                theta_y += rng_geometry.normal(size=n_geometry) * sigma
+
+                excess_cm += 0.5 * dz[i] * (theta_x**2 + theta_y**2)
+
+            if remaining_range is not None:
+                excess_cm = excess_cm[excess_cm <= remaining_range]
+
+            counts, edges = np.histogram(excess_cm * 10, bins=bins, range=(0, upper_cm * 10),)
+            if excess_cm.size:
+                ax.stairs(
+                    counts / (excess_cm.size * np.diff(edges)),
+                    edges,
+                    color=model_color,
+                    linestyle=sampled_style,
+                    linewidth=1.4,
+                    baseline=None,
+                    label=f"{model_name}, sampled, z = {z[layer]:.4g} cm",
+                )
+
+        if geant4 is not None:
+            g4_layers, g4_excess_cm = geant4
+            samples_mm = (
+                np.asarray(g4_excess_cm)[np.asarray(g4_layers) == layer] * 10
+            )
+
+            if samples_mm.size:
+                counts, edges = np.histogram(
+                    samples_mm, bins=bins, range=(0, upper_cm * 10),
+                )
+
+                widths = np.diff(edges)
+                centers = 0.5 * (edges[:-1] + edges[1:])
+                normalization = samples_mm.size * widths
+                g4_density = counts / normalization
+                g4_error = np.sqrt(counts) / normalization
+
+                if show_geant4:
+                    ax.errorbar(
+                        centers, g4_density, yerr=g4_error,
+                        fmt="o", markersize=3, markerfacecolor="none",
+                        color=g4color, elinewidth=0.8, capsize=0,
+                        label=f"Geant4, layer {layer}",
+                    )
+
+                if ax_res is not None:
+                    # Analytical probability in each histogram bin from the CDF.
+                    # cdf_edges = np.zeros_like(edges)
+                    # for probability, values in zip(probabilities, weights):
+                        # cdf_edges += probability * np.array([
+                            # float(gchi2_exact_cdf(edge / 10, values))
+                            # for edge in edges
+                        # ])
+
+                    # if remaining_range is not None:
+                        # cdf_edges /= reach_probability
+
+                    # model_density = np.diff(cdf_edges) / widths
+                    # better performance
+                    integrated_density = np.r_[
+                        0.0,
+                        np.cumsum(
+                            0.5 * (density[:-1] + density[1:]) * np.diff(x_cm)
+                        ),
+                    ]
+                    
+                    # Integrated probabilities at the Geant4 bin edges.
+                    integral_edges = np.interp(
+                        edges / 10, x_cm, integrated_density
+                    )
+                    
+                    # Bin-averaged density in mm^-1.
+                    model_density = np.diff(integral_edges) / widths
+
+                    ax_res.plot(
+                        centers, model_density - g4_density,
+                        color=model_color,
+                        linestyle=analytical_style,
+                        linewidth=1.4,
+                    )
+
+                    # Sampled density using exactly the same bins.
+                    if n_geometry is not None and excess_cm.size:
+                        sampled_counts, _ = np.histogram(
+                            excess_cm * 10, bins=edges,
+                        )
+                        sampled_density = (
+                            sampled_counts / (excess_cm.size * widths)
+                        )
+
+                        ax_res.stairs(
+                            sampled_density - g4_density,
+                            edges,
+                            color=model_color,
+                            linestyle=sampled_style,
+                            linewidth=1.4,
+                            baseline=None,
+                        )
+
+                    # Reference uncertainty, drawn once around zero.
+                    if show_geant4:
+                        ax_res.fill_between(
+                            centers, -g4_error, g4_error,
+                            color="0.85", linewidth=0, zorder=0,
+                        )
+
+    ax.set(xlabel=r"Excess path length $\Delta r$ / mm", ylabel=r"Probability density / mm$^{-1}$")
+    ax.legend()
+    return fig, ax

@@ -23,6 +23,7 @@ RunAction::RunAction()
   analysisManager->CreateNtupleDColumn("CumScatteringAngle");
   analysisManager->CreateNtupleIColumn("layerID");
   analysisManager->CreateNtupleDColumn("deltaX");
+  analysisManager->CreateNtupleDColumn("ExcessPathLength");
   analysisManager->FinishNtuple();
 }
 

@@ -16,8 +16,8 @@ from rel_entr_fit_helper import fit_simple_kl, fit_complex_kl
 plt.rcParams.update({'font.size': 16})
 
 # Configuration: preserve the settings in the supplied script.
-USEPWO = False
-USEHIGHLAND = True
+USEPWO = True
+USEHIGHLAND = False
 USEMODELMIXTURE = True
 SAVEDATA = False
 LARGEOUTPUT = False
@@ -310,6 +310,7 @@ def main():
         CumScatteringAngle = tree["CumScatteringAngle"].array(library="np")
         ScatteringAngle = tree["SingleScatteringAngle"].array(library="np")
         deltaX = tree["deltaX"].array(library="np") * DELTA_X_TO_CM
+        G4ExcessPathLength = tree["ExcessPathLength"].array(library="np")
 
     if event.size == 0:
         raise ValueError("No recorded hits.")
@@ -362,6 +363,7 @@ def main():
         z[i] = recorded_depth[0]
         if not np.allclose(recorded_depth, z[i], rtol=1e-7, atol=1e-8):
             raise ValueError(f"Layer {i} has inconsistent downstream depths; check scoring.")
+        
         CumSigmaCore[i] = gaussian_core_sigma(CumScatteringAngle[rows], CumSigmaCore[i-1])
         SingleSigmaCore[i] = gaussian_core_sigma(ScatteringAngle[rows], SingleSigmaCore[i-1])
         CumDeltaXSigmaCore[i] = gaussian_core_sigma(deltaX[rows], CumDeltaXSigmaCore[i-1])
@@ -395,7 +397,7 @@ def main():
 
             if MIXTURE_FIT_METHOD == "compare":
                 alternative = fit_parameters["curve_fit"][i]
-    
+        
         if i== PLOT_LAYER_INDEX:
             plot_cumulative_angular_fit(CumScatteringAngle[rows], CumSigmaCore[i], i, z[i], mixture, alternative)
             #plot_cumulative_angular_fit(CumScatteringAngle[rows], CumSigmaCore[i], i, z[i], mixture, alternative)
@@ -413,19 +415,20 @@ def main():
         MixtureKickVarTail = np.diff(np.r_[0.0, CumMixtureVarTail])
         
 
-    plt.figure(figsize=(10, 7))
-    plt.plot(z, CumMixtureVarCore, "o-", markersize=3,
-             label="Core variance")
-    plt.plot(z, CumMixtureVarTail, "^-", markersize=3,
-             label="Tail variance")
 
-    plt.xlabel("Depth / cm")
-    plt.ylabel(r"Cumulative angular variance / rad$^2$")
-    plt.legend()
-    plt.grid(alpha=0.3)
-    plt.tight_layout()
-    plt.show()
     if ANGULAR_MODEL == "mixture":
+        plt.figure(figsize=(10, 7))
+        plt.plot(z, CumMixtureVarCore, "o-", markersize=3,
+                 label="Core variance")
+        plt.plot(z, CumMixtureVarTail, "^-", markersize=3,
+                 label="Tail variance")
+
+        plt.xlabel("Depth / cm")
+        plt.ylabel(r"Cumulative angular variance / rad$^2$")
+        plt.legend()
+        plt.grid(alpha=0.3)
+        plt.tight_layout()
+        plt.show()
         CumMixtureVariance = ((1-MixtureWeight) * CumMixtureVarCore + (MixtureWeight) * CumMixtureVarTail)
         if SAVEDATA:
             np.savez("cumulative_angular_mixture.npz", z=z,
@@ -435,7 +438,7 @@ def main():
             print("Saved mixture fits (angles in rad): cumulative_angular_mixture.npz")
             
                 
-    del order, starts, counts, layerID, hit_depth
+    del order, starts, counts, hit_depth
     del CumScatteringAngle, ScatteringAngle, deltaX
     
     if np.any(z <= 0) or np.any(np.diff(z) <= 0):
@@ -492,8 +495,8 @@ def main():
     V = CumVarHighland if USEHIGHLAND else CumVarCoreFit
     print(V)
     KickVarCore = np.diff(np.r_[0.0, V])
-
-    if ANGULAR_MODEL == "mixture":
+    
+    if USEMODELMIXTURE:
         Xs = mcs.scattering_length_from_X0(X0, Z)
         Xs = None
         MixtureModelKickVarCore, MixtureModelKickVarTail, weight = mcs.gaussian_mixture_model(z=z[:n_model], dz=dz[:n_model], R0=R0, E0=E0, p_exp=p_exp, X0=X0, Z=Z, Xs=Xs, KickVariance=KickVarCore[:n_model], MIXTURE_MODEL=MIXTURE_MODEL)
@@ -503,7 +506,7 @@ def main():
         CumMixtureModelSigmaCore = np.sqrt(CumMixtureModelVarCore)
         CumMixtureModelSigmaTail = np.sqrt(CumMixtureModelVarTail)
 
-    if USEMODELMIXTURE and ANGULAR_MODEL == "mixture":
+    
         comp_plot_mixture_parameters(
             z=z,
             weight=MixtureWeight,
@@ -519,6 +522,65 @@ def main():
         CumMixtureSigmaTail = CumMixtureModelSigmaTail
         MixtureKickVarCore = MixtureModelKickVarCore
         MixtureKickVarTail = MixtureModelKickVarTail
+    
+    plt.rcParams.update({
+        "font.size": 16,
+        #"axes.labelsize": 11,
+        #"legend.fontsize": 8,
+        "xtick.labelsize": 9,
+        "ytick.labelsize": 9,
+        "axes.linewidth": 0.8,
+        "lines.linewidth": 1.4,
+        #"pdf.fonttype": 42,
+        "ps.fonttype": 42,
+        "axes.prop_cycle": plt.cycler(
+            color=["#000000", "#0072B2", "#D55E00"]
+        ),
+    })
+
+    fig, (ax, ax_res) = plt.subplots(
+        2, 1,
+        sharex=True,
+        figsize=(15 / 2.54, 14 / 2.54),
+        gridspec_kw={"height_ratios": [3, 1]},
+        constrained_layout=True,
+    )
+
+    options = dict(
+        layers=[80],
+        x_max_mm=2.0,
+        bins=150,
+        n_geometry=N_GEOMETRY,
+        R0=R0,
+        geant4=(layerID, G4ExcessPathLength),
+        ax=ax,
+        ax_res=ax_res,
+    )
+    print("Core")
+    mcs.plot_excess_pathlength_layers(
+        z, dz,
+        cumulative_variance=V,
+        **options,
+    )
+    del layerID, G4ExcessPathLength
+
+    if ANGULAR_MODEL:
+        print("Anuglar Model")
+        mcs.plot_excess_pathlength_layers(
+            z, dz,
+            mixture=(MixtureKickVarCore, MixtureKickVarTail, MixtureWeight),
+            show_geant4=False,
+            **options,
+        )
+    
+    ax.set_xlabel("")
+    ax_res.set(
+        xlabel=r"Excess path length $\Delta r$ / mm",
+        ylabel="Residual\n" + r"/ mm$^{-1}$",
+    )
+    ax_res.axhline(0, color="0.4", linewidth=0.8, zorder=0)
+    plt.show()
+    del options
 
     if USEHIGHLAND:
         mcs.simulation_grid(z[:n_model], V[:n_model], R0, layer_ids=boundary_layers[:n_model])

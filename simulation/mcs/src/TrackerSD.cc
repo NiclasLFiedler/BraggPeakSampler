@@ -37,6 +37,7 @@ void TrackerSD::Initialize(G4HCofThisEvent* hce)
     thetaXOut = 0.0;
     prepos = 0.0;
     postpos = 0.0;
+    pathlength = 0.0;
     fHitsCollection = new TrackerHitsCollection(SensitiveDetectorName, collectionName[0]);
 
     G4int hcID = G4SDManager::GetSDMpointer()->GetCollectionID(collectionName[0]);
@@ -53,8 +54,7 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
 
     G4StepPoint* pre  = aStep->GetPreStepPoint();
     G4StepPoint* post = aStep->GetPostStepPoint();
-    
-    // Entering a layer
+
     if (pre->GetStepStatus() == fGeomBoundary)
     {
         layerID = pre->GetTouchable()->GetCopyNumber();
@@ -105,9 +105,9 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
         
         // Phantom entrance is at global z = 0.
         const G4double depth = -downstreamWorld.z() / cm;
-
-        /////////
-
+        
+        G4double tracklength = (aStep->GetTrack()->GetTrackLength()-0.1*um)/ cm; // 0.001 inital beampos in z
+        
         const G4ThreeVector& dirOut = post->GetMomentumDirection();
         thetaXOut = std::atan2(dirOut.x(), -dirOut.z());
 
@@ -126,6 +126,7 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
         newHit->SetDepth(depth);
 
         newHit->SetCumAngle(thetaXOut);
+        newHit->SetExcessPathLength(tracklength-depth);
 
         newHit->SetScatteringAngle(deltaThetaX);
         newHit->SetLayerID(layerID);
@@ -146,6 +147,7 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
 
 void TrackerSD::EndOfEvent(G4HCofThisEvent*)
 {
+  pathlength = 0.0;
   if ( verboseLevel>2 ) {
      std::size_t nofHits = fHitsCollection->entries();
      G4cout << G4endl

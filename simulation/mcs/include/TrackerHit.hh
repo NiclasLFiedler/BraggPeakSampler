@@ -71,8 +71,8 @@ class TrackerHit : public G4VHit
     void SetCumAngle      (G4double CumAngle){ fCumAngle = CumAngle; };
     void SetLayerID      (G4double LayerID){ fLayerID = LayerID; };
     void SetDeltaX      (G4double DeltaX){ fDeltaX = DeltaX; };
+    void SetExcessPathLength      (G4double ExcessPathLength){ fExcessPathLength = ExcessPathLength; };
 
-    // Get methods
     G4double GetEdep() const     { return fEdep; };
     G4double GetEkin() const     { return feKin; };
     G4double GetdEdX() const     { return fdEdX; };
@@ -87,6 +87,7 @@ class TrackerHit : public G4VHit
     G4double GetThetaY() const { return fThetaY; }; 
     G4double GetLayerID() const { return fLayerID; }; 
     G4double GetDeltaX() const { return fDeltaX; };
+    G4double GetExcessPathLength() const { return fExcessPathLength; };
 
     inline void* operator new(size_t);
     inline void  operator delete(void*);
@@ -110,6 +111,7 @@ class TrackerHit : public G4VHit
     G4double      fScatteringAngle = 0.;
     G4int         fLayerID = 0.;
     G4double      fDeltaX = 0.;
+    G4double      fExcessPathLength = 0.;
 };
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......

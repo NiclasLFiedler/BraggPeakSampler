@@ -67,6 +67,7 @@ class TrackerSD : public G4VSensitiveDetector
     G4double thetaXOut = 0;
     G4double prepos = 0;
     G4double postpos = 0;
+    G4double pathlength = 0;
     G4int layerID = -1;
 };
 

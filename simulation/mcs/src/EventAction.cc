@@ -51,16 +51,18 @@ void EventAction::EndOfEventAction(const G4Event* event)
       G4double Depth = (*hitsCollection)[i]->GetDepth();
       G4int layerID = (*hitsCollection)[i]->GetLayerID();
       G4double deltaX = (*hitsCollection)[i]->GetDeltaX();
+      G4double ExcessPathLength = (*hitsCollection)[i]->GetExcessPathLength();
 
       analysisManager->FillNtupleIColumn(0, eventID);	
       analysisManager->FillNtupleDColumn(1, TrackID);
       analysisManager->FillNtupleDColumn(2, Depth);
-      analysisManager->FillNtupleDColumn(3, eTot);
+      // analysisManager->FillNtupleDColumn(3, eTot);
       analysisManager->FillNtupleDColumn(4, eKin);
       analysisManager->FillNtupleDColumn(5, ScatteringAngle);
       analysisManager->FillNtupleDColumn(6, CumAngle);
       analysisManager->FillNtupleIColumn(7, layerID);
       analysisManager->FillNtupleDColumn(8, deltaX);
+      analysisManager->FillNtupleDColumn(9, ExcessPathLength);
       
  	    analysisManager->AddNtupleRow();
     }
