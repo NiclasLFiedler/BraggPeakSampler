@@ -16,10 +16,11 @@ from rel_entr_fit_helper import fit_simple_kl, fit_complex_kl
 plt.rcParams.update({'font.size': 16})
 
 # Configuration: preserve the settings in the supplied script.
-USEPWO = True
+USEPWO = False
 USEHIGHLAND = False
 USEMODELMIXTURE = True
 SAVEDATA = False
+SAVEPLOT = True
 LARGEOUTPUT = False
 
 ROOT_FILE = "h2oproj.root"
@@ -33,7 +34,7 @@ X0 = 0.89 if USEPWO else 36.08
 N_PRIMARIES = None
 N_RNG = 100_000
 N_GEOMETRY = 100_000
-N_CONFIGURATIONS = 2000  # Increase and inspect the pointwise sampling error.
+N_CONFIGURATIONS = 4000  # Increase and inspect the pointwise sampling error.
 CONFIGURATION_SEED = 20120584  # Separate stream from angle/geometry RNG.
 # Confirm against your scorer: convert deltaX to cm if it was stored in mm.
 DELTA_X_TO_CM = 1.0
@@ -41,7 +42,7 @@ PLOT_LAYER_INDEX = 10
 X_LIM = 6.0 if USEPWO else 30.3
 ANGULAR_MODEL = "mixture"  # "core" or "mixture"
 MIXTURE_MODEL = "highland" # "rutherford" or "highland"
-MIXTURE_FIT_METHOD = "curve_fit"  # "mle", "curve_fit", or "kl"
+MIXTURE_FIT_METHOD = "kl"  # "mle", "curve_fit", or "kl"
 MIXTURE_BINS = 1000  # Used by curve_fit and the comparison histogram.
 
 def gaussian_core_sigma(values, latestSigma):
@@ -227,7 +228,7 @@ def plot_cumulative_angular_fit(values, core_sigma, layer, depth, mixture=None, 
     ax.legend()
     ax.grid(alpha=0.3)
     fig.tight_layout()
-    fig.savefig(f"scattering_{ANGULAR_MODEL}_layer_{layer}.svg")
+    fig.savefig(f"scattering_{ANGULAR_MODEL}_layer_{layer}.pdf")
     plt.show()
 
 def integer_ids(values, name):
@@ -263,7 +264,7 @@ def plot_mixture_parameters(z, weight, sigma_core, sigma_tail):
     ax_sigma.grid(alpha=0.3)
 
     fig.tight_layout()
-    fig.savefig("mixture_parameters.svg")
+    fig.savefig("mixture_parameters.pdf")
     plt.show()
 
 def comp_plot_mixture_parameters(z, weight, sigma_core, sigma_tail, z2, weight2, sigma_core2, sigma_tail2):
@@ -293,7 +294,7 @@ def comp_plot_mixture_parameters(z, weight, sigma_core, sigma_tail, z2, weight2,
     ax_sigma.grid(alpha=0.3)
 
     fig.tight_layout()
-    fig.savefig("mixture_parameters.svg")
+    fig.savefig("mixture_parameters.pdf")
     plt.show()
 
 def main():
@@ -525,13 +526,13 @@ def main():
     
     plt.rcParams.update({
         "font.size": 16,
-        #"axes.labelsize": 11,
-        #"legend.fontsize": 8,
+        "axes.labelsize": 11,
+        "legend.fontsize": 8,
         "xtick.labelsize": 9,
-        "ytick.labelsize": 9,
+        "ytick.labelsize": 9    ,
         "axes.linewidth": 0.8,
         "lines.linewidth": 1.4,
-        #"pdf.fonttype": 42,
+        "pdf.fonttype": 42,
         "ps.fonttype": 42,
         "axes.prop_cycle": plt.cycler(
             color=["#000000", "#0072B2", "#D55E00"]
@@ -547,7 +548,7 @@ def main():
     )
 
     options = dict(
-        layers=[80],
+        layers=[100],
         x_max_mm=2.0,
         bins=150,
         n_geometry=N_GEOMETRY,
@@ -564,7 +565,7 @@ def main():
     )
     del layerID, G4ExcessPathLength
 
-    if ANGULAR_MODEL:
+    if ANGULAR_MODEL== "mixture":
         print("Anuglar Model")
         mcs.plot_excess_pathlength_layers(
             z, dz,
@@ -578,7 +579,21 @@ def main():
         xlabel=r"Excess path length $\Delta r$ / mm",
         ylabel="Residual\n" + r"/ mm$^{-1}$",
     )
+    ax.set_axisbelow(True)
+    ax.grid(
+        True, which="major",
+        color="0.9", linestyle="-", linewidth=0.7,
+    )
     ax_res.axhline(0, color="0.4", linewidth=0.8, zorder=0)
+    ax_res.grid(
+        True, which="major",
+        color="0.9", linestyle="-", linewidth=0.7,
+    )
+    if SAVEPLOT:
+        if USEPWO:
+            fig.savefig(f"img/pwo/excess_pathlength_layers_{E0}.pdf", format="pdf", dpi=300)
+        else:
+            fig.savefig(f"img/h2o/excess_pathlength_layers_{E0}.pdf", format="pdf", dpi=300)
     plt.show()
     del options
 
@@ -705,7 +720,7 @@ def main():
     ax_diff.legend(loc='center left')
     fig.tight_layout()
     plt.xlim(left=X_LIM, right=z_plot[-1]+0.03)
-    plt.savefig("MCSReachProbabilityPWO_mixture.svg", bbox_inches="tight")
+    plt.savefig("MCSReachProbabilityPWO_mixture.pdf", bbox_inches="tight")
     plt.show()
 
     # Densities live on the intervals between measured boundaries. Use these
@@ -735,7 +750,7 @@ def main():
     plt.grid()
     plt.xlim(left=X_LIM, right=z_plot[-1]+0.03)
     plt.tight_layout()
-    plt.savefig("MCSStopProbabilityPWO_mixture.svg", bbox_inches="tight")
+    plt.savefig("MCSStopProbabilityPWO_mixture.pdf", bbox_inches="tight")
     plt.show()
 
     # Diagnostic increments: leave negative estimates undefined rather than
@@ -767,7 +782,7 @@ def main():
     plt.legend()
     plt.grid()
     plt.tight_layout()
-    plt.savefig("multiple_coulomb_scattering.svg", bbox_inches="tight")
+    plt.savefig("multiple_coulomb_scattering.pdf", bbox_inches="tight")
     plt.show()
 
     # Retain your lever-arm diagnostic on unequal intervals. With right-end 
@@ -786,7 +801,7 @@ def main():
     plt.legend()
     plt.grid()
     plt.tight_layout()
-    plt.savefig("lateral_scattering.svg", bbox_inches="tight")
+    plt.savefig("lateral_scattering.pdf", bbox_inches="tight")
     plt.show()
 
 

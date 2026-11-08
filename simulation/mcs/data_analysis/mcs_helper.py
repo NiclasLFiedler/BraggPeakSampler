@@ -759,7 +759,14 @@ def plot_excess_pathlength_layers(z, dz, layers, cumulative_variance=None, *, mi
                 centers = 0.5 * (edges[:-1] + edges[1:])
                 normalization = samples_mm.size * widths
                 g4_density = counts / normalization
-                g4_error = np.sqrt(counts) / normalization
+                
+                # g4_error = np.sqrt(counts) / normalization #poisson
+
+                N = samples_mm.size
+                p_hat = counts / N
+
+                g4_error = np.sqrt(p_hat * (1.0 - p_hat) / N) / widths #binomial
+
 
                 if show_geant4:
                     ax.errorbar(
@@ -782,7 +789,7 @@ def plot_excess_pathlength_layers(z, dz, layers, cumulative_variance=None, *, mi
                         # cdf_edges /= reach_probability
 
                     # model_density = np.diff(cdf_edges) / widths
-                    # better performance
+                    # alleged better performance
                     integrated_density = np.r_[
                         0.0,
                         np.cumsum(
@@ -828,7 +835,10 @@ def plot_excess_pathlength_layers(z, dz, layers, cumulative_variance=None, *, mi
                         ax_res.fill_between(
                             centers, -g4_error, g4_error,
                             color="0.85", linewidth=0, zorder=0,
+                            label=r"Geant4 stat. uncertainty ($\pm1\sigma$)",
                         )
+                                               
+                        ax_res.legend(frameon=False, fontsize=8, loc="best")
 
     ax.set(xlabel=r"Excess path length $\Delta r$ / mm", ylabel=r"Probability density / mm$^{-1}$")
     ax.legend()

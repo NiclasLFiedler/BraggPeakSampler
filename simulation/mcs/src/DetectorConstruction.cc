@@ -92,10 +92,10 @@ void DetectorConstruction::DefineMaterials()
   // Air defined using NIST Manager
   worldMat = nistManager->FindOrBuildMaterial("G4_Galactic"); 
 
-  detMaterial = nistManager->FindOrBuildMaterial("G4_PbWO4");
-  detMaterial->GetIonisation()->SetMeanExcitationEnergy(600.7*eV);
+  // detMaterial = nistManager->FindOrBuildMaterial("G4_PbWO4");
+  // detMaterial->GetIonisation()->SetMeanExcitationEnergy(600.7*eV);
   
-  // detMaterial = nistManager->FindOrBuildMaterial("G4_WATER");
+  detMaterial = nistManager->FindOrBuildMaterial("G4_WATER");
 
   G4Material *SiO2 = new G4Material("SiO2", 2.65*g/cm3, 2);
   SiO2->AddElement(elSi, 1);
@@ -261,7 +261,7 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   G4double coarseWidth = 0.01*RangePWO220;
   G4double fineWidth   = 0.001*RangePWO220;
   
-  bool useH2O = false;
+  bool useH2O = true;
   if(useH2O){
     phantomZ = RangeWater220+0.03;
     switchDepth = 0.995*RangeWater220;
