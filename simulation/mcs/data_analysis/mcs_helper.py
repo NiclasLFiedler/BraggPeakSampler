@@ -606,7 +606,7 @@ def reach_probability_sampled_mixture(z, dz, R0, var_core, var_tail,
             progress(j+1, len(z), len(patterns))
     return mean, error
 
-def plot_excess_pathlength_layers(z, dz, layers, cumulative_variance=None, *, mixture=None, x_max_mm=None, n_configurations=2000, seed=20120584, geant4=None, bins=150,n_geometry=None, R0 =None,ax=None, ax_res=None, show_geant4=True,): 
+def plot_excess_pathlength_layers(z, dz, layers, cumulative_variance=None, *, mixture=None, x_max_mm=None, n_configurations=2000, seed=20120584, geant4=None, bins=150,n_geometry=None, R0 =None,ax=None, ax_res=None, show_geant4=True, Range=None): 
     if (cumulative_variance is None) == (mixture is None):
         raise ValueError("Supply either cumulative_variance or mixture.")
     layers = np.asarray(layers)
@@ -629,16 +629,12 @@ def plot_excess_pathlength_layers(z, dz, layers, cumulative_variance=None, *, mi
         rng = np.random.default_rng(seed)
         choices = rng.random((n_configurations, max(layers) + 1)) < p_tail[:max(layers) + 1]
 
-
     g4color = "#000000"
     singularColor ="#0072B2" 
     mixtureColor = "#D55E00"
 
     if ax is None:
-        fig, ax = plt.subplots(
-            figsize=(15 / 2.54, 11 / 2.54),
-            constrained_layout=True,
-        )
+        fig, ax = plt.subplots(figsize=(15 / 2.54, 11 / 2.54), constrained_layout=True,)
     else:
         fig = ax.figure
 
@@ -648,11 +644,13 @@ def plot_excess_pathlength_layers(z, dz, layers, cumulative_variance=None, *, mi
         model_color = singularColor
         analytical_style = "-"
         sampled_style = "--"
+        plotlabel = f"{model_name}, z = {z[layers[0]]:.4g} cm = {z[layers[0]]/Range:.3f} " r"$R_0$"
     else:
         model_name = "Gaussian mixture"
         model_color = mixtureColor
         analytical_style = "-."
         sampled_style = ":"
+        plotlabel = f"{model_name}"
 
     for layer in layers:
         if layer % 10 == 0:
@@ -699,11 +697,12 @@ def plot_excess_pathlength_layers(z, dz, layers, cumulative_variance=None, *, mi
         
             density /= reach_probability
 
+
         ax.plot(
             x_cm * 10, density / 10,
             color=model_color,
             linestyle=analytical_style,
-            label=f"{model_name}, z = {z[layer]:.4g} cm",
+            label=plotlabel,
         )
 
         if n_geometry is not None:
@@ -720,7 +719,6 @@ def plot_excess_pathlength_layers(z, dz, layers, cumulative_variance=None, *, mi
                 if mixture is None:
                     sigma = np.sqrt(kick_variances[i])
                 else:
-                    # One component selection per kick, shared by x and y.
                     is_tail = rng_geometry.random(n_geometry) < p_tail[i]
                     sigma = np.sqrt(np.where(is_tail, tail[i], core[i]))
 
@@ -741,72 +739,48 @@ def plot_excess_pathlength_layers(z, dz, layers, cumulative_variance=None, *, mi
                     linestyle=sampled_style,
                     linewidth=1.4,
                     baseline=None,
-                    label=f"{model_name}, sampled, z = {z[layer]:.4g} cm",
+                    label=f"{model_name}, sampled",
                 )
 
         if geant4 is not None:
             g4_layers, g4_excess_cm = geant4
-            samples_mm = (
-                np.asarray(g4_excess_cm)[np.asarray(g4_layers) == layer] * 10
-            )
+            samples_mm = (np.asarray(g4_excess_cm)[np.asarray(g4_layers) == layer] * 10)
 
             if samples_mm.size:
-                counts, edges = np.histogram(
-                    samples_mm, bins=bins, range=(0, upper_cm * 10),
-                )
+                counts, edges = np.histogram(samples_mm, bins=bins, range=(0, upper_cm * 10),)
 
                 widths = np.diff(edges)
                 centers = 0.5 * (edges[:-1] + edges[1:])
-                normalization = samples_mm.size * widths
-                g4_density = counts / normalization
-                
-                # g4_error = np.sqrt(counts) / normalization #poisson
-
                 N = samples_mm.size
                 p_hat = counts / N
-
-                g4_error = np.sqrt(p_hat * (1.0 - p_hat) / N) / widths #binomial
-
+                g4_density = p_hat / widths
+                g4_error = np.sqrt(p_hat * (1.0 - p_hat) / N) / widths
 
                 if show_geant4:
                     ax.errorbar(
                         centers, g4_density, yerr=g4_error,
                         fmt="o", markersize=3, markerfacecolor="none",
                         color=g4color, elinewidth=0.8, capsize=0,
-                        label=f"Geant4, layer {layer}",
+                        label=f"Geant4",# layer {layer}",
                     )
 
                 if ax_res is not None:
-                    # Analytical probability in each histogram bin from the CDF.
+                    #more accurate but slower
                     # cdf_edges = np.zeros_like(edges)
                     # for probability, values in zip(probabilities, weights):
-                        # cdf_edges += probability * np.array([
-                            # float(gchi2_exact_cdf(edge / 10, values))
-                            # for edge in edges
-                        # ])
-
+                        # cdf_edges += probability * gchi2_exact_cdf(edges / 10.0, values)
                     # if remaining_range is not None:
                         # cdf_edges /= reach_probability
-
                     # model_density = np.diff(cdf_edges) / widths
-                    # alleged better performance
-                    integrated_density = np.r_[
-                        0.0,
-                        np.cumsum(
-                            0.5 * (density[:-1] + density[1:]) * np.diff(x_cm)
-                        ),
-                    ]
-                    
-                    # Integrated probabilities at the Geant4 bin edges.
-                    integral_edges = np.interp(
-                        edges / 10, x_cm, integrated_density
-                    )
-                    
-                    # Bin-averaged density in mm^-1.
+
+
+                    integrated_density = np.r_[0.0, np.cumsum(0.5 * (density[:-1] + density[1:]) * np.diff(x_cm)),]
+                    integral_edges = np.interp(edges / 10, x_cm, integrated_density)
                     model_density = np.diff(integral_edges) / widths
 
+                    residualsModel_G4 = model_density - g4_density
                     ax_res.plot(
-                        centers, model_density - g4_density,
+                        centers, residualsModel_G4,
                         color=model_color,
                         linestyle=analytical_style,
                         linewidth=1.4,
@@ -814,12 +788,8 @@ def plot_excess_pathlength_layers(z, dz, layers, cumulative_variance=None, *, mi
 
                     # Sampled density using exactly the same bins.
                     if n_geometry is not None and excess_cm.size:
-                        sampled_counts, _ = np.histogram(
-                            excess_cm * 10, bins=edges,
-                        )
-                        sampled_density = (
-                            sampled_counts / (excess_cm.size * widths)
-                        )
+                        sampled_counts, _ = np.histogram(excess_cm * 10, bins=edges,)
+                        sampled_density = (sampled_counts / (excess_cm.size * widths))
 
                         ax_res.stairs(
                             sampled_density - g4_density,
@@ -832,12 +802,8 @@ def plot_excess_pathlength_layers(z, dz, layers, cumulative_variance=None, *, mi
 
                     # Reference uncertainty, drawn once around zero.
                     if show_geant4:
-                        ax_res.fill_between(
-                            centers, -g4_error, g4_error,
-                            color="0.85", linewidth=0, zorder=0,
-                            label=r"Geant4 stat. uncertainty ($\pm1\sigma$)",
-                        )
-                                               
+                        ax_res.fill_between(centers, -g4_error, g4_error, color="0.85", linewidth=0, zorder=0, label=r"Geant4 stat. uncertainty ($\pm1\sigma$)",)
+                        #ax_res.plot(x_cm * 10, np.diff(np.r_[0.0,density]))                       
                         ax_res.legend(frameon=False, fontsize=8, loc="best")
 
     ax.set(xlabel=r"Excess path length $\Delta r$ / mm", ylabel=r"Probability density / mm$^{-1}$")

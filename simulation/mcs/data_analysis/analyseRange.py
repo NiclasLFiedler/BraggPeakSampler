@@ -13,7 +13,10 @@ from plotter import plot_scattering_core
 from scipy.optimize import minimize, curve_fit
 from scipy.special import expit
 from rel_entr_fit_helper import fit_simple_kl, fit_complex_kl
+from pathlib import Path
+from reach_stop_plots import plot_reach_and_stopping
 plt.rcParams.update({'font.size': 16})
+
 
 # Configuration: preserve the settings in the supplied script.
 USEPWO = False
@@ -27,22 +30,21 @@ ROOT_FILE = "h2oproj.root"
 E0 = 220.0
 # Set to None to use range_energy(data, E0). These are your current overrides.
 R0_OVERRIDE = None if USEPWO else 30.723  #30.72, 6.73398 6.736 6.728
+FRACTION_R0 = 0.8
 Z = 73.6 if USEPWO else 7.4 # 73.6, 7.4 due to Mayneord’s formula
 X0 = 0.89 if USEPWO else 36.08
-# Set to the generated-primary count to include events with no recorded hit.
-# None preserves your original normalization to recorded events only.
-N_PRIMARIES = None
+
 N_RNG = 100_000
-N_GEOMETRY = 100_000
-N_CONFIGURATIONS = 4000  # Increase and inspect the pointwise sampling error.
+N_GEOMETRY = 100_00
+N_CONFIGURATIONS = 200  # Increase and inspect the pointwise sampling error.
 CONFIGURATION_SEED = 20120584  # Separate stream from angle/geometry RNG.
 # Confirm against your scorer: convert deltaX to cm if it was stored in mm.
 DELTA_X_TO_CM = 1.0
 PLOT_LAYER_INDEX = 10
 X_LIM = 6.0 if USEPWO else 30.3
 ANGULAR_MODEL = "mixture"  # "core" or "mixture"
-MIXTURE_MODEL = "highland" # "rutherford" or "highland"
-MIXTURE_FIT_METHOD = "kl"  # "mle", "curve_fit", or "kl"
+MIXTURE_MODEL = "rutherford" # "rutherford" or "highland"
+MIXTURE_FIT_METHOD = "curve_fit"  # "mle", "curve_fit", or "kl"
 MIXTURE_BINS = 1000  # Used by curve_fit and the comparison histogram.
 
 def gaussian_core_sigma(values, latestSigma):
@@ -452,10 +454,10 @@ def main():
     # boundary or infer its width from the preceding layer.
     max_layer.sort()
     n_reaching = len(max_layer) - np.searchsorted(max_layer, boundary_layers, side="left")
-    n_primaries = n_recorded if N_PRIMARIES is None else N_PRIMARIES
+    n_primaries = n_recorded
     if not np.isfinite(n_primaries) or n_primaries < n_recorded or int(n_primaries) != n_primaries:
         raise ValueError("N_PRIMARIES must be an integer >= recorded event count.")
-    reach_analytical_g4 = n_reaching / n_primaries
+    reach_g4 = n_reaching / n_primaries
     
     del max_layer
     
@@ -499,8 +501,17 @@ def main():
     
     if USEMODELMIXTURE:
         Xs = mcs.scattering_length_from_X0(X0, Z)
-        Xs = None
-        MixtureModelKickVarCore, MixtureModelKickVarTail, weight = mcs.gaussian_mixture_model(z=z[:n_model], dz=dz[:n_model], R0=R0, E0=E0, p_exp=p_exp, X0=X0, Z=Z, Xs=Xs, KickVariance=KickVarCore[:n_model], MIXTURE_MODEL=MIXTURE_MODEL)
+        #Xs = None
+        MixtureModelKickVarCore, MixtureModelKickVarTail, weight = mcs.gaussian_mixture_model(z=z[:n_model],
+                                                                                              dz=dz[:n_model],
+                                                                                              R0=R0,
+                                                                                              E0=E0,
+                                                                                              p_exp=p_exp,
+                                                                                              X0=X0,
+                                                                                              Z=Z,
+                                                                                              Xs=Xs,
+                                                                                              #KickVariance=KickVarCore[:n_model],
+                                                                                              MIXTURE_MODEL=MIXTURE_MODEL,)
         CumMixtureModelWeight = weight
         CumMixtureModelVarCore = np.cumsum(MixtureModelKickVarCore)
         CumMixtureModelVarTail = np.cumsum(MixtureModelKickVarTail)
@@ -539,6 +550,10 @@ def main():
         ),
     })
 
+    g4color = "#000000"
+    singularColor ="#0072B2" 
+    mixtureColor = "#D55E00"
+
     fig, (ax, ax_res) = plt.subplots(
         2, 1,
         sharex=True,
@@ -547,8 +562,11 @@ def main():
         constrained_layout=True,
     )
 
+    target_depth = FRACTION_R0 * R0
+    layer_index = int(np.argmin(np.abs(np.asarray(z) - target_depth)))
+
     options = dict(
-        layers=[100],
+        layers=[layer_index],
         x_max_mm=2.0,
         bins=150,
         n_geometry=N_GEOMETRY,
@@ -562,6 +580,7 @@ def main():
         z, dz,
         cumulative_variance=V,
         **options,
+        Range=R0
     )
     del layerID, G4ExcessPathLength
 
@@ -572,6 +591,7 @@ def main():
             mixture=(MixtureKickVarCore, MixtureKickVarTail, MixtureWeight),
             show_geant4=False,
             **options,
+            Range=R0
         )
     
     ax.set_xlabel("")
@@ -602,9 +622,7 @@ def main():
 
     rng = np.random.default_rng(12345)
     reach_analytical = np.zeros(len(z))
-    stop_analytical = np.zeros(len(z))
-    reach_rng = np.zeros(len(z))
-    reach_rng_error = np.zeros(len(z))
+
     reach_geometry = np.zeros(len(z))
     reach_geometry_error = np.zeros(len(z))
 
@@ -622,44 +640,56 @@ def main():
               f"KickVarCore: {MixtureKickVarCore[:n_model]}, "
               f"KickVarTail: {MixtureKickVarTail[:n_model]}, "
               f"Weight: {MixtureWeight[:n_model]}")
-        (mixture_reach_analytical, mixture_reach_analytical_error) = mcs.reach_probability_sampled_mixture(
-            z[:n_model], dz[:n_model], R0, MixtureKickVarCore[:n_model], MixtureKickVarTail[:n_model], MixtureWeight[:n_model],
-            np.random.default_rng(CONFIGURATION_SEED),
-            n_configurations=N_CONFIGURATIONS,
-            progress=report_configuration_progress)
-        print("Maximum configuration-sampling standard error: "
+        (mixture_reach_analytical, mixture_reach_analytical_error) = mcs.reach_probability_sampled_mixture(z[:n_model],
+                                                                                                           dz[:n_model],
+                                                                                                           R0,
+                                                                                                           MixtureKickVarCore[:n_model],
+                                                                                                           MixtureKickVarTail[:n_model],
+                                                                                                           MixtureWeight[:n_model],
+                                                                                                           np.random.default_rng(CONFIGURATION_SEED),
+                                                                                                           n_configurations=N_CONFIGURATIONS,
+                                                                                                           progress=report_configuration_progress,
+                                                                                                           )
+        for j in range(n_model):
+            (mixture_reach_geometry[j], mixture_reach_geometry_error[j]) = mcs.reach_probability_rng_geometry_mixture(R0-z[j],
+                                                                                                                     MixtureWeight[:j+1],
+                                                                                                                     MixtureKickVarCore[:j+1],
+                                                                                                                     MixtureKickVarTail[:j+1],
+                                                                                                                     dz[:j+1],
+                                                                                                                     rng,
+                                                                                                                     n_samples=N_GEOMETRY,
+                                                                                                                     )
+        print("Maximum configuration-sampling standard error: " 
               f"{mixture_reach_analytical_error[:n_model].max():.4g}")
         if SAVEDATA:
-            np.savez("sampled_mixture_reach.npz", z=z[:n_model],
+            np.savez("sampled_mixture_reach.npz", 
+                     z=z[:n_model],
                      reach=mixture_reach_analytical[:n_model],
                      standard_error=mixture_reach_analytical_error[:n_model],
-                     n_configurations=N_CONFIGURATIONS, seed=CONFIGURATION_SEED,
-                     var_core=MixtureKickVarCore[:n_model], var_tail=MixtureKickVarTail[:n_model], p_tail=MixtureWeight[:n_model],
-                     dz=dz[:n_model], R0=R0)
-        for j in range(n_model):
-            mixture_reach_geometry[j], mixture_reach_geometry_error[j] = (
-                mcs.reach_probability_rng_geometry_mixture(
-                    R0-z[j], MixtureWeight[:j+1],
-                    MixtureKickVarCore[:j+1], MixtureKickVarTail[:j+1],
-                    dz[:j+1], rng, n_samples=N_GEOMETRY))
+                     n_configurations=N_CONFIGURATIONS,
+                     seed=CONFIGURATION_SEED,
+                     var_core=MixtureKickVarCore[:n_model],
+                     var_tail=MixtureKickVarTail[:n_model],
+                     p_tail=MixtureWeight[:n_model],
+                     dz=dz[:n_model],
+                     R0=R0,
+                     )
+
     for j in range(n_model):
         remaining_range = R0 - z[j]
         V_j, dz_j = V[:j+1], dz[:j+1]
         weights = mcs.weighted_eigenvalues(V_j, dz_j)
         probability = float(mcs.gchi2_exact_cdf(remaining_range, weights))
         reach_analytical[j] = probability
-        reach_rng[j], reach_rng_error[j] = mcs.gchi2_cdf_rng(remaining_range, weights, rng, n_samples=N_RNG)
         reach_geometry[j], reach_geometry_error[j] = mcs.reach_probability_rng_geometry(remaining_range, V_j, dz_j, rng, n_samples=N_GEOMETRY)
 
     z_plot = np.r_[z, z[-1] + dz[-1]]
     dz_plot = np.r_[dz, dz[-1]]
 
-    reach_g4_plot = np.r_[reach_analytical_g4, 0.0]
+    reach_g4_plot = np.r_[reach_g4, 0.0]
     reach_analytical_plot = np.r_[reach_analytical, 0.0]
-    reach_rng_plot = np.r_[reach_rng, 0.0]
     reach_geometry_plot = np.r_[reach_geometry, 0.0]
 
-    reach_rng_error_plot = np.r_[reach_rng_error, 0.0]
     reach_geometry_error_plot = np.r_[reach_geometry_error, 0.0]
 
     mixture_reach_analytical_plot = np.r_[mixture_reach_analytical, 0.0]
@@ -667,37 +697,65 @@ def main():
 
     mixture_reach_geometry_error_plot = np.r_[mixture_reach_geometry_error, 0.0]
     
+    ###teststart
+    fig_reach, fig_stop = plot_reach_and_stopping(
+        z_plot,
+        reach_g4_plot,
+        reach_analytical_plot,
+        reach_geometry_plot=reach_geometry_plot,
+        mixture_reach_analytical_plot=(
+            mixture_reach_analytical_plot if ANGULAR_MODEL== "mixture" else None
+        ),
+        mixture_reach_geometry_plot=(
+            mixture_reach_geometry_plot if ANGULAR_MODEL== "mixture" else None
+        ),
+        R0=R0,
+        n_primaries=n_primaries,
+        xlim=(X_LIM, z_plot[-1] + 0.03),
+    )
+
+    if SAVEPLOT:
+        output_dir = Path("img") / ("pwo" if USEPWO else "h2o")
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        with plt.rc_context({"pdf.fonttype": 42}):
+            fig_reach.savefig(output_dir / f"reach_probability_{E0}.pdf")
+            fig_stop.savefig(output_dir / f"stopping_density_{E0}.pdf")
+
+    plt.show()
+    ###testend
+
+
     print(f"Last model evaluation: {z[n_model-1]:.8f} cm; "
           f"gap to R0: {R0-z[n_model-1]:.8f} cm; "
           f"reach there: {reach_analytical[n_model-1]:.6g}")
-    print(f"Geant4 reach at last recorded boundary: {reach_analytical_g4[-1]:.6g}")
+    print(f"Geant4 reach at last recorded boundary: {reach_g4[-1]:.6g}")
+
+    g4color = "#000000"
+    singularColor ="#0072B2" 
+    mixtureColor = "#D55E00"
+
 
     fig, (ax, ax_diff) = plt.subplots(
-        2, 1, figsize=(12, 9), sharex=True, gridspec_kw={"height_ratios": [3, 1]})
+        2, 1,
+        sharex=True,
+        figsize=(15 / 2.54, 14 / 2.54),
+        gridspec_kw={"height_ratios": [3, 1]},
+        constrained_layout=True,
+    )
+
     ax.set_title("Reach probability vs. depth")
-    ax.plot(z_plot, reach_g4_plot, ".-", color="black", label="Geant4")
-    ax.plot(z_plot, reach_analytical_plot, ".-", color="blue", label="Single Gaussian CDF")
-    
+    ax.plot(z_plot, reach_g4_plot, ".-", color=g4color, label="Geant4")
+    ax.plot(z_plot, reach_analytical_plot, ".-", color=singularColor, label="Single Gaussian")
+    ax.plot(z_plot, reach_geometry_plot, "--o", color=singularColor, label="Single Gaussian, sampled")
     
     if  ANGULAR_MODEL == "mixture":
-        # ax.plot(z_plot, reach_geometry_plot, "-.", color="orange", label="Single Gaussian RNG")
-        line, = ax.plot(z_plot, mixture_reach_analytical_plot, "-^", color="red",
-                        label=f"Gaussian Mixture CDF ({N_CONFIGURATIONS} sampled configurations)")
-        # ax.fill_between(z[:n_model],
-        #                 np.maximum(0, mixture_reach_analytical[:n_model]
-        #                            - 2*mixture_reach_analytical_error[:n_model]),
-        #                 np.minimum(1, mixture_reach_analytical[:n_model]
-        #                            + 2*mixture_reach_analytical_error[:n_model]),
-        #                 color=line.get_color(), alpha=.2,
-        #                 label="Configuration sampling ±2 SE (pointwise)")
+        ax.plot(z_plot, mixture_reach_analytical_plot, "-^", color=mixtureColor,
+                        label=f"Gaussian Mixture")
         
-        # ax.plot(z_plot, mixture_reach_geometry_plot, "-^", color="lime", label="Gaussian Mixture RNG")
-    else:
-        # ax.plot(z_plot, reach_rng_plot, ":.", color="blue", label="Reach Prob. - Chi-squared RNG")
-        ax.plot(z_plot, reach_geometry_plot, "--o", color="orange", label="Reach Prob. - RNG")
-        # ax.fill_between(z_plot, np.maximum(0, reach_rng_plot-2*reach_rng_error_plot),
-                            # np.minimum(1, reach_rng_plot+2*reach_rng_error_plot), alpha=.25,
-                            # label="RNG ±2 standard errors")
+        ax.plot(z_plot, mixture_reach_geometry_plot, "-^", color=mixtureColor, label="Gaussian Mixture, sampled")
+    
+               
     ax.axvline(R0, color="gray", linestyle="--", label="R0")
     ax.set_ylabel("Reach probability")
     ax.legend()
@@ -705,27 +763,32 @@ def main():
     # ax.set_xscale("log")
     ax.grid()
     
-    residuals = reach_g4_plot - reach_analytical_plot
-    mixture_residuals = reach_g4_plot - mixture_reach_analytical_plot
-            
-    ax_diff.plot(z_plot, residuals, "-o", color="blue", label="Geant4 - Single Gaussian CDF")
-    # ax_diff.plot(z_plot, reach_geometry_plot-reach_analytical_plot, "-o", color="orange", label="RNG - Analytical")
-    # ax_diff.fill_between(z_plot, -2*reach_rng_error_plot, 2*reach_rng_error_plot, alpha=.25, label="RNG - Analytical error band")
+    residualsG4_Single = reach_g4_plot - reach_analytical_plot
+    resudialsG4_Mixture = reach_g4_plot - mixture_reach_analytical_plot
+    residualsG4_SingleSampled = reach_g4_plot - reach_geometry_plot
+    residualsG4_SingleSampled = reach_g4_plot - mixture_reach_geometry_plot    
+
+    ax_diff.plot(z_plot, residualsG4_Single, "-o", color=singularColor)
+    ax_diff.plot(z_plot, residualsG4_SingleSampled, "-o", color="orange")
+    
     if ANGULAR_MODEL == "mixture":
-        ax_diff.plot(z_plot, mixture_residuals, "-^", color="red", label="Geant4 - Gaussian Mixture sampled CDF")
-        # ax_diff.plot(z_plot, mixture_reach_geometry_plot-mixture_reach_analytical_plot, "-^", color="lime", label="Gaussian Mixture RNG - Sampled CDF")
+        ax_diff.plot(z_plot, resudialsG4_Mixture, "-^", color="red")
+        ax_diff.plot(z_plot, residualsG4_SingleSampled, "-^", color="lime")
+
     ax_diff.axvline(R0, color="gray", linestyle="--", label="R0")
     ax_diff.set(xlabel="Depth / cm", ylabel="Residuals")
     ax_diff.grid()
     ax_diff.legend(loc='center left')
     fig.tight_layout()
     plt.xlim(left=X_LIM, right=z_plot[-1]+0.03)
-    plt.savefig("MCSReachProbabilityPWO_mixture.pdf", bbox_inches="tight")
+    
+    if SAVEPLOT:
+        if USEPWO:
+            fig.savefig(f"img/pwo/reach_probability_{E0}.pdf", format="pdf", dpi=300)
+        else:
+            fig.savefig(f"img/h2o/reach_probability_{E0}.pdf", format="pdf", dpi=300)
     plt.show()
 
-    # Densities live on the intervals between measured boundaries. Use these
-    # exact same z edges; no centre grid, extra G4 edge, or normalization.
-    # The first interval and the unobserved tail are deliberately not inferred.
     stop_bin_probabilityg4 = -np.diff(reach_g4_plot)
     stop_bin_densityg4 = stop_bin_probabilityg4 / dz_plot[1:] / 100
     
@@ -737,7 +800,15 @@ def main():
     
     if np.any(stop_bin_probability < -1e-8):
         warnings.warn("Analytical reach rises with depth; inspect CDF numerical stability.")
-    plt.figure(figsize=(12, 9))
+    
+    fig, (ax, ax_res) = plt.subplots(
+        2, 1,
+        sharex=True,
+        figsize=(15 / 2.54, 14 / 2.54),
+        gridspec_kw={"height_ratios": [3, 1]},
+        constrained_layout=True,
+    )
+
     if  ANGULAR_MODEL == "mixture":
         plt.stairs(np.r_[0, stop_bin_density_mixture, 0], np.r_[0, z_plot, 0], baseline=None, label="Mixture stopping probability")
     else:
