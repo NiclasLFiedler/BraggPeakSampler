@@ -10,16 +10,15 @@ sys.path.append("../../range_energy/data_analysis")
 import analysisFunctions
 import mcs_helper as mcs
 from plotter import plot_scattering_core
-from scipy.optimize import minimize, curve_fit
-from scipy.special import expit
+from scipy.optimize import minimize, minimize_scalar, curve_fit
+from scipy.special import expit, erf
 from rel_entr_fit_helper import fit_simple_kl, fit_complex_kl
 from pathlib import Path
-from reach_stop_plots import plot_reach_and_stopping
 plt.rcParams.update({'font.size': 16})
 
 
 # Configuration: preserve the settings in the supplied script.
-USEPWO = False
+USEPWO = True
 USEHIGHLAND = False
 USEMODELMIXTURE = True
 SAVEDATA = False
@@ -29,14 +28,13 @@ LARGEOUTPUT = False
 ROOT_FILE = "h2oproj.root"
 E0 = 220.0
 # Set to None to use range_energy(data, E0). These are your current overrides.
-R0_OVERRIDE = None if USEPWO else 30.723  #30.72, 6.73398 6.736 6.728
-FRACTION_R0 = 0.8
+R0_OVERRIDE = 6.735 if USEPWO else 30.723  #30.72, 6.73398 6.736 6.728
+FRACTION_R0 = 0.95
 Z = 73.6 if USEPWO else 7.4 # 73.6, 7.4 due to Mayneord’s formula
 X0 = 0.89 if USEPWO else 36.08
 
-N_RNG = 100_000
-N_GEOMETRY = 100_00
-N_CONFIGURATIONS = 200  # Increase and inspect the pointwise sampling error.
+N_GEOMETRY = 100_000
+N_CONFIGURATIONS = 3000  # Increase and inspect the pointwise sampling error.
 CONFIGURATION_SEED = 20120584  # Separate stream from angle/geometry RNG.
 # Confirm against your scorer: convert deltaX to cm if it was stored in mm.
 DELTA_X_TO_CM = 1.0
@@ -44,28 +42,49 @@ PLOT_LAYER_INDEX = 10
 X_LIM = 6.0 if USEPWO else 30.3
 ANGULAR_MODEL = "mixture"  # "core" or "mixture"
 MIXTURE_MODEL = "rutherford" # "rutherford" or "highland"
-MIXTURE_FIT_METHOD = "curve_fit"  # "mle", "curve_fit", or "kl"
-MIXTURE_BINS = 1000  # Used by curve_fit and the comparison histogram.
+MIXTURE_FIT_METHOD = "kl"  # "mle", "curve_fit", or "kl"
+MIXTURE_BINS = 2000  # Used by curve_fit and the comparison histogram.
 
-def gaussian_core_sigma(values, latestSigma):
+# def gaussian_core_sigma(values, latestSigma):
+#     values = values[np.isfinite(values)]
+#     if len(values) < 100:
+#         return latestSigma*1.01
+#     low, high = np.percentile(values, [15.8655, 84.1345])
+#     return 0.5 * (high - low)
+
+def gaussian_core_sigma(values, latestSigma=None, fit_width=2.0):
+    values = np.asarray(values, dtype=float)
     values = values[np.isfinite(values)]
-    if len(values) < 100:
-        return latestSigma*1.01
-    low, high = np.percentile(values, [15.8655, 84.1345])
-    return 0.5 * (high - low)
+    if values.size < 100:
+        warnings.warn("Too few values: reusing the previous core width.", stacklevel=2)
+        return float(latestSigma) if latestSigma is not None else np.nan
+    if not np.any(values):
+        return 0.0
+    
+    scale = np.diff(np.percentile(values, [15.8655, 84.1345]))[0] / 2
+    x = values / scale
+    mean_square = np.mean(x[np.abs(x) <= fit_width]**2)
+
+    def nll(sigma):
+        normalization = erf(fit_width / (np.sqrt(2) * sigma))
+        return np.log(sigma * normalization) + mean_square / (2 * sigma**2)
+
+    fit = minimize_scalar(nll, bounds=(0.2, 5), method="bounded")
+    if not fit.success or not np.isfinite(fit.fun) or not 0.2001 < fit.x < 4.9999:
+        raise RuntimeError(f"Core fit failed or reached a width bound. {fit.x}")
+    return float(scale * fit.x)
 
 def gaussian_pdf(theta, sigma):
     """Normalized zero-mean Gaussian; theta and sigma use the same units."""
     theta = np.asarray(theta, dtype=float)
     return np.exp(-0.5 * (theta / sigma)**2) / (np.sqrt(2 * np.pi) * sigma)
 
-
 def gaussian_mixture_pdf(theta, weight, sigma_core, sigma_tail):
-    """weight is the integrated probability of the narrower component."""
+    """weight is the integrated probability of the tail component."""
     return (1 - weight) * gaussian_pdf(theta, sigma_core) + (weight) * gaussian_pdf(theta, sigma_tail)
 
 def fit_cumulative_gaussian_mixture(values, min_samples=100, max_iter=5000, tol=1e-6, initial=None):
-    """Return (core_weight, sigma_core, sigma_tail)."""
+    """Return (tail_weight, sigma_core, sigma_tail)."""
 
     angles = np.asarray(values, dtype=float)
     angles = angles[np.isfinite(angles)]
@@ -190,9 +209,9 @@ def mixture_mean_nll(values, params):
     """
     x = np.asarray(values, dtype=float)
     x = x[np.isfinite(x)]
-    w, s1, s2 = params
-    a = np.log(w) - np.log(s1) - 0.5*(x/s1)**2
-    b = np.log1p(-w) - np.log(s2) - 0.5*(x/s2)**2
+    w_tail, s1, s2 = params
+    a = np.log1p(-w_tail) - np.log(s1) - 0.5*(x/s1)**2
+    b = np.log(w_tail) - np.log(s2) - 0.5*(x/s2)**2
     return float(0.5*np.log(2*np.pi) - np.mean(np.logaddexp(a, b)))
 
 
@@ -212,11 +231,11 @@ def plot_cumulative_angular_fit(values, core_sigma, layer, depth, mixture=None, 
         w, s1, s2 = mixture
         s1, s2 = s1 * 1000, s2 * 1000
         ax.plot(theta, gaussian_mixture_pdf(theta, w, s1, s2),
-                color="black", linewidth=2, label="Mixture: " + ("curve_fit" if MIXTURE_FIT_METHOD == "curve_fit" else "MLE"))
+                color="black", linewidth=2, label="Mixture: " + ("MLE" if MIXTURE_FIT_METHOD in ("mle", "compare") else MIXTURE_FIT_METHOD))
         ax.plot(theta, (1-w) * gaussian_pdf(theta, s1), ":", color="#009E73",
-                label=f"Narrow: w={w:.3f}, sigma={s1:.2f} mrad")
+                label=f"Narrow: w={1-w:.3f}, sigma={s1:.2f} mrad")
         ax.plot(theta, w * gaussian_pdf(theta, s2), ":", color="#CC79A7",
-                label=f"Broad: w={1-w:.3f}, sigma={s2:.2f} mrad")
+                label=f"Broad: w={w:.3f}, sigma={s2:.2f} mrad")
     if alternative is not None and np.all(np.isfinite(alternative)):
         w, s1, s2 = alternative
         ax.plot(theta, gaussian_mixture_pdf(theta, w, s1*1000, s2*1000),
@@ -247,8 +266,8 @@ def plot_mixture_parameters(z, weight, sigma_core, sigma_tail):
         2, 1, figsize=(10, 8), sharex=True
     )
 
-    ax_weight.plot(z, weight, label="Narrow component", color="#009E73")
-    ax_weight.plot(z, 1 - weight, label="Broad component", color="#CC79A7")
+    ax_weight.plot(z, 1 - weight, label="Narrow component", color="#009E73")
+    ax_weight.plot(z, weight, label="Broad component", color="#CC79A7")
     ax_weight.set_ylabel("Mixture weight")
     ax_weight.set_ylim(0, 1)
     ax_weight.legend()
@@ -274,8 +293,8 @@ def comp_plot_mixture_parameters(z, weight, sigma_core, sigma_tail, z2, weight2,
         2, 1, figsize=(10, 8), sharex=True
     )
 
-    ax_weight.plot(z, weight, label="Narrow component", color="#009E73")
-    ax_weight.plot(z, 1 - weight, label="Broad component", color="#CC79A7")
+    ax_weight.plot(z, 1 - weight, label="Narrow component", color="#009E73")
+    ax_weight.plot(z, weight, label="Broad component", color="#CC79A7")
     
     ax_weight.plot(z2, 1 - weight2, label="Model: single-kick core probability", color="#FF0000")
     ax_weight.plot(z2, weight2, label="Model: single-kick tail probability", color="#3700FF")
@@ -322,6 +341,18 @@ def main():
         raise ValueError("ROOT branches must have matching shapes.")
 
     event_ids, event_index = np.unique(event, return_inverse=True)
+
+    data_file = ("../../range_energy/data_analysis/pbwo4_alt_range_energy.npz"
+                 if USEPWO else "../../range_energy/data_analysis/h2o_alt_range_energy.npz")
+    data = analysisFunctions.load_EnergyRange(data_file)
+    p_exp = float(data.p)
+    data = analysisFunctions.load_EnergyRange("../../range_energy/data_analysis/pbwo4_range_energy.npz") if USEPWO else analysisFunctions.load_EnergyRange("../../range_energy/data_analysis/h2o_range_energy.npz")
+    fitted_R0 = float(analysisFunctions.range_energy(data, E0))
+    R0 = fitted_R0 if R0_OVERRIDE is None else float(R0_OVERRIDE)
+    del data, data_file
+
+    print(f"Fitted R0: {fitted_R0:.8f} cm; used R0: {R0:.8f} cm")
+
     max_layer = np.full(len(event_ids), -1, dtype=np.int64)
     np.maximum.at(max_layer, event_index, layerID)
     last_row = np.r_[event[1:] != event[:-1], True]
@@ -343,6 +374,7 @@ def main():
 
     # The only depth grid: z[i] = downstream boundary of layer i.
     z = np.empty(len(boundary_layers), dtype=float)
+    
     CumSigmaCore = np.full(len(z), np.nan)
     SingleSigmaCore = np.full(len(z), np.nan)
     CumDeltaXSigmaCore = np.full(len(z), np.nan)
@@ -357,15 +389,27 @@ def main():
     fit_nll = {name: np.full(len(z), np.nan) for name in methods}
     print(f"Calculating angular widths by layer: {ANGULAR_MODEL}, {MIXTURE_FIT_METHOD}")
 
-    previous_curve_fit = None
+    previous_fit = dict.fromkeys(methods)
+    previous_width = None
     for i, (start, count) in enumerate(zip(starts, counts)):
         rows = order[start:start + count]
         recorded_depth = hit_depth[rows]
         if not np.all(np.isfinite(recorded_depth)):
             raise ValueError(f"Nonfinite depths in layer {i}.")
+        if recorded_depth[0] > R0:
+            print(f"Layer {i} exceeds R0; skipping.")
+            break
         z[i] = recorded_depth[0]
         if not np.allclose(recorded_depth, z[i], rtol=1e-7, atol=1e-8):
             raise ValueError(f"Layer {i} has inconsistent downstream depths; check scoring.")
+
+        width = z[i] - (z[i-1] if i else 0.0)
+        if (previous_width is not None and width < previous_width
+                and not np.isclose(width, previous_width, rtol=1e-4, atol=1e-8)):
+            previous_fit = dict.fromkeys(methods)
+            print(f"Layer {i}: grid spacing {previous_width:.6g} -> {width:.6g} cm; "
+                  "resetting mixture fit initial parameters.")
+        previous_width = width
         
         CumSigmaCore[i] = gaussian_core_sigma(CumScatteringAngle[rows], CumSigmaCore[i-1])
         SingleSigmaCore[i] = gaussian_core_sigma(ScatteringAngle[rows], SingleSigmaCore[i-1])
@@ -379,14 +423,12 @@ def main():
                 start_time = perf_counter()
                 try:
                     if name == "mle":
-                        params = fit_cumulative_gaussian_mixture(angles, initial=previous_curve_fit)
-                        previous_curve_fit = params
+                        params = fit_cumulative_gaussian_mixture(angles, initial=previous_fit[name])
                     elif name == "kl":
-                        params = fit_simple_kl(angles, bins=MIXTURE_BINS, initial=previous_curve_fit)
-                        previous_curve_fit = params
+                        params = fit_simple_kl(angles, bins=MIXTURE_BINS, initial=previous_fit[name])
                     else:
-                        params = fit_cumulative_gaussian_mixture_curve_fit(angles, MIXTURE_BINS, initial=previous_curve_fit,)
-                        previous_curve_fit = params
+                        params = fit_cumulative_gaussian_mixture_curve_fit(angles, MIXTURE_BINS, initial=previous_fit[name],)
+                    previous_fit[name] = params
                     fit_seconds[name][i] = perf_counter() - start_time
                     fit_parameters[name][i] = params
                     fit_nll[name][i] = mixture_mean_nll(angles, params)
@@ -406,6 +448,10 @@ def main():
             #plot_cumulative_angular_fit(CumScatteringAngle[rows], CumSigmaCore[i], i, z[i], mixture, alternative)
         if i % 10 == 0:
             print(f"Layer {i}, depth {z[i]:.6f} cm")
+
+    n_model = np.searchsorted(z, R0, side="left")
+    if n_model == 0:
+        raise ValueError("No scored boundary lies below R0.")
 
     if ANGULAR_MODEL == "mixture":
         CumMixtureVarCore = mcs.fit_cumulative_variance(CumMixtureSigmaCore**2)
@@ -461,30 +507,8 @@ def main():
     
     del max_layer
     
-    if N_PRIMARIES is None:
-        print("Geant4 reach is normalized to recorded events (N_PRIMARIES=None).")
-
-    data_file = ("../../range_energy/data_analysis/pbwo4_alt_range_energy.npz"
-                 if USEPWO else "../../range_energy/data_analysis/h2o_alt_range_energy.npz")
-    data = analysisFunctions.load_EnergyRange(data_file)
-    p_exp = float(data.p)
-    data = analysisFunctions.load_EnergyRange("../../range_energy/data_analysis/pbwo4_range_energy.npz") if USEPWO else analysisFunctions.load_EnergyRange("../../range_energy/data_analysis/h2o_range_energy.npz")
-    fitted_R0 = float(analysisFunctions.range_energy(data, E0))
-    R0 = fitted_R0 if R0_OVERRIDE is None else float(R0_OVERRIDE)
-    
-    if not np.isfinite(R0) or R0 <= 0:
-        raise ValueError("R0 must be finite and positive.")
-    print(f"Fitted R0: {fitted_R0:.8f} cm; used R0: {R0:.8f} cm")
-
-    # Keep z and every per-depth array at their full original length.
-    # The fixed-range model is evaluated only on this contiguous prefix.
-    
-    n_model = np.searchsorted(z, R0, side="left") #use left
-    if n_model == 0:
-        raise ValueError("No scored boundary lies below R0.")
-    
     CumVarCore = CumSigmaCore**2  # Input angles are already radians.
-    CumVarHighland = np.full(len(z[:n_model]), 0)
+    CumVarHighland = None
     CumMixtureModelWeight = np.full(len(z), np.nan)
     CumMixtureModelSigmaCore = np.full(len(z), np.nan)
     CumMixtureModelSigmaTail = np.full(len(z), np.nan)
@@ -492,16 +516,16 @@ def main():
     CumMixtureModelVarTail = np.full(len(z), np.nan)
     
     
-    CumVarHighland = mcs.highland_variance(z=z[:n_model], dz=dz[:n_model], R0=R0, E0=E0, p_exp=p_exp, X0=X0)
     CumVarCoreFit = mcs.fit_cumulative_variance(CumVarCore[:n_model])
-
-    V = CumVarHighland if USEHIGHLAND else CumVarCoreFit
+    V = CumVarCoreFit
+    if USEHIGHLAND:
+        CumVarHighland = mcs.highland_variance(z=z[:n_model], dz=dz[:n_model], R0=R0, E0=E0, p_exp=p_exp, X0=X0)
+        V = CumVarHighland
     print(V)
     KickVarCore = np.diff(np.r_[0.0, V])
     
     if USEMODELMIXTURE:
         Xs = mcs.scattering_length_from_X0(X0, Z)
-        #Xs = None
         MixtureModelKickVarCore, MixtureModelKickVarTail, weight = mcs.gaussian_mixture_model(z=z[:n_model],
                                                                                               dz=dz[:n_model],
                                                                                               R0=R0,
@@ -510,7 +534,7 @@ def main():
                                                                                               X0=X0,
                                                                                               Z=Z,
                                                                                               Xs=Xs,
-                                                                                              #KickVariance=KickVarCore[:n_model],
+                                                                                              KickVariance=KickVarCore[:n_model],
                                                                                               MIXTURE_MODEL=MIXTURE_MODEL,)
         CumMixtureModelWeight = weight
         CumMixtureModelVarCore = np.cumsum(MixtureModelKickVarCore)
@@ -518,7 +542,6 @@ def main():
         CumMixtureModelSigmaCore = np.sqrt(CumMixtureModelVarCore)
         CumMixtureModelSigmaTail = np.sqrt(CumMixtureModelVarTail)
 
-    
         comp_plot_mixture_parameters(
             z=z,
             weight=MixtureWeight,
@@ -697,8 +720,7 @@ def main():
 
     mixture_reach_geometry_error_plot = np.r_[mixture_reach_geometry_error, 0.0]
     
-    ###teststart
-    fig_reach, fig_stop = plot_reach_and_stopping(
+    fig_reach, fig_stop = mcs.plot_reach_and_stopping(
         z_plot,
         reach_g4_plot,
         reach_analytical_plot,
@@ -711,6 +733,7 @@ def main():
         ),
         R0=R0,
         n_primaries=n_primaries,
+        n_configurations=N_CONFIGURATIONS,
         xlim=(X_LIM, z_plot[-1] + 0.03),
     )
 
@@ -723,106 +746,12 @@ def main():
             fig_stop.savefig(output_dir / f"stopping_density_{E0}.pdf")
 
     plt.show()
-    ###testend
 
 
     print(f"Last model evaluation: {z[n_model-1]:.8f} cm; "
           f"gap to R0: {R0-z[n_model-1]:.8f} cm; "
           f"reach there: {reach_analytical[n_model-1]:.6g}")
     print(f"Geant4 reach at last recorded boundary: {reach_g4[-1]:.6g}")
-
-    g4color = "#000000"
-    singularColor ="#0072B2" 
-    mixtureColor = "#D55E00"
-
-
-    fig, (ax, ax_diff) = plt.subplots(
-        2, 1,
-        sharex=True,
-        figsize=(15 / 2.54, 14 / 2.54),
-        gridspec_kw={"height_ratios": [3, 1]},
-        constrained_layout=True,
-    )
-
-    ax.set_title("Reach probability vs. depth")
-    ax.plot(z_plot, reach_g4_plot, ".-", color=g4color, label="Geant4")
-    ax.plot(z_plot, reach_analytical_plot, ".-", color=singularColor, label="Single Gaussian")
-    ax.plot(z_plot, reach_geometry_plot, "--o", color=singularColor, label="Single Gaussian, sampled")
-    
-    if  ANGULAR_MODEL == "mixture":
-        ax.plot(z_plot, mixture_reach_analytical_plot, "-^", color=mixtureColor,
-                        label=f"Gaussian Mixture")
-        
-        ax.plot(z_plot, mixture_reach_geometry_plot, "-^", color=mixtureColor, label="Gaussian Mixture, sampled")
-    
-               
-    ax.axvline(R0, color="gray", linestyle="--", label="R0")
-    ax.set_ylabel("Reach probability")
-    ax.legend()
-    
-    # ax.set_xscale("log")
-    ax.grid()
-    
-    residualsG4_Single = reach_g4_plot - reach_analytical_plot
-    resudialsG4_Mixture = reach_g4_plot - mixture_reach_analytical_plot
-    residualsG4_SingleSampled = reach_g4_plot - reach_geometry_plot
-    residualsG4_SingleSampled = reach_g4_plot - mixture_reach_geometry_plot    
-
-    ax_diff.plot(z_plot, residualsG4_Single, "-o", color=singularColor)
-    ax_diff.plot(z_plot, residualsG4_SingleSampled, "-o", color="orange")
-    
-    if ANGULAR_MODEL == "mixture":
-        ax_diff.plot(z_plot, resudialsG4_Mixture, "-^", color="red")
-        ax_diff.plot(z_plot, residualsG4_SingleSampled, "-^", color="lime")
-
-    ax_diff.axvline(R0, color="gray", linestyle="--", label="R0")
-    ax_diff.set(xlabel="Depth / cm", ylabel="Residuals")
-    ax_diff.grid()
-    ax_diff.legend(loc='center left')
-    fig.tight_layout()
-    plt.xlim(left=X_LIM, right=z_plot[-1]+0.03)
-    
-    if SAVEPLOT:
-        if USEPWO:
-            fig.savefig(f"img/pwo/reach_probability_{E0}.pdf", format="pdf", dpi=300)
-        else:
-            fig.savefig(f"img/h2o/reach_probability_{E0}.pdf", format="pdf", dpi=300)
-    plt.show()
-
-    stop_bin_probabilityg4 = -np.diff(reach_g4_plot)
-    stop_bin_densityg4 = stop_bin_probabilityg4 / dz_plot[1:] / 100
-    
-    stop_bin_probability = -np.diff(reach_analytical_plot)
-    stop_bin_density = stop_bin_probability / dz_plot[1:] / 100
-    
-    stop_bin_probability_mixture = -np.diff(mixture_reach_analytical_plot)
-    stop_bin_density_mixture = stop_bin_probability_mixture / dz_plot[1:] / 100
-    
-    if np.any(stop_bin_probability < -1e-8):
-        warnings.warn("Analytical reach rises with depth; inspect CDF numerical stability.")
-    
-    fig, (ax, ax_res) = plt.subplots(
-        2, 1,
-        sharex=True,
-        figsize=(15 / 2.54, 14 / 2.54),
-        gridspec_kw={"height_ratios": [3, 1]},
-        constrained_layout=True,
-    )
-
-    if  ANGULAR_MODEL == "mixture":
-        plt.stairs(np.r_[0, stop_bin_density_mixture, 0], np.r_[0, z_plot, 0], baseline=None, label="Mixture stopping probability")
-    else:
-        plt.stairs(np.r_[0, stop_bin_density, 0], np.r_[0, z_plot, 0], baseline=None, label="Analytical stopping probability")
-    #plt.stairs(stop_analytical_plot, z_plot, baseline=None, label="Analytical PDF")
-    plt.stairs(np.r_[0, stop_bin_densityg4, 0], np.r_[0, z_plot, 0], baseline=None, label="Geant4 stopping probability")
-    plt.xlabel("Depth / cm")
-    plt.ylabel(r"Stop Probability")# / cm$^{-1}$")
-    plt.legend()
-    plt.grid()
-    plt.xlim(left=X_LIM, right=z_plot[-1]+0.03)
-    plt.tight_layout()
-    plt.savefig("MCSStopProbabilityPWO_mixture.pdf", bbox_inches="tight")
-    plt.show()
 
     # Diagnostic increments: leave negative estimates undefined rather than
     # silently clipping them to zero. They can arise from noisy/core widths.
@@ -842,7 +771,8 @@ def main():
     plt.show()
 
     plt.figure(figsize=(12, 9))
-    plt.plot(z, np.degrees(np.sqrt(CumVarHighland)), label="Integrated Highland, global log")
+    if USEHIGHLAND:
+        plt.plot(z[:n_model], np.degrees(np.sqrt(CumVarHighland)), label="Integrated Highland, global log")
     plt.scatter(z, np.degrees(CumSigmaCore), s=10, label="Geant4 cumulative core width")
     if ANGULAR_MODEL == "mixture":
         plt.plot(z, np.degrees(CumMixtureSigmaCore), label="Mixture narrow sigma")

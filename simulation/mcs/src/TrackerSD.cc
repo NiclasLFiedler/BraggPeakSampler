@@ -106,7 +106,7 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
         // Phantom entrance is at global z = 0.
         const G4double depth = -downstreamWorld.z() / cm;
         
-        G4double tracklength = (aStep->GetTrack()->GetTrackLength()-0.1*um)/ cm; // 0.001 inital beampos in z
+        G4double tracklength = (aStep->GetTrack()->GetTrackLength()-0.001*um)/ cm; // 0.001 inital beampos in z
         
         const G4ThreeVector& dirOut = post->GetMomentumDirection();
         thetaXOut = std::atan2(dirOut.x(), -dirOut.z());

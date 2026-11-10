@@ -172,7 +172,7 @@ def gaussian_mixture_model(z, dz, R0, E0, p_exp, X0, Z, Xs=None, KickVariance=No
     mass = 938.272
     beta = _beta(mass, energy)
     
-    if Xs is not None:
+    if MIXTURE_MODEL == "rutherford":
         reduced_thickness = dz / (Xs * beta**2)
     else:
         reduced_thickness = dz / (X0 * beta**2)
@@ -389,14 +389,6 @@ def gchi2_cdf_rng_mixture(x, CoreWeights, TailWeights, core_probability, rng, n_
 
 def reach_probability_rng_geometry(remaining_range, cumulative_variance, dz,
                                    rng, n_samples=50_000, batch_size=1000):
-    """Original per-depth correlated-angle RNG with nonlinear forward geometry.
-
-    Pass a cumulative-variance PREFIX and its corresponding width PREFIX.
-    dz may also be a positive scalar for backwards compatibility.
-    Returns (probability, pointwise standard error, invalid_fraction).
-    A forward-domain violation raises; a successful call returns 0 for the
-    invalid_fraction, preserving the original three-value return signature.
-    """
     V = _variance(cumulative_variance)
     widths = np.broadcast_to(np.asarray(dz, dtype=float), V.shape)
     if np.any(~np.isfinite(widths)) or np.any(widths <= 0):
@@ -412,31 +404,21 @@ def reach_probability_rng_geometry(remaining_range, cumulative_variance, dz,
         return 0.0, 0.0
     increment_sigma = np.sqrt(np.diff(np.r_[0.0, V]))
     n_reach = 0
-    n_nonforward = 0
+
     for start in range(0, n_samples, batch_size):
         size = min(batch_size, n_samples-start)
         kicks_x = rng.normal(size=(size, V.size))*increment_sigma
         kicks_y = rng.normal(size=(size, V.size))*increment_sigma
         theta_x = np.cumsum(kicks_x, axis=1)
         theta_y = np.cumsum(kicks_y, axis=1)
-        forward = np.all(
-            (np.abs(theta_x) < np.pi / 2)
-            & (np.abs(theta_y) < np.pi / 2),
-            axis=1,
-        )
 
-        # Non-forward trajectories count as failures to reach.
-        # Evaluate tan() only for trajectories inside its valid domain.
-        theta_x = theta_x[forward]
-        theta_y = theta_y[forward]
+        # slope_squared = np.tan(theta_x)**2 + np.tan(theta_y)**2
+        # excess_factor = slope_squared / (np.sqrt(1 + slope_squared) + 1) #with tan
 
-        slope_squared = np.tan(theta_x)**2 + np.tan(theta_y)**2
-        excess_factor = slope_squared / (np.sqrt(1 + slope_squared) + 1)
+        excess_factor = 0.5 * (theta_x**2 + theta_y**2)
         delta_R = excess_factor @ widths
         
-        n_nonforward += np.count_nonzero(~forward)
         n_reach += np.count_nonzero(delta_R <= remaining_range)
-    # print(f"Non-forward trajectories: {n_nonforward}")
     probability = n_reach/n_samples
     error = np.sqrt(probability*(1-probability)/n_samples)
     return probability, error
@@ -459,7 +441,6 @@ def reach_probability_rng_geometry_mixture(remaining_range, epsilon, kick_core_v
     
     
     n_reach = 0
-    n_nonforward = 0
     for start in range(0, n_samples, batch_size):
         size = min(batch_size, n_samples-start)
 
@@ -473,23 +454,13 @@ def reach_probability_rng_geometry_mixture(remaining_range, epsilon, kick_core_v
 
         theta_x = np.cumsum(kicks_x, axis=1)
         theta_y = np.cumsum(kicks_y, axis=1)
+
+       # slope_squared = np.tan(theta_x)**2 + np.tan(theta_y)**2
+        # excess_factor = slope_squared / (np.sqrt(1 + slope_squared) + 1)
         
-        forward = np.all(
-            (np.abs(theta_x) < np.pi / 2)
-            & (np.abs(theta_y) < np.pi / 2),
-            axis=1,
-        )
-
-        # Non-forward trajectories count as failures to reach.
-        # Evaluate tan() only for trajectories inside its valid domain.
-        theta_x = theta_x[forward]
-        theta_y = theta_y[forward]
-
-        slope_squared = np.tan(theta_x)**2 + np.tan(theta_y)**2
-        excess_factor = slope_squared / (np.sqrt(1 + slope_squared) + 1)
+        excess_factor = 0.5 * (theta_x**2 + theta_y**2)
         delta_R = excess_factor @ widths
         
-        n_nonforward += np.count_nonzero(~forward)
         n_reach += np.count_nonzero(delta_R <= remaining_range)
     
     probability = n_reach/n_samples
@@ -545,21 +516,6 @@ def reach_probability_sampled_mixture(z, dz, R0, var_core, var_tail,
                                 for a in (var_core, var_tail, p_tail)]
     if any(a.shape != z.shape or np.any(~np.isfinite(a))
         for a in (var_core, var_tail, p_tail)):
-        # print("z.shape:", z.shape)
-
-        # for name, a in (
-        #     ("var_core", var_core),
-        #     ("var_tail", var_tail),
-        #     ("p_tail", p_tail),
-        # ):
-        #     print(f"\n{name}: shape={a.shape}, expected={z.shape}")
-
-        #     bad = ~np.isfinite(a)
-        #     if np.any(bad):
-        #         print("Non-finite indices:", np.argwhere(bad))
-        #         print("Non-finite values:", a[bad])
-        # else:
-        #     print("All values are finite")
         raise ValueError('One finite variance/probability per layer required.')
     if (np.any(var_core < 0) or np.any(var_tail < 0)
             or np.any((p_tail < 0) | (p_tail > 1))):
@@ -567,7 +523,9 @@ def reach_probability_sampled_mixture(z, dz, R0, var_core, var_tail,
     n_configurations = operator.index(n_configurations)
     if n_configurations < 2:
         raise ValueError('Use at least two configurations to estimate an error.')
+    
     cdf = gchi2_cdf_checked if cdf is None else cdf
+
     choices = rng.random((n_configurations, len(z))) < p_tail
     
     tail_count = np.count_nonzero(choices, axis=0)
@@ -582,8 +540,6 @@ def reach_probability_sampled_mixture(z, dz, R0, var_core, var_tail,
         f"Depth {z[j]:.5f} cm: "
         f"tail in this layer = {tail_count[j]}/{n_configurations} "
         f"({tail_count[j] / n_configurations:.2%}), "
-        #f"at least one tail so far = {ever_tail_count[j]}/{n_configurations} "
-        #f"({ever_tail_count[j] / n_configurations:.2%}), "
         f"mean cumulative tail kicks per configuration = "
         f"{cumulative_tails[:, j].mean():.2f}"
     )
@@ -809,3 +765,80 @@ def plot_excess_pathlength_layers(z, dz, layers, cumulative_variance=None, *, mi
     ax.set(xlabel=r"Excess path length $\Delta r$ / mm", ylabel=r"Probability density / mm$^{-1}$")
     ax.legend()
     return fig, ax
+
+
+def plot_reach_and_stopping(
+    z_plot, reach_g4_plot, reach_analytical_plot, *,
+    reach_geometry_plot=None, mixture_reach_analytical_plot=None,
+    mixture_reach_geometry_plot=None, R0=None, n_primaries=None, n_configurations=None,xlim=None,
+):
+    """Return reach and stopping figures; depths in cm, residuals model - Geant4.
+    Inputs share an increasing depth grid. Geant4 reach must be nonincreasing.
+    Optional errors assume n_primaries independent, equally weighted primaries.
+    """
+    z = np.asarray(z_plot)
+    g4 = np.asarray(reach_g4_plot)
+    widths = np.diff(z)
+    models = [
+        ("Single Gaussian", reach_analytical_plot, "#0072B2", "-"),
+        ("Single Gaussian, trajectory  sampling", reach_geometry_plot, "#0072B2", "--"),
+        ("Gaussian mixture (M={n_configurations}$ configurations)", mixture_reach_analytical_plot, "#D55E00", "-."),
+        ("Gaussian mixture, trajectory sampling", mixture_reach_geometry_plot, "#D55E00", ":"),
+    ]
+
+    figures = []
+    with plt.rc_context({"font.size": 9, "legend.fontsize": 8}):
+        for stopping in (False, True):
+            fig, (ax, ax_res) = plt.subplots(
+                2, 1, sharex=True, figsize=(15 / 2.54, 14 / 2.54),
+                gridspec_kw={"height_ratios": [3, 1]}, constrained_layout=True,
+            )
+            x = 0.5 * (z[:-1] + z[1:]) if stopping else z
+            probability = -np.diff(g4) if stopping else g4
+            reference = probability / widths if stopping else probability
+            error = None
+            if n_primaries is not None:
+                error = np.sqrt(probability * (1 - probability) / n_primaries)
+                if stopping:
+                    error = error / widths
+                band = dict(color="0.85", linewidth=0, zorder=0,
+                            label=r"Geant4 stat. uncertainty ($\pm1\sigma$)")
+                if stopping:
+                    ax_res.stairs(error, z, baseline=-error, fill=True, **band)
+                else:
+                    ax_res.fill_between(z, -error, error, **band,)
+                
+            ax.errorbar(
+                x, reference, yerr=error, fmt="o", markersize=3,
+                markerfacecolor="none", color="black", elinewidth=0.8,
+                capsize=0, zorder=3, label="Geant4",
+            )
+            for label, reach, color, linestyle in models:
+                if reach is None:
+                    continue
+                line = dict(color=color, linestyle=linestyle, linewidth=1.4)
+                if stopping:
+                    density = -np.diff(reach) / widths
+                    ax.stairs(density, z, baseline=None, label=label, **line)
+                    ax_res.stairs(reference-density, z, baseline=None, **line)
+                else:
+                    ax.plot(z, reach, label=label, **line)
+                    ax_res.plot(z,  g4 - np.asarray(reach), **line)
+
+            for panel in (ax, ax_res):
+                panel.grid(color="0.9", linewidth=0.5)
+                if R0 is not None:
+                    panel.axvline(R0, color="0.5", linestyle="--", linewidth=1,
+                                  label=r"$ \mathrm{R_0}$" if panel is ax else "_nolegend_")
+            ax_res.axhline(0, color="0.4", linewidth=0.8)
+            ax_res.set_xlabel(r"Depth $z$ / cm")
+            ax_res.set_ylabel(r"Residual / cm$^{-1}$" if stopping else "Residual")
+            ax.set_ylabel(r"Stopping density / cm$^{-1}$" if stopping
+                          else "Reach probability")
+            if not stopping:
+                ax.set_ylim(-0.03, 1.03)
+            ax_res.set_xlim(xlim if xlim is not None else (z[0], z[-1]))
+            ax.legend()
+            ax_res.legend()
+            figures.append(fig)
+    return tuple(figures)
