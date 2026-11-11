@@ -256,14 +256,14 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   G4double phantomZ = RangePWO220+0.01*RangePWO220;
   
   // Depth measured from the phantom entrance along the beam.
-  G4double switchDepth = 0.98*RangePWO220;
+  G4double switchDepth = 0.97*RangePWO220;
   
-  G4double coarseWidth = 0.005*RangePWO220;
-  G4double fineWidth   = 0.001*RangePWO220;
+  G4double coarseWidth = 0.01*RangePWO220;
+  G4double fineWidth   = 0.0005*RangePWO220;
   
   bool useH2O = false;
   if(useH2O){
-    phantomZ = RangeWater220+0.03;
+    phantomZ = RangeWater220+0.02;
     switchDepth = 0.995*RangeWater220;
     coarseWidth = 0.01*RangeWater220;
     fineWidth   = 0.0001*RangeWater220;

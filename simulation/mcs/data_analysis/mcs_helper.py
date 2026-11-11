@@ -200,18 +200,30 @@ def gaussian_mixture_model(z, dz, R0, E0, p_exp, X0, Z, Xs=None, KickVariance=No
 
     pc = np.sqrt(energy * (energy + 2 * mass))  # MeV
 
+    # total_variance = np.asarray(KickVariance, dtype=float)
+    # if KickVariance is not None:
+    #     total_variance = KickVariance
+    # else:
+    #     # total_variance = (15.0 / (beta * pc))**2 * dz / Xs
+    #     total_variance = (1+0.038*np.log(z/X0))**2*(13.6 / (beta * pc))**2 * dz / X0 
+        
+    # core_variance = variance1 * total_variance
+    # tail_variance = variance2 * total_variance
+
+    # return core_variance, tail_variance, epsilon
+
     if KickVariance is not None:
-        total_variance = KickVariance
-    elif Xs is not None:
-        total_variance = (15.0 / (beta * pc))**2 * dz / Xs  # rad²
+        core_variance = np.asarray(KickVariance, dtype=float)
+        total_variance = core_variance / variance1
     else:
-        total_variance = (1+0.038*np.log(z/X0))**2*(13.6 / (beta * pc))**2 * dz / X0  # rad²
+        total_variance = (15.0 / (beta * pc))**2 * dz / Xs
+        core_variance = variance1 * total_variance
+    #else:
+    #    total_variance = (1+0.038*np.log(z/X0))**2*(13.6 / (beta * pc))**2 * dz / X0  # rad²
+    
+    tail_variance = variance2 * total_variance
 
-    variance1 = variance1 * total_variance  # core variance in rad²
-    # variance1 = total_variance  # core variance in rad²
-    variance2 = variance2 * total_variance  # tail variance in rad²
-
-    return variance1, variance2, epsilon
+    return core_variance, tail_variance, epsilon
 
 def weighted_eigenvalues(V, dz):
     """Weights of sum_k w_k chi2_2 for nonuniform integration intervals.

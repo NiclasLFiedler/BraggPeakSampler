@@ -9,7 +9,6 @@ import uproot
 sys.path.append("../../range_energy/data_analysis")
 import analysisFunctions
 import mcs_helper as mcs
-from plotter import plot_scattering_core
 from scipy.optimize import minimize, minimize_scalar, curve_fit
 from scipy.special import expit, erf
 from rel_entr_fit_helper import fit_simple_kl, fit_complex_kl
@@ -28,8 +27,8 @@ LARGEOUTPUT = False
 ROOT_FILE = "h2oproj.root"
 E0 = 220.0
 # Set to None to use range_energy(data, E0). These are your current overrides.
-R0_OVERRIDE = 6.735 if USEPWO else 30.723  #30.72, 6.73398 6.736 6.728
-FRACTION_R0 = 0.95
+R0_OVERRIDE = 6.735 if USEPWO else 30.722  #30.72, 6.73398 6.736 6.728
+FRACTION_R0 = 0.8
 Z = 73.6 if USEPWO else 7.4 # 73.6, 7.4 due to Mayneord’s formula
 X0 = 0.89 if USEPWO else 36.08
 
@@ -42,8 +41,9 @@ PLOT_LAYER_INDEX = 10
 X_LIM = 6.0 if USEPWO else 30.3
 ANGULAR_MODEL = "mixture"  # "core" or "mixture"
 MIXTURE_MODEL = "rutherford" # "rutherford" or "highland"
-MIXTURE_FIT_METHOD = "kl"  # "mle", "curve_fit", or "kl"
+MIXTURE_FIT_METHOD = "curve_fit"  # "mle", "curve_fit", or "kl"
 MIXTURE_BINS = 2000  # Used by curve_fit and the comparison histogram.
+CORE_FIT_WIDTH = 2.0
 
 # def gaussian_core_sigma(values, latestSigma):
 #     values = values[np.isfinite(values)]
@@ -55,24 +55,29 @@ MIXTURE_BINS = 2000  # Used by curve_fit and the comparison histogram.
 def gaussian_core_sigma(values, latestSigma=None, fit_width=2.0):
     values = np.asarray(values, dtype=float)
     values = values[np.isfinite(values)]
+
     if values.size < 100:
-        warnings.warn("Too few values: reusing the previous core width.", stacklevel=2)
+        warnings.warn("Too few angles: reusing the previous core width.")
         return float(latestSigma) if latestSigma is not None else np.nan
-    if not np.any(values):
-        return 0.0
-    
+
     scale = np.diff(np.percentile(values, [15.8655, 84.1345]))[0] / 2
-    x = values / scale
-    mean_square = np.mean(x[np.abs(x) <= fit_width]**2)
+    if scale <= 0:
+        return 0.0 if np.all(values == 0) else np.nan
 
-    def nll(sigma):
-        normalization = erf(fit_width / (np.sqrt(2) * sigma))
-        return np.log(sigma * normalization) + mean_square / (2 * sigma**2)
+    counts, edges = np.histogram(values / scale, bins=150, range=(-fit_width, fit_width),)
+    centers = (edges[:-1] + edges[1:]) / 2
 
-    fit = minimize_scalar(nll, bounds=(0.2, 5), method="bounded")
-    if not fit.success or not np.isfinite(fit.fun) or not 0.2001 < fit.x < 4.9999:
-        raise RuntimeError(f"Core fit failed or reached a width bound. {fit.x}")
-    return float(scale * fit.x)
+    def gaussian(x, amplitude, sigma):
+        return amplitude * np.exp(-0.5 * (x / sigma)**2)
+
+    params, _ = curve_fit(
+        gaussian, centers, counts,
+        p0=(counts.max(), 1.0),
+        sigma=np.sqrt(np.maximum(counts, 1)),
+        absolute_sigma=True,
+        bounds=([0, 0.05], [np.inf, 5.0]),
+    )
+    return float(params[1] * scale)
 
 def gaussian_pdf(theta, sigma):
     """Normalized zero-mean Gaussian; theta and sigma use the same units."""
@@ -249,7 +254,7 @@ def plot_cumulative_angular_fit(values, core_sigma, layer, depth, mixture=None, 
     ax.legend()
     ax.grid(alpha=0.3)
     fig.tight_layout()
-    fig.savefig(f"scattering_{ANGULAR_MODEL}_layer_{layer}.pdf")
+    # fig.savefig(f"scattering_{ANGULAR_MODEL}_layer_{layer}.pdf")
     plt.show()
 
 def integer_ids(values, name):
@@ -285,7 +290,7 @@ def plot_mixture_parameters(z, weight, sigma_core, sigma_tail):
     ax_sigma.grid(alpha=0.3)
 
     fig.tight_layout()
-    fig.savefig("mixture_parameters.pdf")
+    # fig.savefig("mixture_parameters.pdf")
     plt.show()
 
 def comp_plot_mixture_parameters(z, weight, sigma_core, sigma_tail, z2, weight2, sigma_core2, sigma_tail2):
@@ -315,7 +320,7 @@ def comp_plot_mixture_parameters(z, weight, sigma_core, sigma_tail, z2, weight2,
     ax_sigma.grid(alpha=0.3)
 
     fig.tight_layout()
-    fig.savefig("mixture_parameters.pdf")
+    # fig.savefig("mixture_parameters.pdf")
     plt.show()
 
 def main():
@@ -323,6 +328,19 @@ def main():
         raise ValueError('ANGULAR_MODEL must be "core" or "mixture".')
     if MIXTURE_FIT_METHOD not in ("mle", "curve_fit", "compare", "kl"):
         raise ValueError('MIXTURE_FIT_METHOD must be "mle", "curve_fit", or "compare".')
+
+    data_file = ("../../range_energy/data_analysis/pbwo4_alt_range_energy.npz"
+                 if USEPWO else "../../range_energy/data_analysis/h2o_alt_range_energy.npz")
+    data = analysisFunctions.load_EnergyRange(data_file)
+    p_exp = float(data.p)
+    print(f"Range parameter: {p_exp:.6f}")
+    data = analysisFunctions.load_EnergyRange("../../range_energy/data_analysis/pbwo4_range_energy.npz") if USEPWO else analysisFunctions.load_EnergyRange("../../range_energy/data_analysis/h2o_range_energy.npz")
+    fitted_R0 = float(analysisFunctions.range_energy(data, E0))
+    R0 = fitted_R0 if R0_OVERRIDE is None else float(R0_OVERRIDE)
+
+    print(f"Fitted R0: {fitted_R0:.8f} cm; used R0: {R0:.8f} cm")
+    del data, data_file
+
     with uproot.open(ROOT_FILE) as f:
         tree = f["braggsampler"]
         event = integer_ids(tree["event"].array(library="np"), "event")
@@ -341,18 +359,6 @@ def main():
         raise ValueError("ROOT branches must have matching shapes.")
 
     event_ids, event_index = np.unique(event, return_inverse=True)
-
-    data_file = ("../../range_energy/data_analysis/pbwo4_alt_range_energy.npz"
-                 if USEPWO else "../../range_energy/data_analysis/h2o_alt_range_energy.npz")
-    data = analysisFunctions.load_EnergyRange(data_file)
-    p_exp = float(data.p)
-    data = analysisFunctions.load_EnergyRange("../../range_energy/data_analysis/pbwo4_range_energy.npz") if USEPWO else analysisFunctions.load_EnergyRange("../../range_energy/data_analysis/h2o_range_energy.npz")
-    fitted_R0 = float(analysisFunctions.range_energy(data, E0))
-    R0 = fitted_R0 if R0_OVERRIDE is None else float(R0_OVERRIDE)
-    del data, data_file
-
-    print(f"Fitted R0: {fitted_R0:.8f} cm; used R0: {R0:.8f} cm")
-
     max_layer = np.full(len(event_ids), -1, dtype=np.int64)
     np.maximum.at(max_layer, event_index, layerID)
     last_row = np.r_[event[1:] != event[:-1], True]
@@ -373,7 +379,12 @@ def main():
         raise ValueError("Missing layer IDs: need a complete consecutive prefix from 0.")
 
     # The only depth grid: z[i] = downstream boundary of layer i.
-    z = np.empty(len(boundary_layers), dtype=float)
+    z = hit_depth[order[starts]].copy()
+    if np.any(~np.isfinite(z)) or np.any(z <= 0) or np.any(np.diff(z) <= 0):
+        raise ValueError("z must contain finite positive increasing boundaries.")
+    n_model = np.searchsorted(z, R0, side="left")
+    if n_model == 0:
+        raise ValueError("No scored boundary lies below R0.")
     
     CumSigmaCore = np.full(len(z), np.nan)
     SingleSigmaCore = np.full(len(z), np.nan)
@@ -391,14 +402,11 @@ def main():
 
     previous_fit = dict.fromkeys(methods)
     previous_width = None
-    for i, (start, count) in enumerate(zip(starts, counts)):
+    for i, (start, count) in enumerate(zip(starts[:n_model], counts[:n_model])):
         rows = order[start:start + count]
         recorded_depth = hit_depth[rows]
         if not np.all(np.isfinite(recorded_depth)):
             raise ValueError(f"Nonfinite depths in layer {i}.")
-        if recorded_depth[0] > R0:
-            print(f"Layer {i} exceeds R0; skipping.")
-            break
         z[i] = recorded_depth[0]
         if not np.allclose(recorded_depth, z[i], rtol=1e-7, atol=1e-8):
             raise ValueError(f"Layer {i} has inconsistent downstream depths; check scoring.")
@@ -411,9 +419,18 @@ def main():
                   "resetting mixture fit initial parameters.")
         previous_width = width
         
-        CumSigmaCore[i] = gaussian_core_sigma(CumScatteringAngle[rows], CumSigmaCore[i-1])
-        SingleSigmaCore[i] = gaussian_core_sigma(ScatteringAngle[rows], SingleSigmaCore[i-1])
-        CumDeltaXSigmaCore[i] = gaussian_core_sigma(deltaX[rows], CumDeltaXSigmaCore[i-1])
+        CumSigmaCore[i] = gaussian_core_sigma(CumScatteringAngle[rows],
+                                              CumSigmaCore[i-1],
+                                              #fit_width=CORE_FIT_WIDTH
+                                              )
+        SingleSigmaCore[i] = gaussian_core_sigma(ScatteringAngle[rows],
+                                                 SingleSigmaCore[i-1],
+                                                 fit_width=CORE_FIT_WIDTH
+                                                 )
+        CumDeltaXSigmaCore[i] = gaussian_core_sigma(deltaX[rows],
+                                                    CumDeltaXSigmaCore[i-1],
+                                                    fit_width=CORE_FIT_WIDTH
+                                                    )
         
         mixture = alternative = None
 
@@ -427,7 +444,7 @@ def main():
                     elif name == "kl":
                         params = fit_simple_kl(angles, bins=MIXTURE_BINS, initial=previous_fit[name])
                     else:
-                        params = fit_cumulative_gaussian_mixture_curve_fit(angles, MIXTURE_BINS, initial=previous_fit[name],)
+                        params = fit_cumulative_gaussian_mixture_curve_fit(angles, MIXTURE_BINS, initial=previous_fit[name])
                     previous_fit[name] = params
                     fit_seconds[name][i] = perf_counter() - start_time
                     fit_parameters[name][i] = params
@@ -449,13 +466,24 @@ def main():
         if i % 10 == 0:
             print(f"Layer {i}, depth {z[i]:.6f} cm")
 
-    n_model = np.searchsorted(z, R0, side="left")
-    if n_model == 0:
-        raise ValueError("No scored boundary lies below R0.")
+    plt.plot(z[:n_model], CumSigmaCore, "o-", markersize=3, label="Cum Core width")
+
+    KickVarCore = SingleSigmaCore[:n_model]**2
+    CumVarCore = np.cumsum(KickVarCore)
+    CumSigmaCore = np.sqrt(CumVarCore)
+    plt.plot(z[:n_model], CumSigmaCore, "-o", markersize=3, label="Cumulative core width from increments ")
+    plt.legend()
+    plt.show()
+
+
+
+
 
     if ANGULAR_MODEL == "mixture":
-        CumMixtureVarCore = mcs.fit_cumulative_variance(CumMixtureSigmaCore**2)
-        CumMixtureVarTail = mcs.fit_cumulative_variance(CumMixtureSigmaTail**2)
+        CumMixtureVarCore = np.full(len(z), np.nan)
+        CumMixtureVarTail = np.full(len(z), np.nan)
+        CumMixtureVarCore[:n_model] = mcs.fit_cumulative_variance(CumMixtureSigmaCore[:n_model]**2)
+        CumMixtureVarTail[:n_model] = mcs.fit_cumulative_variance(CumMixtureSigmaTail[:n_model]**2)
 
         CumMixtureSigmaCore = np.sqrt(CumMixtureVarCore)
         CumMixtureSigmaTail = np.sqrt(CumMixtureVarTail)
@@ -486,7 +514,6 @@ def main():
                  variance=CumMixtureVariance)
             print("Saved mixture fits (angles in rad): cumulative_angular_mixture.npz")
             
-                
     del order, starts, counts, hit_depth
     del CumScatteringAngle, ScatteringAngle, deltaX
     
@@ -496,8 +523,6 @@ def main():
     dz = np.diff(np.r_[0.0, z])
     print(f"Intervals: {len(z)}, dz min/max: {dz.min():.6g}/{dz.max():.6g} cm")
 
-    # Geant4 reach at exactly the same z entries. Do not invent an extra
-    # boundary or infer its width from the preceding layer.
     max_layer.sort()
     n_reaching = len(max_layer) - np.searchsorted(max_layer, boundary_layers, side="left")
     n_primaries = n_recorded
@@ -518,30 +543,30 @@ def main():
     
     CumVarCoreFit = mcs.fit_cumulative_variance(CumVarCore[:n_model])
     V = CumVarCoreFit
+    CumVarHighland = mcs.highland_variance(z=z[:n_model], dz=dz[:n_model], R0=R0, E0=E0, p_exp=p_exp, X0=X0)
     if USEHIGHLAND:
-        CumVarHighland = mcs.highland_variance(z=z[:n_model], dz=dz[:n_model], R0=R0, E0=E0, p_exp=p_exp, X0=X0)
         V = CumVarHighland
     print(V)
     KickVarCore = np.diff(np.r_[0.0, V])
     
-    if USEMODELMIXTURE:
-        Xs = mcs.scattering_length_from_X0(X0, Z)
-        MixtureModelKickVarCore, MixtureModelKickVarTail, weight = mcs.gaussian_mixture_model(z=z[:n_model],
-                                                                                              dz=dz[:n_model],
-                                                                                              R0=R0,
-                                                                                              E0=E0,
-                                                                                              p_exp=p_exp,
-                                                                                              X0=X0,
-                                                                                              Z=Z,
-                                                                                              Xs=Xs,
-                                                                                              KickVariance=KickVarCore[:n_model],
-                                                                                              MIXTURE_MODEL=MIXTURE_MODEL,)
-        CumMixtureModelWeight = weight
-        CumMixtureModelVarCore = np.cumsum(MixtureModelKickVarCore)
-        CumMixtureModelVarTail = np.cumsum(MixtureModelKickVarTail)
-        CumMixtureModelSigmaCore = np.sqrt(CumMixtureModelVarCore)
-        CumMixtureModelSigmaTail = np.sqrt(CumMixtureModelVarTail)
+    Xs = mcs.scattering_length_from_X0(X0, Z)
+    MixtureModelKickVarCore, MixtureModelKickVarTail, weight = mcs.gaussian_mixture_model(z=z[:n_model],
+                                                                                          dz=dz[:n_model],
+                                                                                          R0=R0,
+                                                                                          E0=E0,
+                                                                                          p_exp=p_exp,
+                                                                                          X0=X0,
+                                                                                          Z=Z,
+                                                                                          Xs=Xs,
+                                                                                          KickVariance=KickVarCore[:n_model],
+                                                                                          MIXTURE_MODEL=MIXTURE_MODEL,)
+    CumMixtureModelWeight = weight
+    CumMixtureModelVarCore = np.cumsum(MixtureModelKickVarCore)
+    CumMixtureModelVarTail = np.cumsum(MixtureModelKickVarTail)
+    CumMixtureModelSigmaCore = np.sqrt(CumMixtureModelVarCore)
+    CumMixtureModelSigmaTail = np.sqrt(CumMixtureModelVarTail)
 
+    if USEMODELMIXTURE:
         comp_plot_mixture_parameters(
             z=z,
             weight=MixtureWeight,
@@ -586,7 +611,7 @@ def main():
     )
 
     target_depth = FRACTION_R0 * R0
-    layer_index = int(np.argmin(np.abs(np.asarray(z) - target_depth)))
+    layer_index = int(np.argmin(np.abs(z[:n_model] - target_depth)))
 
     options = dict(
         layers=[layer_index],
@@ -611,7 +636,7 @@ def main():
         print("Anuglar Model")
         mcs.plot_excess_pathlength_layers(
             z, dz,
-            mixture=(MixtureKickVarCore, MixtureKickVarTail, MixtureWeight),
+            mixture=(MixtureKickVarCore[:n_model], MixtureKickVarTail[:n_model], MixtureWeight[:n_model]),
             show_geant4=False,
             **options,
             Range=R0
@@ -640,6 +665,36 @@ def main():
     plt.show()
     del options
 
+    z_fit = z[:n_model]
+    plt.figure(figsize=(12, 9))
+
+    if CumVarHighland is not None:
+        plt.plot(z_fit, np.degrees(np.sqrt(CumVarHighland[:n_model])), label="Integrated Highland, global log",)
+
+    plt.scatter(z_fit, np.degrees(CumSigmaCore[:n_model]), s=10, label="Geant4 cumulative core width",)
+
+    if ANGULAR_MODEL == "mixture":
+        plt.plot(z_fit, np.degrees(CumMixtureSigmaCore[:n_model]), label="Mixture narrow sigma",)
+        plt.plot(z_fit, np.degrees(CumMixtureSigmaTail[:n_model]), label="Mixture broad sigma",)
+        plt.plot(z_fit, np.degrees(np.sqrt(CumMixtureVariance[:n_model])), "--", label="Mixture RMS",)
+
+        
+        var_core = CumMixtureModelVarCore[:n_model]
+        var_tail = CumMixtureModelVarTail[:n_model]
+        weight_tail = CumMixtureModelWeight[:n_model]
+        var_total = (1 - weight_tail) * var_core + weight_tail * var_tail
+
+        plt.plot(z_fit, np.degrees(np.sqrt(var_core)),":", label="Mixture model narrow sigma",)
+        plt.plot(z_fit, np.degrees(np.sqrt(var_tail)), ":", label="Mixture model broad sigma",)
+        plt.plot(z_fit, np.degrees(np.sqrt(var_total)), "--", color="orange",label="Mixture model RMS",)
+
+    plt.xlabel("Depth / cm")
+    plt.ylabel("Projected angle / degree")
+    plt.legend()
+    plt.grid()
+    plt.tight_layout()
+    plt.show()
+
     if USEHIGHLAND:
         mcs.simulation_grid(z[:n_model], V[:n_model], R0, layer_ids=boundary_layers[:n_model])
 
@@ -663,7 +718,7 @@ def main():
               f"KickVarCore: {MixtureKickVarCore[:n_model]}, "
               f"KickVarTail: {MixtureKickVarTail[:n_model]}, "
               f"Weight: {MixtureWeight[:n_model]}")
-        (mixture_reach_analytical, mixture_reach_analytical_error) = mcs.reach_probability_sampled_mixture(z[:n_model],
+        (mixture_reach_analytical[:n_model], mixture_reach_analytical_error[:n_model]) = mcs.reach_probability_sampled_mixture(z[:n_model],
                                                                                                            dz[:n_model],
                                                                                                            R0,
                                                                                                            MixtureKickVarCore[:n_model],
@@ -770,22 +825,6 @@ def main():
     plt.tight_layout()
     plt.show()
 
-    plt.figure(figsize=(12, 9))
-    if USEHIGHLAND:
-        plt.plot(z[:n_model], np.degrees(np.sqrt(CumVarHighland)), label="Integrated Highland, global log")
-    plt.scatter(z, np.degrees(CumSigmaCore), s=10, label="Geant4 cumulative core width")
-    if ANGULAR_MODEL == "mixture":
-        plt.plot(z, np.degrees(CumMixtureSigmaCore), label="Mixture narrow sigma")
-        plt.plot(z, np.degrees(CumMixtureSigmaTail), label="Mixture broad sigma")
-        plt.plot(z, np.degrees(np.sqrt(CumMixtureVariance)), "--", label="Mixture RMS")
-    plt.xlabel("Depth / cm")
-    plt.ylabel("Projected angle / degree")
-    plt.legend()
-    plt.grid()
-    plt.tight_layout()
-    plt.savefig("multiple_coulomb_scattering.pdf", bbox_inches="tight")
-    plt.show()
-
     # Retain your lever-arm diagnostic on unequal intervals. With right-end 
     # angles held over each interval, kick i acts over z[j]-(z[i]-dz[i]).
     # This is a SMALL-ANGLE variance estimate: use Var(theta), not tan(RMS)^2.
@@ -802,7 +841,7 @@ def main():
     plt.legend()
     plt.grid()
     plt.tight_layout()
-    plt.savefig("lateral_scattering.pdf", bbox_inches="tight")
+    # plt.savefig("lateral_scattering.pdf", bbox_inches="tight")
     plt.show()
 
 
