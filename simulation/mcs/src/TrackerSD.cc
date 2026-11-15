@@ -33,6 +33,7 @@ TrackerSD::TrackerSD(const G4String& name,
 void TrackerSD::Initialize(G4HCofThisEvent* hce)
 {
     layerID = -1;
+    ekinIn = 0;
     thetaXIn = 0.0;
     thetaXOut = 0.0;
     prepos = 0.0;
@@ -61,7 +62,7 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
         prepos = pre->GetPosition().z();
         const G4ThreeVector& dirIn =
             pre->GetMomentumDirection();
-
+        ekinIn = pre->GetKineticEnergy();
         thetaXIn = std::atan2(dirIn.x(), -dirIn.z());
     }
 
@@ -73,6 +74,7 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
         { 
             layerID = -1;
             thetaXIn = 0.;
+            ekinIn = 0.0;
             return true;
         }
 
@@ -117,11 +119,13 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
         postpos = post->GetPosition().z();
         G4double deltaX = post->GetPosition().x();
         const G4double energy = post->GetTotalEnergy();
-        const G4double eKin = post->GetKineticEnergy();
+        const G4double eKinOut = post->GetKineticEnergy();
 
+        G4double ekin = (ekinIn+eKinOut)/2;
         auto newHit = new TrackerHit();
         newHit->SetTrackID(trackid);
-        newHit->SetEkin(eKin);
+        newHit->SetEkinIn(ekinIn);
+        newHit->SetEkinOut(ekin);
         newHit->SetEtot(energy);
         newHit->SetDepth(depth);
 
@@ -147,6 +151,7 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
 
 void TrackerSD::EndOfEvent(G4HCofThisEvent*)
 {
+  ekinIn = 0;
   pathlength = 0.0;
   if ( verboseLevel>2 ) {
      std::size_t nofHits = fHitsCollection->entries();

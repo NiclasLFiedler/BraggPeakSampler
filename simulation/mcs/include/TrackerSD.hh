@@ -63,6 +63,7 @@ class TrackerSD : public G4VSensitiveDetector
   private:
     TrackerHitsCollection* fHitsCollection = nullptr;
     G4double fNextDepthBoundary = 0.0;
+    G4double ekinIn = 0;
     G4double thetaXIn = 0;
     G4double thetaXOut = 0;
     G4double prepos = 0;

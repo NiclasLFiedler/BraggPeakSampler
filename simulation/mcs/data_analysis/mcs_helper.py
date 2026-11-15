@@ -4,12 +4,6 @@ from scipy.optimize import isotonic_regression
 import matplotlib.pyplot as plt
 
 def fit_cumulative_variance(variance, weights=None):
-    variance = np.asarray(variance, dtype=float)
-    if variance.ndim != 1 or not np.all(np.isfinite(variance)):
-        raise ValueError("Expected a finite 1D cumulative variance array.")
-    if np.any(variance < 0):
-        raise ValueError("Cumulative variance must be nonnegative.")
-
     return isotonic_regression(variance, weights=weights, increasing=True).x
 
 def _beta(E0, T):
@@ -156,7 +150,7 @@ def scattering_length_from_X0(X0, Z):
     return float(Xs)
 
 
-def gaussian_mixture_model(z, dz, R0, E0, p_exp, X0, Z, Xs=None, KickVariance=None, MIXTURE_MODEL="rutherford"):
+def gaussian_mixture_model(z, dz, R0, E0, p_exp, X0, Z, Xs=None, KickVariance=None, MIXTURE_MODEL="rutherford", energy=None):
     z, dz = _grid(z, dz, R0)
     if not np.all(np.isfinite([E0, p_exp, X0, Z])) or min(E0, p_exp, X0, Z) <= 0:
         raise ValueError('E0, p_exp, X0 and Z must be finite and positive.')
@@ -165,31 +159,52 @@ def gaussian_mixture_model(z, dz, R0, E0, p_exp, X0, Z, Xs=None, KickVariance=No
         raise ValueError('Xs must be finite and positive.')
     
     mid = z - dz/2
-    energy = _energy_at_depth(mid, R0, E0, p_exp)
+    if energy is None:
+        energy = _energy_at_depth(mid, R0, E0, p_exp)
     
     if energy.shape != z.shape or np.any(~np.isfinite(energy)) or np.any(energy <= 0):
         raise ValueError('Energy function must return finite positive energies.')
+
     mass = 938.272
     beta = _beta(mass, energy)
     
-    if MIXTURE_MODEL == "rutherford":
-        reduced_thickness = dz / (Xs * beta**2)
-    else:
-        reduced_thickness = dz / (X0 * beta**2)
-        
+    reduced_thickness = dz / (X0 * beta**2)
     modified_reduced_thickness = Z**(2/3) * reduced_thickness
     log_d = np.log(reduced_thickness)
     log_d_modified = np.log(modified_reduced_thickness)
-
-    if MIXTURE_MODEL == "highland":
-        variance1 = 0.8471 + 0.03347*log_d - 0.001843*log_d**2
-        epsilon = np.where(
-            log_d_modified < 0.5,
-            0.04841 + 0.006348*log_d_modified + 0.0006096*log_d_modified**2,
-            -0.01908 + 0.1106*log_d_modified - 0.005729*log_d_modified**2,
-        )
-    elif MIXTURE_MODEL == "rutherford":
+    variance1 = 0.8471 + 0.03347*log_d - 0.001843*log_d**2
+    epsilon = np.where(
+        log_d_modified < 0.5,
+        0.04841 + 0.006348*log_d_modified + 0.0006096*log_d_modified**2,
+        -0.01908 + 0.1106*log_d_modified - 0.005729*log_d_modified**2,
+    )
+    energyComp = _energy_at_depth(mid, R0, E0, p_exp)
+    Compbeta = _beta(mass, energyComp)
+    Compreduced_thickness = dz / (X0 * Compbeta**2)
+    Compmodified_reduced_thickness = Z**(2/3) * Compreduced_thickness
+    Complog_d = np.log(Compreduced_thickness)
+    Complog_d_modified = np.log(Compmodified_reduced_thickness)
+    Compvariance1 = 0.8471 + 0.03347*Complog_d - 0.001843*Complog_d**2
+    Compepsilon = np.where(
+        Complog_d_modified < 0.5,
+        0.04841 + 0.006348*Complog_d_modified + 0.0006096*Complog_d_modified**2,
+        -0.01908 + 0.1106*Complog_d_modified - 0.005729*Complog_d_modified**2,
+    )
+    plt.plot(z, variance1, "o-", markersize=3, label="variance1 highlandgeant4")
+    plt.plot(z, Compvariance1, "o-", markersize=3, label="variance1 highland")
+    plt.plot(z, epsilon, "o-", markersize=3, label="epsilon highland geant4")
+    plt.plot(z, Compepsilon, "o-", markersize=3, label="epsilon highland")
+    plt.legend()
+    plt.show()
+    if MIXTURE_MODEL == "rutherford":
+        reduced_thickness = dz / (Xs * beta**2)
+        modified_reduced_thickness = Z**(2/3) * reduced_thickness
+        log_d = np.log(reduced_thickness)
+        log_d_modified = np.log(modified_reduced_thickness)
         variance1 = 0.8510 + 0.03314*log_d - 0.001825*log_d**2
+        plt.plot(z, variance1, "o-", markersize=3, label="variance1 rutherford")
+        plt.legend()
+        plt.show()
         epsilon = np.where(
             log_d_modified < 0.5,
             0.05283 + 0.0077*log_d_modified + 0.00069*log_d_modified**2,
@@ -204,7 +219,7 @@ def gaussian_mixture_model(z, dz, R0, E0, p_exp, X0, Z, Xs=None, KickVariance=No
     # if KickVariance is not None:
     #     total_variance = KickVariance
     # else:
-    #     # total_variance = (15.0 / (beta * pc))**2 * dz / Xs
+    #     total_variance = (15.0 / (beta * pc))**2 * dz / Xs
     #     total_variance = (1+0.038*np.log(z/X0))**2*(13.6 / (beta * pc))**2 * dz / X0 
         
     # core_variance = variance1 * total_variance

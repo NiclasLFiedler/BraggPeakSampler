@@ -58,7 +58,8 @@ class TrackerHit : public G4VHit
 
     // Set methods
     void SetEdep     (G4double de)      { fEdep += de; };
-    void SetEkin     (G4double eKin)      { feKin += eKin; };
+    void SetEkinIn     (G4double eKinIn)      { feKinIn += eKinIn; };
+    void SetEkinOut     (G4double eKinOut)      { feKinOut += eKinOut; };
     void SetdEdX      (G4double dEdX){ fdEdX = dEdX; };
     void Setbeta      (G4double beta){ fbeta = beta; };
     void SetEtot      (G4double eTot){ feTot = eTot; };
@@ -74,7 +75,8 @@ class TrackerHit : public G4VHit
     void SetExcessPathLength      (G4double ExcessPathLength){ fExcessPathLength = ExcessPathLength; };
 
     G4double GetEdep() const     { return fEdep; };
-    G4double GetEkin() const     { return feKin; };
+    G4double GetEkinIn() const     { return feKinIn; };
+    G4double GetEkinOut() const     { return feKinOut; };
     G4double GetdEdX() const     { return fdEdX; };
     G4double Getbeta() const     { return fbeta; };
     G4double GetEtot() const     { return feTot; };
@@ -98,7 +100,8 @@ class TrackerHit : public G4VHit
 
   private:
     G4double      fEdep = 0.;
-    G4double      feKin = 0.;
+    G4double      feKinIn = 0.;
+    G4double      feKinOut = 0.;
     G4double      fdEdX = 0.;
     G4double      fbeta = 0.;
     G4double      feTot = 0.;

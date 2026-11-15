@@ -45,7 +45,8 @@ void EventAction::EndOfEventAction(const G4Event* event)
 	    G4double partEdep = (*hitsCollection)[i]->GetEdep();
       G4double eTot = (*hitsCollection)[i]->GetEtot();
       G4double TrackID = (*hitsCollection)[i]->GetTrackID();
-      G4double eKin = (*hitsCollection)[i]->GetEkin();
+      G4double eKinIn = (*hitsCollection)[i]->GetEkinIn();
+      G4double eKinOut = (*hitsCollection)[i]->GetEkinOut();
       G4double ScatteringAngle = (*hitsCollection)[i]->GetScatteringAngle();
       G4double CumAngle = (*hitsCollection)[i]->GetCumAngle();
       G4double Depth = (*hitsCollection)[i]->GetDepth();
@@ -57,12 +58,13 @@ void EventAction::EndOfEventAction(const G4Event* event)
       analysisManager->FillNtupleDColumn(1, TrackID);
       analysisManager->FillNtupleDColumn(2, Depth);
       // analysisManager->FillNtupleDColumn(3, eTot);
-      analysisManager->FillNtupleDColumn(4, eKin);
-      analysisManager->FillNtupleDColumn(5, ScatteringAngle);
-      analysisManager->FillNtupleDColumn(6, CumAngle);
-      analysisManager->FillNtupleIColumn(7, layerID);
-      analysisManager->FillNtupleDColumn(8, deltaX);
-      analysisManager->FillNtupleDColumn(9, ExcessPathLength);
+      analysisManager->FillNtupleDColumn(4, eKinIn);
+      analysisManager->FillNtupleDColumn(5, eKinOut);
+      analysisManager->FillNtupleDColumn(6, ScatteringAngle);
+      analysisManager->FillNtupleDColumn(7, CumAngle);
+      analysisManager->FillNtupleIColumn(8, layerID);
+      analysisManager->FillNtupleDColumn(9, deltaX);
+      analysisManager->FillNtupleDColumn(10, ExcessPathLength);
       
  	    analysisManager->AddNtupleRow();
     }

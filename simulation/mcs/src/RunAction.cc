@@ -18,7 +18,8 @@ RunAction::RunAction()
   analysisManager->CreateNtupleDColumn("trackid");
   analysisManager->CreateNtupleDColumn("depth");	 
   analysisManager->CreateNtupleDColumn("eTot");
-  analysisManager->CreateNtupleDColumn("eKin");
+  analysisManager->CreateNtupleDColumn("eKinIn");
+  analysisManager->CreateNtupleDColumn("eKinOut");
   analysisManager->CreateNtupleDColumn("SingleScatteringAngle");
   analysisManager->CreateNtupleDColumn("CumScatteringAngle");
   analysisManager->CreateNtupleIColumn("layerID");
