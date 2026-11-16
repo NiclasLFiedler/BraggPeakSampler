@@ -21,7 +21,7 @@ USEPWO = False
 USEHIGHLAND = False
 USEMODELMIXTURE = False
 SAVEDATA = False
-SAVEPLOT = True
+SAVEPLOT = False
 LARGEOUTPUT = False
 
 ROOT_FILE = "h2oproj.root"
@@ -41,16 +41,9 @@ PLOT_LAYER_INDEX = 145
 X_LIM = 6.0 if USEPWO else 30.3
 ANGULAR_MODEL = "mixture"  # "core" or "mixture"
 MIXTURE_MODEL = "rutherford" # "rutherford" or "highland"
-MIXTURE_FIT_METHOD = "curve_fit"  # "mle", "curve_fit", or "kl"
-MIXTURE_BINS = 200  # Used by curve_fit and the comparison histogram.
+MIXTURE_FIT_METHOD = "kl"  # "mle", "curve_fit", or "kl"
+MIXTURE_BINS = 150  # Used by curve_fit and the comparison histogram.
 CORE_FIT_WIDTH = 2.0
-
-# def gaussian_core_sigma(values, latestSigma):
-#     values = values[np.isfinite(values)]
-#     if len(values) < 100:
-#         return latestSigma*1.01
-#     low, high = np.percentile(values, [15.8655, 84.1345])
-#     return 0.5 * (high - low)
 
 def gaussian_core_sigma(
     values, latestSigma=None, fit_width=2.0,
@@ -60,8 +53,11 @@ def gaussian_core_sigma(
     values = values[np.isfinite(values)]
 
     if values.size < 100:
-        warnings.warn("Too few angles: reusing the previous core width.")
-        return float(latestSigma) if latestSigma is not None else np.nan
+        # print("too few angles latest sigma", latestSigma)
+        if latestSigma is None:
+            warnings.warn("Too few angles and latestSigma is None.")
+            return np.nan
+        return float(latestSigma) 
 
     if not np.isfinite(pseudocount) or pseudocount < 0:
         raise ValueError("pseudocount must be finite and nonnegative.")
@@ -171,7 +167,11 @@ def fit_cumulative_gaussian_mixture_curve_fit(values, bins=150, min_samples=100,
     angles = angles[np.isfinite(angles)]
 
     if len(angles) < min_samples:
-        return 0, 0, 0 if initial is None else initial
+        print("too few samples in curve mixture fit")
+        if initial is None:
+            print("initial also None")
+            return 0.5, 0, 0
+        return initial
 
     counts, edges = np.histogram(angles, bins=bins)
     centres = (edges[:-1] + edges[1:]) / 2
@@ -181,7 +181,6 @@ def fit_cumulative_gaussian_mixture_curve_fit(values, bins=150, min_samples=100,
     density = counts / normalization
     error = np.sqrt(np.maximum(counts, 1)) / normalization
 
-    # Initial guess: 80% narrow Gaussian + 20% broad Gaussian
     sigma = np.std(angles)
     lower_sigma = sigma * 1e-6
 
@@ -209,12 +208,11 @@ def fit_cumulative_gaussian_mixture_curve_fit(values, bins=150, min_samples=100,
 
     weight, sigma1, sigma2 = params
 
-    # Always return the narrower component first
     if sigma1 > sigma2:
         weight = 1 - weight
         sigma1, sigma2 = sigma2, sigma1
 
-    return weight, sigma1, sigma2 # returns tail weight
+    return weight, sigma1, sigma2
 
 def mixture_mean_nll(values, params):
     """Common in-sample score for either fit; lower is better (same data/units).
@@ -469,6 +467,7 @@ def main():
                     #fit_nll[name][i] = mixture_mean_nll(angles, params)
                 except (ValueError, RuntimeError) as exc:
                     fit_seconds[name][i] = perf_counter() - start_time
+                    print("value/runtime error")
                     warnings.warn(f"Layer {i}, {name}: {exc} Parameters remain NaN.")
 
             selected = "mle" if MIXTURE_FIT_METHOD == "compare" else MIXTURE_FIT_METHOD
@@ -482,6 +481,7 @@ def main():
             # plot_cumulative_angular_fit(CumScatteringAngle[rows], CumSigmaCore[i], i, z[i], mixture, alternative)
             plot_cumulative_angular_fit(ScatteringAngle[rows], CumSigmaCore[i], i, z[i], mixture, alternative)
         if i % 10 == 0:
+            # print(f"Layer {i}, angles: {len(angles)}")
             print(f"Layer {i}, depth {z[i]:.6f} cm")
 
     KickVarCoreMixture = CumMixtureSigmaCore[:n_model]**2    
@@ -497,7 +497,7 @@ def main():
     # CumSigmaCore = np.sqrt(CumVarCore)
     # KickVarCoreMixture = KickVarCore
     #KickVarCoreMixture = mcs.fit_cumulative_variance(np.diff(np.r_[0.0, CumSigmaCore**2]))
-    print(f"KickVarCoreMixture: {KickVarCoreMixture}")
+    
     plt.plot(z[:n_model], np.diff(np.r_[0.0, CumSigmaCore**2]), "o-", markersize=3, label="Kick var Core width")
     plt.plot(z[:n_model], SingleSigmaCore**2, "o", markersize=3, label="single sigma^2")
     plt.legend()
@@ -741,13 +741,10 @@ def main():
             if done == 1 or done % 10 == 0 or done == total:
                 print(f"Sampled mixture: depth {done}/{total}, "
                       f"{unique} unique prefixes from {N_CONFIGURATIONS} configurations")
-        print(f"Length: {z[:n_model]}, {dz[:n_model]}, R0: {R0}, "
-              f"KickVarCore: {MixtureKickVarCore[:n_model]}, "
-              f"KickVarTail: {MixtureKickVarTail[:n_model]}, "
-              f"Weight: {MixtureWeight[:n_model]}")
+                
         (mixture_reach_analytical[:n_model], mixture_reach_analytical_error[:n_model]) = mcs.reach_probability_sampled_mixture(z[:n_model],
                                                                                                            dz[:n_model],
-                                                                                                           (R0+0.01),
+                                                                                                           (R0),
                                                                                                            MixtureKickVarCore[:n_model],
                                                                                                            MixtureKickVarTail[:n_model],
                                                                                                            MixtureWeight[:n_model],
@@ -756,7 +753,7 @@ def main():
                                                                                                            progress=report_configuration_progress,
                                                                                                            )
         for j in range(n_model):
-            (mixture_reach_geometry[j], mixture_reach_geometry_error[j]) = mcs.reach_probability_rng_geometry_mixture((R0+0.01)-z[j],
+            (mixture_reach_geometry[j], mixture_reach_geometry_error[j]) = mcs.reach_probability_rng_geometry_mixture((R0)-z[j],
                                                                                                                      MixtureWeight[:j+1],
                                                                                                                      MixtureKickVarCore[:j+1],
                                                                                                                      MixtureKickVarTail[:j+1],

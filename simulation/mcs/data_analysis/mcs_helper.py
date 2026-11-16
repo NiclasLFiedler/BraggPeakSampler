@@ -563,13 +563,14 @@ def reach_probability_sampled_mixture(z, dz, R0, var_core, var_tail,
     cumulative_tails = np.cumsum(choices, axis=1)
 
     for j in range(len(z)):
-        print(
-        f"Depth {z[j]:.5f} cm: "
-        f"tail in this layer = {tail_count[j]}/{n_configurations} "
-        f"({tail_count[j] / n_configurations:.2%}), "
-        f"mean cumulative tail kicks per configuration = "
-        f"{cumulative_tails[:, j].mean():.2f}"
-    )
+        if j % 10 == 0:
+            print(
+            f"Depth {z[j]:.5f} cm: "
+            f"tail in this layer = {tail_count[j]}/{n_configurations} "
+            f"({tail_count[j] / n_configurations:.2%}), "
+            f"mean cumulative tail kicks per configuration = "
+            f"{cumulative_tails[:, j].mean():.2f}"
+            )
     mean = np.empty(len(z))
     error = np.empty(len(z))
     for j in range(len(z)):
@@ -608,6 +609,7 @@ def plot_excess_pathlength_layers(z, dz, layers, cumulative_variance=None, *, mi
         if n_configurations < 1:
             raise ValueError("n_configurations must be positive.")
         if np.any(~np.isfinite(p_tail)) or np.any((p_tail < 0) | (p_tail > 1)):
+            print(f"p_tail ", p_tail)
             raise ValueError("Tail probabilities must lie in [0, 1].")
         rng = np.random.default_rng(seed)
         choices = rng.random((n_configurations, max(layers) + 1)) < p_tail[:max(layers) + 1]

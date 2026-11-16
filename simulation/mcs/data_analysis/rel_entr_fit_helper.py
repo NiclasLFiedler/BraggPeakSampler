@@ -185,9 +185,12 @@ def fit_simple_kl(
     Its widths are rescaled together to the fixed second moment, preserving
     their ratio. A supplied guess uses one start; None uses nine default starts.
     """
+
     theta = np.asarray(angles, dtype=float)
-    if theta.ndim != 1 or theta.size < 20 or not np.all(np.isfinite(theta)):
-        raise ValueError("Provide at least 20 finite signed angles in a 1-D array.")
+    if theta.size < 100:
+        if initial is None:
+            raise ValueError("Too few angles for mixture fit and inital is none.")    
+        return initial
     if not (np.any(theta < 0) and np.any(theta > 0)):
         raise ValueError("Expected signed projected angles on both sides of zero.")
     if isinstance(bins, bool) or not isinstance(bins, (int, np.integer)) or bins < 10:
@@ -255,6 +258,10 @@ def fit_simple_kl(
 
     epsilon, v_core = best.x
     v_tail = (1.0 - (1.0 - epsilon) * v_core) / epsilon
+
+    if epsilon is None:
+        print("epsilon is none. Number of angles: ", theta.size())
+
     return (
         float(epsilon),
         float(scale * np.sqrt(v_core)),

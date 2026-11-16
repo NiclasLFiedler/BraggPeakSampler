@@ -113,7 +113,6 @@ G4bool TrackerSD::ProcessHits(G4Step* aStep,
         const G4ThreeVector& dirOut = post->GetMomentumDirection();
         thetaXOut = std::atan2(dirOut.x(), -dirOut.z());
 
-
         G4double deltaThetaX = thetaXOut - thetaXIn;
         
         postpos = post->GetPosition().z();
