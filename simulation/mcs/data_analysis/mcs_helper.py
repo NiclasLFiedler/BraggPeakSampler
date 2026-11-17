@@ -215,17 +215,17 @@ def gaussian_mixture_model(z, dz, R0, E0, p_exp, X0, Z, Xs=None, KickVariance=No
 
     pc = np.sqrt(energy * (energy + 2 * mass))  # MeV
 
-    # total_variance = np.asarray(KickVariance, dtype=float)
-    # if KickVariance is not None:
-    #     total_variance = KickVariance
-    # else:
-    #     total_variance = (15.0 / (beta * pc))**2 * dz / Xs
-    #     total_variance = (1+0.038*np.log(z/X0))**2*(13.6 / (beta * pc))**2 * dz / X0 
+    total_variance = np.asarray(KickVariance, dtype=float)
+    if KickVariance is not None:
+        total_variance = KickVariance
+    else:
+        total_variance = (15.0 / (beta * pc))**2 * dz / Xs
+        total_variance = (1+0.038*np.log(z/X0))**2*(13.6 / (beta * pc))**2 * dz / X0 
         
-    # core_variance = variance1 * total_variance
-    # tail_variance = variance2 * total_variance
+    core_variance = variance1 * total_variance
+    tail_variance = variance2 * total_variance
 
-    # return core_variance, tail_variance, epsilon
+    return core_variance, tail_variance, epsilon
 
     if KickVariance is not None:
         core_variance = np.asarray(KickVariance, dtype=float)
@@ -824,7 +824,7 @@ def plot_reach_and_stopping(
             )
             x = 0.5 * (z[:-1] + z[1:]) if stopping else z
             probability = -np.diff(g4) if stopping else g4
-            reference = probability / widths if stopping else probability
+            reference = probability / widths if stopping else probability  #density by normalization
             error = None
             if n_primaries is not None:
                 error = np.sqrt(probability * (1 - probability) / n_primaries)
@@ -847,7 +847,7 @@ def plot_reach_and_stopping(
                     continue
                 line = dict(color=color, linestyle=linestyle, linewidth=1.4)
                 if stopping:
-                    density = -np.diff(reach) / widths
+                    density = -np.diff(reach) / widths #if plot density else probabiltiy
                     ax.stairs(density, z, baseline=None, label=label, **line)
                     ax_res.stairs(reference-density, z, baseline=None, **line)
                 else:

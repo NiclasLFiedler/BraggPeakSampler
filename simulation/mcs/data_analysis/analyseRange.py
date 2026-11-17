@@ -19,7 +19,7 @@ plt.rcParams.update({'font.size': 16})
 # Configuration: preserve the settings in the supplied script.
 USEPWO = False
 USEHIGHLAND = False
-USEMODELMIXTURE = False
+USEMODELMIXTURE = True
 SAVEDATA = False
 SAVEPLOT = False
 LARGEOUTPUT = False
@@ -27,8 +27,8 @@ LARGEOUTPUT = False
 ROOT_FILE = "h2oproj.root"
 E0 = 220.0
 # Set to None to use range_energy(data, E0). These are your current overrides.
-R0_OVERRIDE = 6.734 if USEPWO else 30.724  #30.72, 6.73398 6.736 6.728
-FRACTION_R0 = 0.99
+R0_OVERRIDE = 6.734 if USEPWO else 30.7233  #30.72, 6.73398 6.736 6.728
+FRACTION_R0 = 0.999
 Z = 73.6 if USEPWO else 7.4 # 73.6, 7.4 due to Mayneord’s formula
 X0 = 0.89 if USEPWO else 36.08
 
@@ -41,8 +41,8 @@ PLOT_LAYER_INDEX = 145
 X_LIM = 6.0 if USEPWO else 30.3
 ANGULAR_MODEL = "mixture"  # "core" or "mixture"
 MIXTURE_MODEL = "rutherford" # "rutherford" or "highland"
-MIXTURE_FIT_METHOD = "kl"  # "mle", "curve_fit", or "kl"
-MIXTURE_BINS = 150  # Used by curve_fit and the comparison histogram.
+MIXTURE_FIT_METHOD = "curve_fit"  # "mle", "curve_fit", or "kl"
+MIXTURE_BINS = 2000  # Used by curve_fit and the comparison histogram.
 CORE_FIT_WIDTH = 2.0
 
 def gaussian_core_sigma(
@@ -450,8 +450,8 @@ def main():
         mixture = alternative = None
 
         if ANGULAR_MODEL == "mixture":
-            # angles = CumScatteringAngle[rows]
-            angles = ScatteringAngle[rows]
+            angles = CumScatteringAngle[rows]
+            # angles = ScatteringAngle[rows]
             for name in methods:
                 start_time = perf_counter()
                 try:
@@ -484,20 +484,23 @@ def main():
             # print(f"Layer {i}, angles: {len(angles)}")
             print(f"Layer {i}, depth {z[i]:.6f} cm")
 
-    KickVarCoreMixture = CumMixtureSigmaCore[:n_model]**2    
-    KickVarTailMixture = CumMixtureSigmaTail[:n_model]**2    
-    CumVarCoreMixture = np.cumsum(KickVarCoreMixture)
-    CumVarTailMixture = np.cumsum(KickVarTailMixture)
-    CumMixtureSigmaCore = np.sqrt(CumVarCoreMixture)
-    CumMixtureSigmaTail = np.sqrt(CumVarTailMixture)
+    # KickVarCoreMixture = CumMixtureSigmaCore[:n_model]**2    
+    # KickVarTailMixture = CumMixtureSigmaTail[:n_model]**2    
+    # CumVarCoreMixture = np.cumsum(KickVarCoreMixture)
+    # CumVarTailMixture = np.cumsum(KickVarTailMixture)
+    # CumMixtureSigmaCore = np.sqrt(CumVarCoreMixture)
+    # CumMixtureSigmaTail = np.sqrt(CumVarTailMixture)
 
-    KickVarCoreMixture = SingleSigmaCore[:n_model]**2
-    KickVarCore = KickVarCoreMixture
+    # KickVarCoreMixture = SingleSigmaCore[:n_model]**2
+    # KickVarCore = KickVarCoreMixture
     # CumVarCore = np.cumsum(KickVarCore)
     # CumSigmaCore = np.sqrt(CumVarCore)
     # KickVarCoreMixture = KickVarCore
     #KickVarCoreMixture = mcs.fit_cumulative_variance(np.diff(np.r_[0.0, CumSigmaCore**2]))
     
+    CumVarCore = CumSigmaCore**2
+    KickVarCore = np.diff(np.r_[0.0, CumVarCore])
+    KickVarCoreMixture = KickVarCore
     plt.plot(z[:n_model], np.diff(np.r_[0.0, CumSigmaCore**2]), "o-", markersize=3, label="Kick var Core width")
     plt.plot(z[:n_model], SingleSigmaCore**2, "o", markersize=3, label="single sigma^2")
     plt.legend()
@@ -533,7 +536,6 @@ def main():
     
     del max_layer
     
-    CumVarCore = CumSigmaCore**2  # Input angles are already radians.
     CumVarHighland = None
     CumMixtureModelWeight = np.full(len(z), np.nan)
     CumMixtureModelSigmaCore = np.full(len(z), np.nan)

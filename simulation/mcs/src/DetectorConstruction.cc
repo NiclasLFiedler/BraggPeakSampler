@@ -221,7 +221,7 @@ void DetectorConstruction::DefineMaterials()
 G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
 {
   G4double worldX = 500*cm;
-  G4double worldZ = 500*cm;
+  G4double worldZ = 200*cm;
   G4double worldY = 500*cm;
 
   solidworld = new G4Box("solidworld",              // its name
@@ -243,8 +243,8 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
     fCheckOverlaps);                         // checking overlaps
 
   ////////////
-  const G4double phantomX = 400.0 * cm;
-  const G4double phantomY = 400.0 * cm;
+  const G4double phantomX = 450.0 * cm;
+  const G4double phantomY = 450.0 * cm;
   
   G4ParticleDefinition* particle = G4ParticleTable::GetParticleTable()->FindParticle("proton");
   G4EmCalculator emCalc;
@@ -258,12 +258,12 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   // Depth measured from the phantom entrance along the beam.
   G4double switchDepth = 0.97*RangePWO220;
   
-  G4double coarseWidth = 0.01*RangePWO220;
-  G4double fineWidth   = 0.0005*RangePWO220;
+  G4double coarseWidth = 0.02*RangePWO220;
+  G4double fineWidth   = 0.002*RangePWO220;
   
   bool useH2O = true;
   if(useH2O){
-    phantomZ = RangeWater220+0.02;
+    phantomZ = RangeWater220+0.05;
     switchDepth = 0.995*RangeWater220;
     coarseWidth = 0.01*RangeWater220;
     fineWidth   = 0.0001*RangeWater220;
