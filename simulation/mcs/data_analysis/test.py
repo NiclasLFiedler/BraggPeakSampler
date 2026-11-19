@@ -1,862 +1,881 @@
-import sys
-import warnings
-from time import perf_counter
-
-import matplotlib.pyplot as plt
+import operator
 import numpy as np
-import uproot
+from scipy.optimize import isotonic_regression
+import matplotlib.pyplot as plt
 
-sys.path.append("../../range_energy/data_analysis")
-import analysisFunctions
-import mcs_helper as mcs
-from scipy.optimize import minimize, minimize_scalar, curve_fit
-from scipy.special import expit, erf
-from rel_entr_fit_helper import fit_simple_kl, fit_complex_kl
-from pathlib import Path
-plt.rcParams.update({'font.size': 16})
+def fit_cumulative_variance(variance, weights=None):
+    return isotonic_regression(variance, weights=weights, increasing=True).x
 
+def _beta(E0, T):
+    return np.sqrt(T * (T + 2 * E0) / (T + E0)**2)
 
-# Configuration: preserve the settings in the supplied script.
-USEPWO = True
-USEHIGHLAND = False
-USEMODELMIXTURE = True
-SAVEDATA = False
-SAVEPLOT = True
-LARGEOUTPUT = False
+def _momentum(E0, T):
+    return np.sqrt(T * (T + 2 * E0))
 
-ROOT_FILE = "h2oproj.root"
-E0 = 220.0
-# Set to None to use range_energy(data, E0). These are your current overrides.
-R0_OVERRIDE = 6.735 if USEPWO else 30.724  #30.72, 6.73398 6.736 6.728
-FRACTION_R0 = 0.8
-Z = 73.6 if USEPWO else 7.4 # 73.6, 7.4 due to Mayneord’s formula
-X0 = 0.89 if USEPWO else 36.08
+def _energy_at_depth(z, R0, E0, p_exp):
+    return E0 * (1-z/R0)**(1/p_exp)
 
-N_GEOMETRY = 100_000
-N_CONFIGURATIONS = 3000  # Increase and inspect the pointwise sampling error.
-CONFIGURATION_SEED = 20120584  # Separate stream from angle/geometry RNG.
-# Confirm against your scorer: convert deltaX to cm if it was stored in mm.
-DELTA_X_TO_CM = 1.0
-PLOT_LAYER_INDEX = 120
-X_LIM = 6.0 if USEPWO else 30.3
-ANGULAR_MODEL = "mixture"  # "core" or "mixture"
-MIXTURE_MODEL = "rutherford" # "rutherford" or "highland"
-MIXTURE_FIT_METHOD = "curve_fit"  # "mle", "curve_fit", or "kl"
-MIXTURE_BINS = 500  # Used by curve_fit and the comparison histogram.
-CORE_FIT_WIDTH = 2.0
+def two_grid(R0, switch_depth, coarse_step, fine_step): ##returns depths with 2 widths and dz
+    """Return interior reach depths z and integration widths dz, starting at 0.
 
-# def gaussian_core_sigma(values, latestSigma):
-#     values = values[np.isfinite(values)]
-#     if len(values) < 100:
-#         return latestSigma*1.01
-#     low, high = np.percentile(values, [15.8655, 84.1345])
-#     return 0.5 * (high - low)
-
-def gaussian_core_sigma(values, latestSigma=None, fit_width=2.0):
-    values = np.asarray(values, dtype=float)
-    values = values[np.isfinite(values)]
-
-    if values.size < 100:
-        warnings.warn("Too few angles: reusing the previous core width.")
-        return float(latestSigma) if latestSigma is not None else np.nan
-
-    scale = np.diff(np.percentile(values, [15.8655, 84.1345]))[0] / 2
-    if scale <= 0:
-        return 0.0 if np.all(values == 0) else np.nan
-
-    counts, edges = np.histogram(values / scale, bins=150, range=(-fit_width, fit_width),)
-    centers = (edges[:-1] + edges[1:]) / 2
-
-    def gaussian(x, amplitude, sigma):
-        return amplitude * np.exp(-0.5 * (x / sigma)**2)
-
-    params, _ = curve_fit(
-        gaussian, centers, counts,
-        p0=(counts.max(), 1.0),
-        sigma=np.sqrt(np.maximum(counts, 1)),
-        absolute_sigma=True,
-        bounds=([0, 0.05], [np.inf, 5.0]),
-    )
-    return float(params[1] * scale)
-
-def gaussian_pdf(theta, sigma):
-    """Normalized zero-mean Gaussian; theta and sigma use the same units."""
-    theta = np.asarray(theta, dtype=float)
-    return np.exp(-0.5 * (theta / sigma)**2) / (np.sqrt(2 * np.pi) * sigma)
-
-def gaussian_mixture_pdf(theta, weight, sigma_core, sigma_tail):
-    """weight is the integrated probability of the tail component."""
-    return (1 - weight) * gaussian_pdf(theta, sigma_core) + (weight) * gaussian_pdf(theta, sigma_tail)
-
-def fit_cumulative_gaussian_mixture(values, min_samples=100, max_iter=5000, tol=1e-6, initial=None):
-    """Return (tail_weight, sigma_core, sigma_tail)."""
-
-    angles = np.asarray(values, dtype=float)
-    angles = angles[np.isfinite(angles)]
-
-    if angles.size < min_samples:
-        raise ValueError("Too few angles to fit.")
-
-    # Normalize for numerical stability; restore angle units at the end.
-    scale = np.sqrt(np.mean(angles**2))
-    if not np.isfinite(scale) or scale <= 0:
-        raise ValueError("Angles must have a finite positive RMS.")
-
-    angle_squared = (angles / scale)**2
-
-    if initial is not None:
-        weight, sigma_core, sigma_tail = initial
-        weight = 1-weight
-        var_core = (sigma_core / scale)**2
-        var_tail = (sigma_tail / scale)**2
-    else:
-        weight = 0.9
-        var_core = 0.5**2
-        var_tail = 2.0**2
-
-    for _ in range(max_iter):
-        log_tail_over_core = ( np.log((1 - weight) / weight) + 0.5 * np.log(var_core / var_tail) + 0.5 * angle_squared * (1 / var_core - 1 / var_tail)
-        )
-        responsibility = expit(-log_tail_over_core)
-
-        # Update using fractional membership in each component.
-        core_count = responsibility.sum()
-        tail_count = angles.size - core_count
-
-        if min(core_count, tail_count) <= 0:
-            raise RuntimeError("One mixture component became empty.")
-
-        new_weight = core_count / angles.size
-        new_var_core = (np.sum(responsibility * angle_squared) / core_count)
-        new_var_tail = (np.sum((1 - responsibility) * angle_squared) / tail_count)
-
-        if min(new_var_core, new_var_tail) <= 0:
-            raise RuntimeError("A mixture variance collapsed to zero.")
-
-        change = max(
-            abs(new_weight - weight),
-            abs(np.log(new_var_core / var_core)),
-            abs(np.log(new_var_tail / var_tail)),
-        )
-
-        weight = new_weight
-        var_core = new_var_core
-        var_tail = new_var_tail
-
-        if change < tol:
-            break
-    else:
-        raise RuntimeError("Mixture fit did not converge.")
-
-    sigma_core, sigma_tail = scale * np.sqrt([var_core, var_tail])
-
-    if sigma_core > sigma_tail:
-        weight = 1 - weight
-        sigma_core, sigma_tail = sigma_tail, sigma_core
-
-    return 1-float(weight), float(sigma_core), float(sigma_tail) # return the weight of the tail component, not the core component
-
-def fit_cumulative_gaussian_mixture_curve_fit(values, bins=150, min_samples=100, initial=None):
-    angles = np.asarray(values)
-    angles = angles[np.isfinite(angles)]
-
-    if len(angles) < min_samples:
-        return 0, 0, 0
-
-    counts, edges = np.histogram(angles, bins=bins)
-    centres = (edges[:-1] + edges[1:]) / 2
-    bin_width = edges[1] - edges[0]
-
-    normalization = len(angles) * bin_width
-    density = counts / normalization
-    error = np.sqrt(np.maximum(counts, 1)) / normalization
-
-    # Initial guess: 80% narrow Gaussian + 20% broad Gaussian
-    sigma = np.std(angles)
-    lower_sigma = sigma * 1e-6
-
-    if initial is None:
-        initial = [0.05, sigma / 2, 2 * sigma]
-    else:
-        weight, sigma_core, sigma_tail = initial
-        initial = [
-            np.clip(weight, 1e-6, 1 - 1e-6),
-            max(sigma_core, 2 * lower_sigma),
-            max(sigma_tail, 2 * lower_sigma),
-        ]
-
-    params, _ = curve_fit(
-            gaussian_mixture_pdf,
-            centres,
-            density,
-            p0=initial,
-            sigma=error,
-            absolute_sigma=True,
-            bounds=([0, lower_sigma, lower_sigma],
-                    [1, np.inf, np.inf]),
-            max_nfev=1000000,
-        )
-
-    weight, sigma1, sigma2 = params
-
-    # Always return the narrower component first
-    if sigma1 > sigma2:
-        weight = 1 - weight
-        sigma1, sigma2 = sigma2, sigma1
-
-    return weight, sigma1, sigma2 # returns tail weight
-
-def mixture_mean_nll(values, params):
-    """Common in-sample score for either fit; lower is better (same data/units).
-
-    MLE optimizes this score; it is not an independent validation measure.
-    Computed outside the fit timer.
+    Steps are maximum widths: each region uses equally spaced intervals no
+    wider than requested. Includes the switch exactly and excludes R0.
+    There is a final unresolved interval (z[-1], R0), at most fine_step wide.
     """
-    x = np.asarray(values, dtype=float)
-    x = x[np.isfinite(x)]
-    w_tail, s1, s2 = params
-    a = np.log1p(-w_tail) - np.log(s1) - 0.5*(x/s1)**2
-    b = np.log(w_tail) - np.log(s2) - 0.5*(x/s2)**2
-    return float(0.5*np.log(2*np.pi) - np.mean(np.logaddexp(a, b)))
-
-
-def plot_cumulative_angular_fit(values, core_sigma, layer, depth, mixture=None, alternative=None):
-    """Compare the unchanged quantile core approximation with a fitted mixture."""
-    angles = np.asarray(values)
-    angles = angles[np.isfinite(angles)] * 1000  # rad -> mrad
-    if angles.size == 0:
-        return
-    theta = np.linspace(angles.min(), angles.max(), 2000)
-    fig, ax = plt.subplots(figsize=(12, 9))
-    ax.hist(angles, bins=MIXTURE_BINS, density=True, histtype="step", linewidth=1.5,
-            color="#21618C", label="Geant4")
-    ax.plot(theta, gaussian_pdf(theta, core_sigma * 1000), "--", linewidth=2, color="#D55E00", label="Gaussian core (quantile width): {0:.2f} mrad".format(core_sigma * 1000))
-
-    if mixture is not None and np.all(np.isfinite(mixture)):
-        w, s1, s2 = mixture
-        s1, s2 = s1 * 1000, s2 * 1000
-        ax.plot(theta, gaussian_mixture_pdf(theta, w, s1, s2),
-                color="black", linewidth=2, label="Mixture: " + ("MLE" if MIXTURE_FIT_METHOD in ("mle", "compare") else MIXTURE_FIT_METHOD))
-        ax.plot(theta, (1-w) * gaussian_pdf(theta, s1), ":", color="#009E73",
-                label=f"Narrow: w={1-w:.3f}, sigma={s1:.2f} mrad")
-        ax.plot(theta, w * gaussian_pdf(theta, s2), ":", color="#CC79A7",
-                label=f"Broad: w={w:.3f}, sigma={s2:.2f} mrad")
-    if alternative is not None and np.all(np.isfinite(alternative)):
-        w, s1, s2 = alternative
-        ax.plot(theta, gaussian_mixture_pdf(theta, w, s1*1000, s2*1000),
-                "-.", color="#7B3294", linewidth=2, label="Mixture: curve_fit, sigma_1: {0:.2f} mrad, sigma_2: {1:.2f} mrad".format(s1*1000, s2*1000))
-    ax.set_yscale("log")
-    if np.isfinite(core_sigma) and core_sigma > 0:
-        ax.set_ylim(bottom=0.1 / (len(angles) * core_sigma * 1000))
-    ax.set_xlabel(r"Cumulative angle $\theta_x$ / mrad")
-    ax.set_ylabel(r"Probability density / mrad$^{-1}$")
-    ax.set_title(f"Layer {layer} — depth {depth:.2f} cm")
-    ax.legend()
-    ax.grid(alpha=0.3)
-    fig.tight_layout()
-    # fig.savefig(f"scattering_{ANGULAR_MODEL}_layer_{layer}.pdf")
-    plt.show()
-
-def integer_ids(values, name):
-    values = np.asarray(values)
-    if np.any(~np.isfinite(values)) or np.any(values < 0):
-        raise ValueError(f"{name} must contain finite nonnegative IDs.")
-    ids = values.astype(np.int64)
-    if not np.all(values == ids):
-        raise ValueError(f"{name} contains noninteger values.")
-    return ids
-
-def plot_mixture_parameters(z, weight, sigma_core, sigma_tail):
-    fig, (ax_weight, ax_sigma) = plt.subplots(
-        2, 1, figsize=(10, 8), sharex=True
-    )
-
-    ax_weight.plot(z, 1 - weight, label="Narrow component", color="#009E73")
-    ax_weight.plot(z, weight, label="Broad component", color="#CC79A7")
-    ax_weight.set_ylabel("Mixture weight")
-    ax_weight.set_ylim(0, 1)
-    ax_weight.legend()
-    ax_weight.grid(alpha=0.3)
-
-    ax_sigma.plot(
-        z, sigma_core * 1000, label="Narrow component", color="#009E73"
-    )
-    ax_sigma.plot(
-        z, sigma_tail * 1000, label="Broad component", color="#CC79A7"
-    )
-    ax_sigma.set_xlabel("Depth / cm")
-    ax_sigma.set_ylabel(r"$\sigma$ / mrad")
-    ax_sigma.legend()
-    ax_sigma.grid(alpha=0.3)
-
-    fig.tight_layout()
-    # fig.savefig("mixture_parameters.pdf")
-    plt.show()
-
-def comp_plot_mixture_parameters(z, weight, sigma_core, sigma_tail, z2, weight2, sigma_core2, sigma_tail2):
-    fig, (ax_weight, ax_sigma) = plt.subplots(
-        2, 1, figsize=(10, 8), sharex=True
-    )
-
-    ax_weight.plot(z, 1 - weight, label="Narrow component", color="#009E73")
-    ax_weight.plot(z, weight, label="Broad component", color="#CC79A7")
+    values = np.asarray([R0, switch_depth, coarse_step, fine_step], float)
     
-    ax_weight.plot(z2, 1 - weight2, label="Model: single-kick core probability", color="#FF0000")
-    ax_weight.plot(z2, weight2, label="Model: single-kick tail probability", color="#3700FF")
+    if not np.all(np.isfinite(values)):
+        raise ValueError('Grid parameters must be finite.')
+    if not (0 < switch_depth < R0 and coarse_step > 0 and fine_step > 0):
+        raise ValueError('Require 0 < switch_depth < R0 and positive steps.')
     
-    ax_weight.set_ylabel("Mixture weight")
-    ax_weight.set_ylim(0, 1)
-    ax_weight.legend()
-    ax_weight.grid(alpha=0.3)
+    n_front = int(np.ceil(switch_depth / coarse_step))
+    n_tail = int(np.ceil((R0-switch_depth) / fine_step))
+    edges = np.r_[np.linspace(0.0, switch_depth, n_front+1),
+                  np.linspace(switch_depth, R0, n_tail+1)[1:]]
+    return edges[1:-1], np.diff(edges)[:-1]
 
-    ax_sigma.plot(z, sigma_core * 1000, label="Narrow component", color="#009E73")
-    ax_sigma.plot(z, sigma_tail * 1000, label="Broad component", color="#CC79A7")
-    ax_sigma.plot(z2, sigma_core2 * 1000, label="Model: all-core cumulative width", color="#FF0000")
-    ax_sigma.plot(z2, sigma_tail2 * 1000, label="Model: all-tail cumulative width", color="#3700FF")
 
-    ax_sigma.set_xlabel("Depth / cm")
-    ax_sigma.set_ylabel(r"$\sigma$ / mrad")
-    ax_sigma.legend()
-    ax_sigma.grid(alpha=0.3)
+def _variance(V): ##checks variance
+    V = np.asarray(V, dtype=float)
+    if V.ndim != 1 or V.size == 0 or not np.all(np.isfinite(V)):
+        raise ValueError('V must be a nonempty finite 1D array in rad^2.')
+    if np.any(V < 0) or np.any(np.diff(V) < 0):
+        raise ValueError('V must be nonnegative and nondecreasing. Do not '
+                         'silently clip negative measured increments.')
+    return V
 
-    fig.tight_layout()
-    # fig.savefig("mixture_parameters.pdf")
-    plt.show()
 
-def main():
-    if ANGULAR_MODEL not in ("core", "mixture"):
-        raise ValueError('ANGULAR_MODEL must be "core" or "mixture".')
-    if MIXTURE_FIT_METHOD not in ("mle", "curve_fit", "compare", "kl"):
-        raise ValueError('MIXTURE_FIT_METHOD must be "mle", "curve_fit", or "compare".')
+def _grid(z, dz, R0):
+    z, dz = np.asarray(z, float), np.asarray(dz, float)
+    if (z.ndim != 1 or z.size == 0 or dz.shape != z.shape
+            or not np.all(np.isfinite(z)) or not np.all(np.isfinite(dz))
+            or not np.isfinite(R0) or R0 <= 0):
+        raise ValueError('Invalid grid or R0.')
+    if np.any(dz <= 0) or np.any(np.diff(z) <= 0) or np.any(z >= R0):
+        raise ValueError('Need positive intervals and increasing depths < R0.')
+    if not np.allclose(z, np.cumsum(dz), rtol=1e-12, atol=1e-13):
+        raise ValueError('dz must cover every interval from 0 to each depth.')
+    return z, dz
 
-    data_file = ("../../range_energy/data_analysis/pbwo4_alt_range_energy.npz"
-                 if USEPWO else "../../range_energy/data_analysis/h2o_alt_range_energy.npz")
-    data = analysisFunctions.load_EnergyRange(data_file)
-    p_exp = float(data.p)
-    print(f"Range parameter: {p_exp:.6f}")
-    data = analysisFunctions.load_EnergyRange("../../range_energy/data_analysis/pbwo4_range_energy.npz") if USEPWO else analysisFunctions.load_EnergyRange("../../range_energy/data_analysis/h2o_range_energy.npz")
-    fitted_R0 = float(analysisFunctions.range_energy(data, E0))
-    R0 = fitted_R0 if R0_OVERRIDE is None else float(R0_OVERRIDE)
 
-    print(f"Fitted R0: {fitted_R0:.8f} cm; used R0: {R0:.8f} cm")
-    del data, data_file
+def simulation_grid(depths, cumulative_variance, R0, layer_ids=None):
+    """Use actual downstream boundary depths and measured V without interpolation.
 
-    with uproot.open(ROOT_FILE) as f:
-        tree = f["braggsampler"]
-        event = integer_ids(tree["event"].array(library="np"), "event")
-        layerID = integer_ids(tree["layerID"].array(library="np"), "layerID")
-        # Per-hit coordinates used only to construct z, not a second model grid.
-        hit_depth = tree["depth"].array(library="np").astype(float)
-        ekin = tree["eKin"].array(library="np")
-        CumScatteringAngle = tree["CumScatteringAngle"].array(library="np")
-        ScatteringAngle = tree["SingleScatteringAngle"].array(library="np")
-        deltaX = tree["deltaX"].array(library="np") * DELTA_X_TO_CM
-        G4ExcessPathLength = tree["ExcessPathLength"].array(library="np")
+    depths: one depth per consecutive scored layer in physical order, cm.
+    cumulative_variance: matching ONE-projection variances in rad^2.
+    R0: fixed reference path range, cm.
+    layer_ids: optional matching IDs, required to be 0,1,... . Providing these
+        detects omitted layers (including missing front layers). Without IDs,
+        completeness must be established by the caller against the geometry.
 
-    if event.size == 0:
-        raise ValueError("No recorded hits.")
-    if not all(a.shape == event.shape for a in
-               (layerID, hit_depth, ekin, CumScatteringAngle, ScatteringAngle, deltaX)):
-        raise ValueError("ROOT branches must have matching shapes.")
+    Only depths strictly below R0 are used. Nonfinite variances at/beyond R0
+    are irrelevant; nonfinite/decreasing variances below R0 raise. There must
+    be no gaps of unmodelled material or omitted layers in the input prefix.
+    A depth equal to 0 is not an interval endpoint here: omit that origin row.
+    """
+    z = np.asarray(depths, dtype=float)
+    V = np.asarray(cumulative_variance, dtype=float)
+    if z.ndim != 1 or z.size == 0 or V.shape != z.shape:
+        raise ValueError('Depths and variances must be matching nonempty 1D arrays.')
+    if (not np.isfinite(R0) or R0 <= 0 or not np.all(np.isfinite(z))
+            or np.any(z <= 0) or np.any(np.diff(z) <= 0)):
+        raise ValueError('Need positive increasing boundary depths and positive R0.')
+    if layer_ids is not None:
+        ids = np.asarray(layer_ids)
+        if ids.shape != z.shape or not np.array_equal(ids, np.arange(z.size)):
+            raise ValueError('Expected one entry per layer with IDs 0,1,...; '
+                             'check omitted or duplicated layers.')
+    inside = z < R0
+    z, V = z[inside].copy(), V[inside].copy()
+    V = _variance(V)
+    dz = np.diff(np.r_[0.0, z])
+    _grid(z, dz, R0)
+    return z, dz, V
 
-    event_ids, event_index = np.unique(event, return_inverse=True)
-    max_layer = np.full(len(event_ids), -1, dtype=np.int64)
-    np.maximum.at(max_layer, event_index, layerID)
-    last_row = np.r_[event[1:] != event[:-1], True]
-    print("Unique recorded events:", len(event_ids))
-    print("Contiguous event blocks:", np.count_nonzero(last_row))
-    print("Blocks ending below their event's maximum layer:",
-          np.count_nonzero(layerID[last_row] < max_layer[event_index[last_row]]))
-    n_recorded = len(event_ids)
-    del event, event_ids, event_index, last_row
 
-    # Group once by layer ID. This avoids repeatedly scanning all hits and
-    # prevents a fixed depth tolerance from mixing neighbouring fine layers.
-    order = np.argsort(layerID, kind="stable")
+def highland_variance(z, dz, R0, E0, p_exp, X0):
+    """Regrid the ORIGINAL integrated-Highland/global-log prescription.
+
+    This preserves that heuristic prescription; it does not establish its
+    validity near stopping or for arbitrary thicknesses. Integrates the
+    energy-dependent factor with midpoint quadrature and the actual dz.
+    """
+    z, dz = _grid(z, dz, R0)
+    if not np.all(np.isfinite([E0, p_exp, X0])) or min(E0, p_exp, X0) <= 0:
+        raise ValueError('E0, p_exp and X0 must be finite and positive.')
     
-    boundary_layers, starts, counts = np.unique(layerID[order], return_index=True, return_counts=True) 
-
-    if not np.array_equal(boundary_layers, np.arange(len(boundary_layers))):
-        raise ValueError("Missing layer IDs: need a complete consecutive prefix from 0.")
-
-    # The only depth grid: z[i] = downstream boundary of layer i.
-    z = hit_depth[order[starts]].copy()
-    if np.any(~np.isfinite(z)) or np.any(z <= 0) or np.any(np.diff(z) <= 0):
-        raise ValueError("z must contain finite positive increasing boundaries.")
-    n_model = np.searchsorted(z, R0, side="left")
-    if n_model == 0:
-        raise ValueError("No scored boundary lies below R0.")
-    
-    LayerEnergy = np.full(len(z), np.nan)  # Mean downstream kinetic energy, MeV.
-    CumSigmaCore = np.full(len(z), np.nan)
-    SingleSigmaCore = np.full(len(z), np.nan)
-    CumDeltaXSigmaCore = np.full(len(z), np.nan)
-    # Mixture fits are separate from the original core-width arrays.
-    MixtureWeight = np.full(len(z), np.nan)
-    CumMixtureSigmaCore = np.full(len(z), np.nan)
-    CumMixtureSigmaTail = np.full(len(z), np.nan)
-
-    methods = ("mle", "curve_fit", "kl") if MIXTURE_FIT_METHOD == "compare" else (MIXTURE_FIT_METHOD,)
-    fit_parameters = {name: np.full((len(z), 3), np.nan) for name in methods}
-    fit_seconds = {name: np.full(len(z), np.nan) for name in methods}
-    fit_nll = {name: np.full(len(z), np.nan) for name in methods}
-    print(f"Calculating angular widths by layer: {ANGULAR_MODEL}, {MIXTURE_FIT_METHOD}")
-
-    previous_fit = dict.fromkeys(methods)
-    previous_width = None
-    for i, (start, count) in enumerate(zip(starts[:n_model], counts[:n_model])):
-        rows = order[start:start + count]
-        layer_energy = ekin[rows]
-        if np.any(~np.isfinite(layer_energy)) or np.any(layer_energy <= 0):
-            raise ValueError(f"Layer {i} has nonfinite or nonpositive kinetic energies.")
-        LayerEnergy[i] = np.mean(layer_energy)
-        recorded_depth = hit_depth[rows]
-        if not np.all(np.isfinite(recorded_depth)):
-            raise ValueError(f"Nonfinite depths in layer {i}.")
-        z[i] = recorded_depth[0]
-        if not np.allclose(recorded_depth, z[i], rtol=1e-7, atol=1e-8):
-            raise ValueError(f"Layer {i} has inconsistent downstream depths; check scoring.")
-
-        width = z[i] - (z[i-1] if i else 0.0)
-        if (previous_width is not None and width < previous_width
-                and not np.isclose(width, previous_width, rtol=1e-4, atol=1e-8)):
-            previous_fit = dict.fromkeys(methods)
-            print(f"Layer {i}: grid spacing {previous_width:.6g} -> {width:.6g} cm; "
-                  "resetting mixture fit initial parameters.")
-        previous_width = width
+    mid = z - dz/2
+    energy = _energy_at_depth(mid, R0, E0, p_exp)
         
-        CumSigmaCore[i] = gaussian_core_sigma(CumScatteringAngle[rows],
-                                              CumSigmaCore[i-1],
-                                              #fit_width=CORE_FIT_WIDTH
-                                              )
-        SingleSigmaCore[i] = gaussian_core_sigma(ScatteringAngle[rows],
-                                                 SingleSigmaCore[i-1],
-                                                 fit_width=CORE_FIT_WIDTH
-                                                 )
-        CumDeltaXSigmaCore[i] = gaussian_core_sigma(deltaX[rows],
-                                                    CumDeltaXSigmaCore[i-1],
-                                                    fit_width=CORE_FIT_WIDTH
-                                                    )
+    if energy.shape != z.shape or np.any(~np.isfinite(energy)) or np.any(energy <= 0):
+        raise ValueError('Energy function must return finite positive energies.')
+    mass = 938.272
+    beta_pc = energy * (energy + 2*mass) / (energy + mass)
+    V = (1+0.038*np.log(z/X0))**2 * np.cumsum((13.6/beta_pc)**2 * dz/X0)
+    return _variance(V)
+
+def generalized_highland_variance(z, dz, R0, E0, p_exp, X0):
+    
+    z, dz = _grid(z, dz, R0)
+    if not np.all(np.isfinite([E0, p_exp, X0])) or min(E0, p_exp, X0) <= 0:
+        raise ValueError('E0, p_exp and X0 must be finite and positive.')
+    
+    mid = z - dz/2
+    energy = _energy_at_depth(mid, R0, E0, p_exp)
+    
+    if energy.shape != z.shape or np.any(~np.isfinite(energy)) or np.any(energy <= 0):
+        raise ValueError('Energy function must return finite positive energies.')
+    mass = 938.272
+    beta = _beta(mass, energy)
+    momentum = _momentum(mass, energy)
+    reduced_thickness = dz / (X0*beta**2)
+    reduced_totalthickness = z / (X0*beta**2)
+
+    V = (1+0.038*np.log(reduced_totalthickness))**2 * np.cumsum((13.6/momentum)**2 * reduced_thickness)
+    return _variance(V)
+
+def scattering_length_from_X0(X0, Z):
+    """Fruehwirth-Regler Eq. (37): Xs = X0*h(Z), in the units of X0.
+
+    This is an elemental-material relation. Using an effective Z for a
+    compound (e.g. the current PbWO4/water settings) is an approximation.
+    """
+    if not np.all(np.isfinite([X0, Z])) or min(X0, Z) <= 0:
+        raise ValueError('X0 and Z must be finite and positive.')
+    h = (Z + 1) / Z * np.log(287 * Z**(-1/2)) / np.log(159 * Z**(-1/3))
+    Xs = X0 * h
+    if not np.isfinite(Xs) or Xs <= 0:
+        raise ValueError('Invalid scattering length from X0 and Z.')
+    return float(Xs)
+
+
+def gaussian_mixture_model(z, dz, R0, E0, p_exp, X0, Z, Xs=None, KickVariance=None, MIXTURE_MODEL="rutherford", energy=None):
+    z, dz = _grid(z, dz, R0)
+    if not np.all(np.isfinite([E0, p_exp, X0, Z])) or min(E0, p_exp, X0, Z) <= 0:
+        raise ValueError('E0, p_exp, X0 and Z must be finite and positive.')
+    Xs = scattering_length_from_X0(X0, Z) if Xs is None else float(Xs)
+    if not np.isfinite(Xs) or Xs <= 0:
+        raise ValueError('Xs must be finite and positive.')
+    
+    mid = z - dz/2
+    if energy is None:
+        energy = _energy_at_depth(mid, R0, E0, p_exp)
+    
+    if energy.shape != z.shape or np.any(~np.isfinite(energy)) or np.any(energy <= 0):
+        raise ValueError('Energy function must return finite positive energies.')
+
+    mass = 938.272
+    beta = _beta(mass, energy)
+    if MIXTURE_MODEL == "highland":
+        reduced_thickness = dz / (X0 * beta**2)
+        modified_reduced_thickness = Z**(2/3) * reduced_thickness
+        log_d = np.log(reduced_thickness)
+        log_d_modified = np.log(modified_reduced_thickness)
+        variance1 = 0.8471 + 0.03347*log_d - 0.001843*log_d**2
+        epsilon = np.where(
+            log_d_modified < 0.5,
+            0.04841 + 0.006348*log_d_modified + 0.0006096*log_d_modified**2,
+            -0.01908 + 0.1106*log_d_modified - 0.005729*log_d_modified**2,
+        )
+
+    plt.plot(z, variance1, "o-", markersize=3, label="variance1 highlandgeant4")
+    plt.plot(z, epsilon, "o-", markersize=3, label="epsilon highland geant4")
+
+    
+    if MIXTURE_MODEL == "rutherford":
+        reduced_thickness = dz / (Xs * beta**2)
+        modified_reduced_thickness = Z**(2/3) * reduced_thickness
+        log_d = np.log(reduced_thickness)
+        log_d_modified = np.log(modified_reduced_thickness)
+        variance1 = 0.8510 + 0.03314*log_d - 0.001825*log_d**2
+        epsilon = np.where(
+            log_d_modified < 0.5,
+            0.05283 + 0.0077*log_d_modified + 0.00069*log_d_modified**2,
+            -0.01517 + 0.1151*log_d_modified - 0.00653*log_d_modified**2,
+        )
         
-        mixture = alternative = None
-
-        if ANGULAR_MODEL == "mixture":
-            angles = CumScatteringAngle[rows]
-            # angles = ScatteringAngle[rows]
-            for name in methods:
-                start_time = perf_counter()
-                try:
-                    if name == "mle":
-                        params = fit_cumulative_gaussian_mixture(angles, initial=previous_fit[name])
-                    elif name == "kl":
-                        params = fit_simple_kl(angles, bins=MIXTURE_BINS, initial=previous_fit[name])
-                    else:
-                        params = fit_cumulative_gaussian_mixture_curve_fit(angles, MIXTURE_BINS, initial=previous_fit[name])
-                    previous_fit[name] = params
-                    fit_seconds[name][i] = perf_counter() - start_time
-                    fit_parameters[name][i] = params
-                    #fit_nll[name][i] = mixture_mean_nll(angles, params)
-                except (ValueError, RuntimeError) as exc:
-                    fit_seconds[name][i] = perf_counter() - start_time
-                    warnings.warn(f"Layer {i}, {name}: {exc} Parameters remain NaN.")
-
-            selected = "mle" if MIXTURE_FIT_METHOD == "compare" else MIXTURE_FIT_METHOD
-            mixture = fit_parameters[selected][i]
-            (MixtureWeight[i], CumMixtureSigmaCore[i], CumMixtureSigmaTail[i]) = mixture
-
-            if MIXTURE_FIT_METHOD == "compare":
-                alternative = fit_parameters["curve_fit"][i]
+        plt.plot(z, variance1, "o-", markersize=3, label="variance1 rutherford")
+        plt.plot(z, epsilon, "o-", markersize=3, label="epsilon rutherford")
         
-        if i== PLOT_LAYER_INDEX:
-            # plot_cumulative_angular_fit(CumScatteringAngle[rows], CumSigmaCore[i], i, z[i], mixture, alternative)
-            plot_cumulative_angular_fit(ScatteringAngle[rows], CumSigmaCore[i], i, z[i], mixture, alternative)
-        if i % 10 == 0:
-            print(f"Layer {i}, depth {z[i]:.6f} cm")
-
-    # KickVarCoreMixture = CumMixtureSigmaCore[:n_model]**2    
-    # KickVarTailMixture = CumMixtureSigmaTail[:n_model]**2    
-    # CumVarCoreMixture = np.cumsum(KickVarCoreMixture)
-    # CumVarTailMixture = np.cumsum(KickVarTailMixture)
-    # CumMixtureSigmaCore = np.sqrt(CumVarCoreMixture)
-    # CumMixtureSigmaTail = np.sqrt(CumVarTailMixture)
-
-
-    KickVarCoreMixture = SingleSigmaCore[:n_model]**2
-    # KickVarCore = KickVarCoreMixture
-    # CumVarCore = np.cumsum(KickVarCore)
-    # CumSigmaCore = np.sqrt(CumVarCore)
-    # KickVarCoreMixture = KickVarCore
-    #KickVarCoreMixture = mcs.fit_cumulative_variance(np.diff(np.r_[0.0, CumSigmaCore**2]))
-    print(f"KickVarCoreMixture: {KickVarCoreMixture}")
-    plt.plot(z[:n_model], np.diff(np.r_[0.0, CumSigmaCore[:n_model]**2]), "o-", markersize=3, label="Kick var Core width")
-    plt.plot(z[:n_model], SingleSigmaCore[:n_model]**2, "o", markersize=3, label="single sigma^2")
     plt.legend()
     plt.show()
+    variance2 = (1 - (1 - epsilon)*variance1) / epsilon
 
-    if ANGULAR_MODEL == "mixture":
-        CumMixtureVarCore = np.full(len(z), np.nan)
-        CumMixtureVarTail = np.full(len(z), np.nan)
-        CumMixtureVarCore[:n_model] = mcs.fit_cumulative_variance(CumMixtureSigmaCore[:n_model]**2)
-        CumMixtureVarTail[:n_model] = mcs.fit_cumulative_variance(CumMixtureSigmaTail[:n_model]**2)
+    pc = np.sqrt(energy * (energy + 2 * mass))  # MeV
 
-        CumMixtureSigmaCore = np.sqrt(CumMixtureVarCore)
-        CumMixtureSigmaTail = np.sqrt(CumMixtureVarTail)
+    total_variance = np.asarray(KickVariance, dtype=float)
+    if KickVariance is not None:
+        total_variance = KickVariance
+    else:
+        total_variance = (15.0 / (beta * pc))**2 * dz / Xs
+        total_variance = (1+0.038*np.log(z/X0))**2*(13.6 / (beta * pc))**2 * dz / X0 
+        
+    core_variance = variance1 * total_variance
+    tail_variance = variance2 * total_variance
 
-        MixtureKickVarCore = np.diff(np.r_[0.0, CumMixtureVarCore])
-        MixtureKickVarTail = np.diff(np.r_[0.0, CumMixtureVarTail])
+    return core_variance, tail_variance, epsilon
 
-    if ANGULAR_MODEL == "mixture":
-        plt.figure(figsize=(10, 7))
-        plt.plot(z, CumMixtureVarCore, "o-", markersize=3,
-                 label="Core variance")
-        plt.plot(z, CumMixtureVarTail, "^-", markersize=3,
-                 label="Tail variance")
+    if KickVariance is not None:
+        core_variance = np.asarray(KickVariance, dtype=float)
+        total_variance = core_variance / variance1
+    else:
+        total_variance = (15.0 / (beta * pc))**2 * dz / Xs
+        core_variance = variance1 * total_variance
+    #else:
+    #    total_variance = (1+0.038*np.log(z/X0))**2*(13.6 / (beta * pc))**2 * dz / X0  # rad²
+    
+    tail_variance = variance2 * total_variance
 
-        plt.xlabel("Depth / cm")
-        plt.ylabel(r"Cumulative angular variance / rad$^2$")
-        plt.legend()
-        plt.grid(alpha=0.3)
-        plt.tight_layout()
-        plt.show()
-        CumMixtureVariance = ((1-MixtureWeight) * CumMixtureVarCore + (MixtureWeight) * CumMixtureVarTail)
-        if SAVEDATA:
-            np.savez("cumulative_angular_mixture.npz", z=z,
-                 weight_core=1-MixtureWeight, weight_tail=MixtureWeight,
-                 sigma_core=np.sqrt(CumMixtureVarCore), sigma_tail=np.sqrt(CumMixtureVarTail),
-                 variance=CumMixtureVariance)
-            print("Saved mixture fits (angles in rad): cumulative_angular_mixture.npz")
-            
-    del order, starts, counts, hit_depth
-    del CumScatteringAngle, ScatteringAngle, deltaX, ekin
-    
-    if np.any(z <= 0) or np.any(np.diff(z) <= 0):
-        raise ValueError("z must contain positive increasing downstream boundaries.")
-    # Include the interval from the material entrance (depth 0) to z[0].
-    dz = np.diff(np.r_[0.0, z])
-    print(f"Intervals: {len(z)}, dz min/max: {dz.min():.6g}/{dz.max():.6g} cm")
+    return core_variance, tail_variance, epsilon
 
-    max_layer.sort()
-    n_reaching = len(max_layer) - np.searchsorted(max_layer, boundary_layers, side="left")
-    n_primaries = n_recorded
-    if not np.isfinite(n_primaries) or n_primaries < n_recorded or int(n_primaries) != n_primaries:
-        raise ValueError("N_PRIMARIES must be an integer >= recorded event count.")
-    reach_g4 = n_reaching / n_primaries
-    
-    del max_layer
-    
-    CumVarCore = CumSigmaCore**2  # Input angles are already radians.
-    CumVarHighland = None
-    CumMixtureModelWeight = np.full(len(z), np.nan)
-    CumMixtureModelSigmaCore = np.full(len(z), np.nan)
-    CumMixtureModelSigmaTail = np.full(len(z), np.nan)
-    CumMixtureModelVarCore = np.full(len(z), np.nan)
-    CumMixtureModelVarTail = np.full(len(z), np.nan)
-    
-    
-    CumVarCoreFit = mcs.fit_cumulative_variance(CumVarCore[:n_model])
-    V = CumVarCoreFit
-    CumVarHighland = mcs.highland_variance(z=z[:n_model], dz=dz[:n_model], R0=R0, E0=E0, p_exp=p_exp, X0=X0)
-    if USEHIGHLAND:
-        V = CumVarHighland
-    
-    #KickVarCoreMixture = np.diff(np.r_[0.0, V])
-    
-    Xs = mcs.scattering_length_from_X0(X0, Z)
-    MixtureModelKickVarCore, MixtureModelKickVarTail, CumMixtureModelWeight = mcs.gaussian_mixture_model(z=z[:n_model],
-                                                                                          dz=dz[:n_model],
-                                                                                          R0=R0,
-                                                                                          E0=E0,
-                                                                                          p_exp=p_exp,
-                                                                                          X0=X0,
-                                                                                          Z=Z,
-                                                                                          Xs=Xs,
-                                                                                          energy=LayerEnergy[:n_model],
-                                                                                          KickVariance=KickVarCoreMixture[:n_model],
-                                                                                          MIXTURE_MODEL=MIXTURE_MODEL,)
+def weighted_eigenvalues(V, dz):
+    """Weights of sum_k w_k chi2_2 for nonuniform integration intervals.
 
-    CumMixtureModelVarCore = np.cumsum(MixtureModelKickVarCore)
-    CumMixtureModelVarTail = np.cumsum(MixtureModelKickVarTail)
-    CumMixtureModelSigmaCore = np.sqrt(CumMixtureModelVarCore)
-    CumMixtureModelSigmaTail = np.sqrt(CumMixtureModelVarTail)
+    C_ij = V[min(i,j)] for independent angular increments.
+    B = diag(sqrt(dz)) C diag(sqrt(dz)) / 2 is symmetric.
+    Its eigenvalues ALREADY include interval widths and the factor 1/2.
+    """
+    V = _variance(V)
+    dz = np.asarray(dz, float)
+    if dz.shape != V.shape or np.any(~np.isfinite(dz)) or np.any(dz <= 0):
+        raise ValueError('Widths must match V and be finite and positive.')
+    indices = np.arange(V.size)
+    C = V[np.minimum.outer(indices, indices)]
+    root = np.sqrt(dz)
+    B = 0.5 * root[:, None] * C * root[None, :]
+    weights = np.linalg.eigvalsh(B)
+    tolerance = 100*np.finfo(float).eps*V.size*max(np.max(np.abs(weights)),
+                                                np.finfo(float).tiny)
+    if weights[0] < -tolerance:
+        raise ValueError('Weighted covariance has significantly negative eigenvalues.')
+    return weights[weights > 0]
 
-    if USEMODELMIXTURE:
-        comp_plot_mixture_parameters(
-            z=z,
-            weight=MixtureWeight,
-            sigma_core=CumMixtureSigmaCore,
-            sigma_tail=CumMixtureSigmaTail,
-            z2=z[:n_model],
-            weight2=CumMixtureModelWeight[:n_model],
-            sigma_core2=CumMixtureModelSigmaCore[:n_model],
-            sigma_tail2=CumMixtureModelSigmaTail[:n_model]
-        )
-        MixtureWeight = CumMixtureModelWeight
-        CumMixtureSigmaCore = CumMixtureModelSigmaCore
-        CumMixtureSigmaTail = CumMixtureModelSigmaTail
-        MixtureKickVarCore = MixtureModelKickVarCore
-        MixtureKickVarTail = MixtureModelKickVarTail
+def calculate_coefficients(weights):
+    """Original residue formula; may be ill-conditioned for nearby weights."""
+    weights = np.asarray(weights, dtype=float)
+    coefficients = np.ones(len(weights))
+    for i, wi in enumerate(weights):
+        for j, wj in enumerate(weights):
+            if i != j:
+                if wi == wj:
+                    raise ValueError("Repeated weights: residue CDF is singular.")
+                coefficients[i] *= wi / (wi - wj)
+    return coefficients
+
+def gchi2_exact_pdf(delta_r, weights):
+    weights = np.asarray(weights, dtype=float)
+    weights = weights[weights > 0]
+    delta_r = np.asarray(delta_r, dtype=float)
+    if not weights.size:
+        return np.asarray(delta_r >= 0, dtype=float)
+    coefficients = calculate_coefficients(weights)
+    pdf = np.zeros_like(delta_r)
+    for wi, Ai in zip(weights, coefficients):
+        pdf += Ai / (2 * wi) * np.exp(-np.maximum(delta_r, 0) / (2 * wi))
+    return pdf
+
+def gchi2_exact_cdf(delta_r, weights):
+    weights = np.asarray(weights, dtype=float)
+    weights = weights[weights > 0]
+    delta_r = np.asarray(delta_r, dtype=float)
+    if not weights.size:
+        return np.asarray(delta_r >= 0, dtype=float)
+    coefficients = calculate_coefficients(weights)
+    cdf = np.ones_like(delta_r)
     
-    plt.rcParams.update({
-        "font.size": 16,
-        "axes.labelsize": 11,
-        "legend.fontsize": 8,
-        "xtick.labelsize": 9,
-        "ytick.labelsize": 9    ,
-        "axes.linewidth": 0.8,
-        "lines.linewidth": 1.4,
-        "pdf.fonttype": 42,
-        "ps.fonttype": 42,
-        "axes.prop_cycle": plt.cycler(
-            color=["#000000", "#0072B2", "#D55E00"]
-        ),
-    })
+    for wi, Ai in zip(weights, coefficients):
+        cdf -= Ai * np.exp(-np.maximum(delta_r, 0) / (2 * wi))
+    
+    return cdf
+
+def reach_cdf_grid(z, dz, V, R0, cdf, indices=None):
+    """Optional analytical evaluation only at selected grid indices.
+
+    All preceding intervals remain in each covariance matrix even if their
+    reach probabilities are not requested. cdf(x, weights) is user-supplied.
+    """
+    z, dz = _grid(z, dz, R0)
+    V = _variance(V)
+    if V.shape != z.shape:
+        raise ValueError('One cumulative variance is required per grid point.')
+    if indices is None:
+        indices = np.arange(z.size)
+    indices = np.asarray(indices)
+    if indices.ndim != 1 or indices.dtype.kind not in 'iu':
+        raise ValueError('indices must be a 1D integer array.')
+    if np.any(indices < 0) or np.any(indices >= z.size):
+        raise ValueError('Evaluation index outside grid.')
+    probabilities = np.empty(indices.size)
+    for k, j in enumerate(indices):
+        w = weighted_eigenvalues(V[:j+1], dz[:j+1])
+        probability = 1.0 if w.size == 0 else float(cdf(R0-z[j], w))
+        if not np.isfinite(probability) or not 0 <= probability <= 1:
+            raise FloatingPointError(f'CDF returned {probability} at {z[j]} cm; '
+                                     'check numerical cancellation.')
+        probabilities[k] = probability
+    return z[indices], probabilities
+
+
+def _sampling_counts(n_samples, batch_size):
+    n_samples, batch_size = operator.index(n_samples), operator.index(batch_size)
+    if n_samples <= 0 or batch_size <= 0:
+        raise ValueError('Sample and batch counts must be positive integers.')
+    return n_samples, batch_size
+
+
+def gchi2_cdf_rng(x, weights, rng, n_samples=50_000, batch_size=1000):
+    """Original per-depth RNG: estimate P(sum_k weights[k]*chi2_2 <= x).
+
+    weights already contain nonuniform interval widths and the factor 1/2.
+    Returns (probability, pointwise sampling standard error).
+    """
+    weights = np.asarray(weights, dtype=float)
+    if (weights.ndim != 1 or np.any(~np.isfinite(weights))
+            or np.any(weights < 0)):
+        raise ValueError('Weights must be a finite nonnegative 1D array.')
+    if not np.isfinite(x):
+        raise ValueError('Threshold must be finite.')
+    n_samples, batch_size = _sampling_counts(n_samples, batch_size)
+    weights = weights[weights > 0]
+    if x < 0:
+        return 0.0, 0.0
+    if weights.size == 0:
+        return 1.0, 0.0
+    if x == 0:
+        return 0.0, 0.0
+    n_reach = 0
+    for start in range(0, n_samples, batch_size):
+        size = min(batch_size, n_samples-start)
+        samples = rng.chisquare(df=2, size=(size, len(weights)))
+        delta_R = samples @ weights
+        n_reach += np.count_nonzero(delta_R <= x)
+    probability = n_reach/n_samples
+    error = np.sqrt(probability*(1-probability)/n_samples)
+    return probability, error
+
+def gchi2_cdf_rng_mixture(x, CoreWeights, TailWeights, core_probability, rng, n_samples=50_000, batch_size=1000):
+    core = np.asarray(CoreWeights, dtype=float)
+    tail = np.asarray(TailWeights, dtype=float)
+
+    for weights in (core, tail):
+        if (weights.ndim != 1
+                or np.any(~np.isfinite(weights))
+                or np.any(weights < 0)):
+            raise ValueError("Weights must be finite nonnegative 1D arrays.")
+
+    if not np.isfinite(x):
+        raise ValueError("Threshold must be finite.")
+
+    w = float(core_probability)
+    if not np.isfinite(w) or not 0 <= w <= 1:
+        raise ValueError("core_probability must be between 0 and 1.")
+
+    n_samples, batch_size = _sampling_counts(n_samples, batch_size)
+    core = core[core > 0]
+    tail = tail[tail > 0]
+
+    if x < 0:
+        return 0.0, 0.0
+
+    n_reach = 0
+
+    for start in range(0, n_samples, batch_size):
+        size = min(batch_size, n_samples - start)
+
+        # One component choice per complete sample.
+        n_core = np.count_nonzero(rng.random(size) < w)
+        n_tail = size - n_core
+
+        for count, weights in ((n_core, core), (n_tail, tail)):
+            if count == 0:
+                continue
+
+            if weights.size == 0:
+                n_reach += count
+                continue
+
+            samples = rng.chisquare(df=2, size=(count, weights.size))
+            delta_R = samples @ weights
+            n_reach += np.count_nonzero(delta_R <= x)
+
+    probability = n_reach / n_samples
+    error = np.sqrt(probability * (1 - probability) / n_samples)
+    return probability, error
+
+def reach_probability_rng_geometry(remaining_range, cumulative_variance, dz,
+                                   rng, n_samples=50_000, batch_size=1000):
+    V = _variance(cumulative_variance)
+    widths = np.broadcast_to(np.asarray(dz, dtype=float), V.shape)
+    if np.any(~np.isfinite(widths)) or np.any(widths <= 0):
+        raise ValueError('Widths must be finite and positive.')
+    if not np.isfinite(remaining_range):
+        raise ValueError('Remaining range must be finite.')
+    n_samples, batch_size = _sampling_counts(n_samples, batch_size)
+    if remaining_range < 0:
+        return 0.0, 0.0
+    if not np.any(V):
+        return 1.0, 0.0
+    if remaining_range == 0:
+        return 0.0, 0.0
+    increment_sigma = np.sqrt(np.diff(np.r_[0.0, V]))
+    n_reach = 0
+
+    for start in range(0, n_samples, batch_size):
+        size = min(batch_size, n_samples-start)
+        kicks_x = rng.normal(size=(size, V.size))*increment_sigma
+        kicks_y = rng.normal(size=(size, V.size))*increment_sigma
+        theta_x = np.cumsum(kicks_x, axis=1)
+        theta_y = np.cumsum(kicks_y, axis=1)
+
+        # slope_squared = np.tan(theta_x)**2 + np.tan(theta_y)**2
+        # excess_factor = slope_squared / (np.sqrt(1 + slope_squared) + 1) #with tan
+
+        excess_factor = 0.5 * (theta_x**2 + theta_y**2)
+        delta_R = excess_factor @ widths
+        
+        n_reach += np.count_nonzero(delta_R <= remaining_range)
+    probability = n_reach/n_samples
+    error = np.sqrt(probability*(1-probability)/n_samples)
+    return probability, error
+
+def reach_probability_rng_geometry_mixture(remaining_range, epsilon, kick_core_variance, kick_tail_variance, dz,
+                                   rng, n_samples=50_000, batch_size=1000):
+    
+    widths = np.broadcast_to(np.asarray(dz, dtype=float), kick_core_variance.shape)
+
+    if np.any(~np.isfinite(widths)) or np.any(widths <= 0):
+        raise ValueError('Widths must be finite and positive.')
+    if not np.isfinite(remaining_range):
+        raise ValueError('Remaining range must be finite.')
+    n_samples, batch_size = _sampling_counts(n_samples, batch_size)
+    if remaining_range < 0:
+        return 0.0, 0.0
+    
+    if remaining_range == 0:
+        return 0.0, 0.0
+    
+    
+    n_reach = 0
+    for start in range(0, n_samples, batch_size):
+        size = min(batch_size, n_samples-start)
+
+        shape = (size, len(kick_core_variance))
+
+        is_tail = rng.random(shape) < epsilon
+
+        kick_sigma = np.sqrt(np.where(is_tail, kick_tail_variance, kick_core_variance))
+        kicks_x = rng.normal(size=shape) * kick_sigma
+        kicks_y = rng.normal(size=shape) * kick_sigma
+
+        theta_x = np.cumsum(kicks_x, axis=1)
+        theta_y = np.cumsum(kicks_y, axis=1)
+
+        slope_squared = np.tan(theta_x)**2 + np.tan(theta_y)**2
+        excess_factor = slope_squared / (np.sqrt(1 + slope_squared) + 1)
+        
+        # excess_factor = 0.5 * (theta_x**2 + theta_y**2)
+        delta_R = excess_factor @ widths
+        
+        n_reach += np.count_nonzero(delta_R <= remaining_range)
+    
+    probability = n_reach/n_samples
+    error = np.sqrt(probability*(1-probability)/n_samples)
+    return probability, error
+
+def gchi2_cdf_checked(x, weights):
+    weights = np.asarray(weights, dtype=float)
+    if (weights.ndim != 1 or np.any(~np.isfinite(weights))
+            or np.any(weights < 0) or not np.isfinite(x)):
+        raise ValueError('Require finite nonnegative weights and finite x.')
+    weights = weights[weights > 0]
+    if x < 0:
+        return 0.0
+    if not weights.size:
+        return 1.0
+    if x == 0:
+        return 0.0
+    w = weights.astype(np.longdouble)
+    differences = w[:, None] - w[None, :]
+    np.fill_diagonal(differences, 1)
+    if np.all(differences != 0):
+        with np.errstate(over='ignore', invalid='ignore', divide='ignore'):
+            ratios = w[:, None] / differences
+            np.fill_diagonal(ratios, 1)
+            terms = np.prod(ratios, axis=1) * np.exp(-np.longdouble(x)/(2*w))
+            probability = 1 - np.sum(terms)
+            # Conservative roundoff screen; not a rigorous error bound.
+            roundoff = (100 * len(w) * np.finfo(np.longdouble).eps
+                        * (1 + np.sum(np.abs(terms))))
+        if (np.isfinite(probability) and roundoff < 1e-10
+                and 0 <= probability <= 1):
+            return float(probability)
+    ### secondary approach
+    from scipy.linalg import expm
+    print("First approach for CDF failed resorting to secondary approach")
+    rates = 1 / (2 * weights)
+    generator = np.zeros((len(weights) + 1, len(weights) + 1))
+    indices = np.arange(len(weights))
+    generator[indices, indices] = -rates
+    generator[indices, indices + 1] = rates
+    probability = float(expm(x * generator)[0, -1])
+    if not np.isfinite(probability) or not -1e-10 <= probability <= 1 + 1e-10:
+        raise FloatingPointError('Conditional CDF evaluation failed.')
+    return float(np.clip(probability, 0, 1))
+
+
+def reach_probability_sampled_mixture(z, dz, R0, var_core, var_tail,
+                                      p_tail, rng, n_configurations=500, 
+                                      cdf=None, progress=None):
+    z, dz = _grid(z, dz, R0)
+    var_core, var_tail, p_tail = [np.asarray(a, dtype=float)
+                                for a in (var_core, var_tail, p_tail)]
+    if any(a.shape != z.shape or np.any(~np.isfinite(a))
+        for a in (var_core, var_tail, p_tail)):
+        raise ValueError('One finite variance/probability per layer required.')
+    if (np.any(var_core < 0) or np.any(var_tail < 0)
+            or np.any((p_tail < 0) | (p_tail > 1))):
+        raise ValueError('Variances must be nonnegative; probabilities in [0,1].')
+    n_configurations = operator.index(n_configurations)
+    if n_configurations < 2:
+        raise ValueError('Use at least two configurations to estimate an error.')
+    
+    cdf = gchi2_cdf_checked if cdf is None else cdf
+
+    choices = rng.random((n_configurations, len(z))) < p_tail
+    
+    tail_count = np.count_nonzero(choices, axis=0)
+    ever_tail_count = np.count_nonzero(
+        np.logical_or.accumulate(choices, axis=1), axis=0
+    )
+    tails_per_configuration = np.count_nonzero(choices, axis=1)
+    cumulative_tails = np.cumsum(choices, axis=1)
+
+    for j in range(len(z)):
+        if j % 10 == 0:
+            print(
+            f"Depth {z[j]:.5f} cm: "
+            f"tail in this layer = {tail_count[j]}/{n_configurations} "
+            f"({tail_count[j] / n_configurations:.2%}), "
+            f"mean cumulative tail kicks per configuration = "
+            f"{cumulative_tails[:, j].mean():.2f}"
+            )
+    mean = np.empty(len(z))
+    error = np.empty(len(z))
+    for j in range(len(z)):
+        patterns, counts = np.unique(choices[:, :j+1], axis=0, return_counts=True)
+        conditional = np.empty(len(patterns))
+        for k, pattern in enumerate(patterns):
+            cumulative = np.cumsum(np.where(pattern, var_tail[:j+1], var_core[:j+1]))
+            eigenvalues = weighted_eigenvalues(cumulative, dz[:j+1])
+            conditional[k] = float(cdf(R0-z[j], eigenvalues))
+        if (np.any(~np.isfinite(conditional))
+                or np.any((conditional < 0) | (conditional > 1))):
+            raise FloatingPointError(f'Invalid conditional CDF at depth {z[j]}.')
+        mean[j] = np.dot(counts / n_configurations, conditional)
+        error[j] = np.sqrt(np.dot(counts, (conditional - mean[j])**2)
+                           / (n_configurations * (n_configurations-1)))
+        if progress is not None:
+            progress(j+1, len(z), len(patterns))
+    return mean, error
+
+def plot_excess_pathlength_layers(z, dz, layers, cumulative_variance=None, *, mixture=None, x_max_mm=None, n_configurations=2000, seed=20120584, geant4=None, bins=150,n_geometry=None, R0 =None,ax=None, ax_res=None, show_geant4=True, Range=None, plot_data=None): 
+    if (cumulative_variance is None) == (mixture is None):
+        raise ValueError("Supply either cumulative_variance or mixture.")
+    layers = np.asarray(layers)
+    if (layers.ndim != 1 or layers.size == 0 or layers.dtype.kind not in "iu"
+            or np.any(layers < 0) or np.any(layers >= len(z))):
+        raise ValueError("layers must contain valid zero-based integer indices.")
+    if x_max_mm is not None and (not np.isfinite(x_max_mm) or x_max_mm <= 0):
+        raise ValueError("x_max_mm must be finite and positive.")
+    if n_geometry is not None:
+        if not isinstance(n_geometry, (int, np.integer)) or n_geometry < 1:
+            raise ValueError("n_geometry must be a positive integer.")
+        rng_geometry = np.random.default_rng(np.random.SeedSequence(seed).spawn(1)[0])
+
+    if mixture is not None:
+        core, tail, p_tail = map(np.asarray, mixture)
+        if n_configurations < 1:
+            raise ValueError("n_configurations must be positive.")
+        if np.any(~np.isfinite(p_tail)) or np.any((p_tail < 0) | (p_tail > 1)):
+            print(f"p_tail ", p_tail)
+            raise ValueError("Tail probabilities must lie in [0, 1].")
+        rng = np.random.default_rng(seed)
+        choices = rng.random((n_configurations, max(layers) + 1)) < p_tail[:max(layers) + 1]
 
     g4color = "#000000"
     singularColor ="#0072B2" 
     mixtureColor = "#D55E00"
 
-    fig, (ax, ax_res) = plt.subplots(
-        2, 1,
-        sharex=True,
-        figsize=(15 / 2.54, 14 / 2.54),
-        gridspec_kw={"height_ratios": [3, 1]},
-        constrained_layout=True,
-    )
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(15 / 2.54, 11 / 2.54), constrained_layout=True,)
+    else:
+        fig = ax.figure
 
-    target_depth = FRACTION_R0 * R0
-    layer_index = int(np.argmin(np.abs(z[:n_model] - target_depth)))
 
-    options = dict(
-        layers=[layer_index],
-        x_max_mm=2.0,
-        bins=150,
-        n_geometry=N_GEOMETRY,
-        R0=R0,
-        geant4=(layerID, G4ExcessPathLength),
-        ax=ax,
-        ax_res=ax_res,
-    )
-    print("Core")
-    mcs.plot_excess_pathlength_layers(
-        z, dz,
-        cumulative_variance=V,
-        **options,
-        Range=R0
-    )
-    del layerID, G4ExcessPathLength
+    if mixture is None:
+        model_name = "Single Gaussian"
+        model_color = singularColor
+        analytical_style = "-"
+        sampled_style = "--"
+        plotlabel = f"{model_name}, z = {z[layers[0]]:.4g} cm = {z[layers[0]]/Range:.3f} " r"$R_0$"
+    else:
+        model_name = "Gaussian mixture"
+        model_color = mixtureColor
+        analytical_style = "-."
+        sampled_style = ":"
+        plotlabel = f"{model_name}"
 
-    if ANGULAR_MODEL== "mixture":
-        print("Anuglar Model")
-        mcs.plot_excess_pathlength_layers(
-            z, dz,
-            mixture=(MixtureKickVarCore[:n_model], MixtureKickVarTail[:n_model], MixtureWeight[:n_model]),
-            show_geant4=False,
-            **options,
-            Range=R0
-        )
-    
-    ax.set_xlabel("")
-    ax_res.set(
-        xlabel=r"Excess path length $\Delta r$ / mm",
-        ylabel="Residual\n" + r"/ mm$^{-1}$",
-    )
-    ax.set_axisbelow(True)
-    ax.grid(
-        True, which="major",
-        color="0.9", linestyle="-", linewidth=0.7,
-    )
-    ax_res.axhline(0, color="0.4", linewidth=0.8, zorder=0)
-    ax_res.grid(
-        True, which="major",
-        color="0.9", linestyle="-", linewidth=0.7,
-    )
-    if SAVEPLOT:
-        if USEPWO:
-            fig.savefig(f"img/pwo/excess_pathlength_layers_{E0}.pdf", format="pdf", dpi=300)
+    for layer in layers:
+        if layer % 10 == 0:
+            print(f"Layer {layer}")
+        n = layer + 1
+        if mixture is None:
+            weights = [weighted_eigenvalues(cumulative_variance[:n], dz[:n])]
+            probabilities = np.array([1.0])
         else:
-            fig.savefig(f"img/h2o/excess_pathlength_layers_{E0}.pdf", format="pdf", dpi=300)
-    plt.show()
-    del options
+            patterns, counts = np.unique(choices[:, :n], axis=0, return_counts=True)
+            weights = [weighted_eigenvalues(
+                np.cumsum(np.where(pattern, tail[:n], core[:n])), dz[:n]
+            ) for pattern in patterns]
+            probabilities = counts / n_configurations
 
-    z_fit = z[:n_model]
-    plt.figure(figsize=(12, 9))
+        means = np.array([2 * values.sum() for values in weights])
+        variances = np.array([4 * np.sum(values**2) for values in weights])
+        mean = probabilities @ means
+        variance = probabilities @ (variances + (means - mean)**2)
+        upper_cm = mean + 12 * np.sqrt(variance) if x_max_mm is None else x_max_mm / 10
+        remaining_range = None if R0 is None else R0 - z[layer]
 
-    if CumVarHighland is not None:
-        plt.plot(z_fit, np.degrees(np.sqrt(CumVarHighland[:n_model])), label="Integrated Highland, global log",)
-
-    plt.scatter(z_fit, np.degrees(CumSigmaCore[:n_model]), s=10, label="Geant4 cumulative core width",)
-
-    if ANGULAR_MODEL == "mixture":
-        plt.plot(z_fit, np.degrees(CumMixtureSigmaCore[:n_model]), label="Mixture narrow sigma",)
-        plt.plot(z_fit, np.degrees(CumMixtureSigmaTail[:n_model]), label="Mixture broad sigma",)
-        plt.plot(z_fit, np.degrees(np.sqrt(CumMixtureVariance[:n_model])), "--", label="Mixture RMS",)
-
+        if remaining_range is not None:
+            if remaining_range <= 0:
+                raise ValueError(f"Layer {layer} is at or beyond R0.")
+            upper_cm = min(upper_cm, remaining_range)
         
-        var_core = CumMixtureModelVarCore[:n_model]
-        var_tail = CumMixtureModelVarTail[:n_model]
-        weight_tail = CumMixtureModelWeight[:n_model]
-        var_total = (1 - weight_tail) * var_core + weight_tail * var_tail
+        x_cm = upper_cm * np.linspace(0, 1, 1000)**2
+        
+        density = np.zeros_like(x_cm)
+        for probability, values in zip(probabilities, weights):
+            pdf = gchi2_exact_pdf(x_cm, values)
+            if values.size == 1:
+                pdf[0] = 1 / (2 * values[0])  # Exponential endpoint. corrects nan
+            density += probability * pdf
 
-        plt.plot(z_fit, np.degrees(np.sqrt(var_core)),":", label="Mixture model narrow sigma",)
-        plt.plot(z_fit, np.degrees(np.sqrt(var_tail)), ":", label="Mixture model broad sigma",)
-        plt.plot(z_fit, np.degrees(np.sqrt(var_total)), "--", color="orange",label="Mixture model RMS",)
-
-    plt.xlabel("Depth / cm")
-    plt.ylabel("Projected angle / degree")
-    plt.legend()
-    plt.grid()
-    plt.tight_layout()
-    plt.show()
-
-    if USEHIGHLAND:
-        mcs.simulation_grid(z[:n_model], V[:n_model], R0, layer_ids=boundary_layers[:n_model])
-
-    rng = np.random.default_rng(12345)
-    reach_analytical = np.zeros(len(z))
-
-    reach_geometry = np.zeros(len(z))
-    reach_geometry_error = np.zeros(len(z))
-
-    mixture_reach_analytical = np.zeros(len(z))
-    mixture_reach_analytical_error = np.zeros(len(z))
-    mixture_reach_geometry = np.zeros(len(z))
-    mixture_reach_geometry_error = np.zeros(len(z))
-    
-    if ANGULAR_MODEL == "mixture":
-        def report_configuration_progress(done, total, unique):
-            if done == 1 or done % 10 == 0 or done == total:
-                print(f"Sampled mixture: depth {done}/{total}, "
-                      f"{unique} unique prefixes from {N_CONFIGURATIONS} configurations")
-        print(f"Length: {z[:n_model]}, {dz[:n_model]}, R0: {R0}, "
-              f"KickVarCore: {MixtureKickVarCore[:n_model]}, "
-              f"KickVarTail: {MixtureKickVarTail[:n_model]}, "
-              f"Weight: {MixtureWeight[:n_model]}")
-        (mixture_reach_analytical[:n_model], mixture_reach_analytical_error[:n_model]) = mcs.reach_probability_sampled_mixture(z[:n_model],
-                                                                                                           dz[:n_model],
-                                                                                                           R0,
-                                                                                                           MixtureKickVarCore[:n_model],
-                                                                                                           MixtureKickVarTail[:n_model],
-                                                                                                           MixtureWeight[:n_model],
-                                                                                                           np.random.default_rng(CONFIGURATION_SEED),
-                                                                                                           n_configurations=N_CONFIGURATIONS,
-                                                                                                           progress=report_configuration_progress,
-                                                                                                           )
-        for j in range(n_model):
-            (mixture_reach_geometry[j], mixture_reach_geometry_error[j]) = mcs.reach_probability_rng_geometry_mixture(R0-z[j],
-                                                                                                                     MixtureWeight[:j+1],
-                                                                                                                     MixtureKickVarCore[:j+1],
-                                                                                                                     MixtureKickVarTail[:j+1],
-                                                                                                                     dz[:j+1],
-                                                                                                                     rng,
-                                                                                                                     n_samples=N_GEOMETRY,
-                                                                                                                     )
-        print("Maximum configuration-sampling standard error: " 
-              f"{mixture_reach_analytical_error[:n_model].max():.4g}")
-        if SAVEDATA:
-            np.savez("sampled_mixture_reach.npz", 
-                     z=z[:n_model],
-                     reach=mixture_reach_analytical[:n_model],
-                     standard_error=mixture_reach_analytical_error[:n_model],
-                     n_configurations=N_CONFIGURATIONS,
-                     seed=CONFIGURATION_SEED,
-                     var_core=MixtureKickVarCore[:n_model],
-                     var_tail=MixtureKickVarTail[:n_model],
-                     p_tail=MixtureWeight[:n_model],
-                     dz=dz[:n_model],
-                     R0=R0,
-                     )
-
-    for j in range(n_model):
-        remaining_range = R0 - z[j]
-        V_j, dz_j = V[:j+1], dz[:j+1]
-        weights = mcs.weighted_eigenvalues(V_j, dz_j)
-        probability = float(mcs.gchi2_exact_cdf(remaining_range, weights))
-        reach_analytical[j] = probability
-        reach_geometry[j], reach_geometry_error[j] = mcs.reach_probability_rng_geometry(remaining_range, V_j, dz_j, rng, n_samples=N_GEOMETRY)
-
-    z_plot = np.r_[z, z[-1] + dz[-1]]
-    dz_plot = np.r_[dz, dz[-1]]
-
-    reach_g4_plot = np.r_[reach_g4, 0.0]
-    reach_analytical_plot = np.r_[reach_analytical, 0.0]
-    reach_geometry_plot = np.r_[reach_geometry, 0.0]
-
-    reach_geometry_error_plot = np.r_[reach_geometry_error, 0.0]
-
-    mixture_reach_analytical_plot = np.r_[mixture_reach_analytical, 0.0]
-    mixture_reach_geometry_plot = np.r_[mixture_reach_geometry, 0.0]
-
-    mixture_reach_geometry_error_plot = np.r_[mixture_reach_geometry_error, 0.0]
-    
-    fig_reach, fig_stop = mcs.plot_reach_and_stopping(
-        z_plot,
-        reach_g4_plot,
-        reach_analytical_plot,
-        reach_geometry_plot=reach_geometry_plot,
-        mixture_reach_analytical_plot=(
-            mixture_reach_analytical_plot if ANGULAR_MODEL== "mixture" else None
-        ),
-        mixture_reach_geometry_plot=(
-            mixture_reach_geometry_plot if ANGULAR_MODEL== "mixture" else None
-        ),
-        R0=R0,
-        n_primaries=n_primaries,
-        n_configurations=N_CONFIGURATIONS,
-        xlim=(X_LIM, z_plot[-1] + 0.03),
-    )
-
-    if SAVEPLOT:
-        output_dir = Path("img") / ("pwo" if USEPWO else "h2o")
-        output_dir.mkdir(parents=True, exist_ok=True)
-
-        with plt.rc_context({"pdf.fonttype": 42}):
-            fig_reach.savefig(output_dir / f"reach_probability_{E0}.pdf")
-            fig_stop.savefig(output_dir / f"stopping_density_{E0}.pdf")
-
-    plt.show()
+        if remaining_range is not None:
+            reach_probability = sum(
+                probability * float(gchi2_exact_cdf(remaining_range, values))
+                for probability, values in zip(probabilities, weights)
+            )
+            if not np.isfinite(reach_probability) or reach_probability <= 0:
+                raise ValueError(f"Invalid reach probability for layer {layer}.")
+        
+            density /= reach_probability
 
 
-    print(f"Last model evaluation: {z[n_model-1]:.8f} cm; "
-          f"gap to R0: {R0-z[n_model-1]:.8f} cm; "
-          f"reach there: {reach_analytical[n_model-1]:.6g}")
-    print(f"Geant4 reach at last recorded boundary: {reach_g4[-1]:.6g}")
+        if plot_data is not None:
+            prefix = f"{'single' if mixture is None else 'mixture'}_{layer}_"
+            plot_data[prefix + "x_mm"] = x_cm * 10
+            plot_data[prefix + "density"] = density / 10
+            plot_data[prefix + "label"] = plotlabel
 
-    # Diagnostic increments: leave negative estimates undefined rather than
-    # silently clipping them to zero. They can arise from noisy/core widths.
-    increment_variance = np.diff(np.r_[0.0, CumVarCore])
-    SingleAngleRMSFromCum = np.full(len(z), np.nan)
-    good = np.isfinite(increment_variance) & (increment_variance >= 0)
-    SingleAngleRMSFromCum[good] = np.sqrt(increment_variance[good])
+        ax.plot(
+            x_cm * 10, density / 10,
+            color=model_color,
+            linestyle=analytical_style,
+            label=plotlabel,
+        )
 
-    plt.figure(figsize=(12, 9))
-    plt.plot(z, np.degrees(SingleAngleRMSFromCum), "o-", label="From cumulative core variance")
-    plt.plot(z, np.degrees(SingleSigmaCore), "s--", label="Direct Geant4 single-angle core width")
-    plt.xlabel("Depth / cm")
-    plt.ylabel("Single projected angle / degree")
-    plt.legend()
-    plt.grid(alpha=.3)
-    plt.tight_layout()
-    plt.show()
+        if n_geometry is not None:
+            theta_x = np.zeros(n_geometry)
+            theta_y = np.zeros(n_geometry)
+            excess_cm = np.zeros(n_geometry)
 
-    # Retain your lever-arm diagnostic on unequal intervals. With right-end 
-    # angles held over each interval, kick i acts over z[j]-(z[i]-dz[i]).
-    # This is a SMALL-ANGLE variance estimate: use Var(theta), not tan(RMS)^2.
-    lateralVariance = np.full(len(z), np.nan)
-    for j, d in enumerate(z):
-        if np.all(good[:j+1]):
-            lever_arm = d-z[:j+1]+dz[:j+1]
-            lateralVariance[j] = np.sum(lever_arm**2 * increment_variance[:j+1])
-    plt.figure(figsize=(12, 9))
-    plt.plot(z, np.sqrt(lateralVariance), "o-", label="Gaussian increment model")
-    plt.plot(z, CumDeltaXSigmaCore, label="Geant4 lateral core width")
-    plt.xlabel("Depth / cm")
-    plt.ylabel("Lateral width / cm")
-    plt.legend()
-    plt.grid()
-    plt.tight_layout()
-    # plt.savefig("lateral_scattering.pdf", bbox_inches="tight")
-    plt.show()
+            if mixture is None:
+                kick_variances = np.diff(np.r_[0.0, cumulative_variance[:n]])
+                if np.any(kick_variances < 0):
+                    raise ValueError("Cumulative variances produce negative kick variances.")
+
+            for i in range(n):
+                if mixture is None:
+                    sigma = np.sqrt(kick_variances[i])
+                else:
+                    is_tail = rng_geometry.random(n_geometry) < p_tail[i]
+                    sigma = np.sqrt(np.where(is_tail, tail[i], core[i]))
+
+                theta_x += rng_geometry.normal(size=n_geometry) * sigma
+                theta_y += rng_geometry.normal(size=n_geometry) * sigma
+
+                excess_cm += 0.5 * dz[i] * (theta_x**2 + theta_y**2)
+
+            if remaining_range is not None:
+                excess_cm = excess_cm[excess_cm <= remaining_range]
+
+            counts, edges = np.histogram(excess_cm * 10, bins=bins, range=(0, upper_cm * 10),)
+            if excess_cm.size:
+                if plot_data is not None:
+                    plot_data[prefix + "sample_edges_mm"] = edges
+                    plot_data[prefix + "sample_density"] = counts / (excess_cm.size * np.diff(edges))
+                ax.stairs(
+                    counts / (excess_cm.size * np.diff(edges)),
+                    edges,
+                    color=model_color,
+                    linestyle=sampled_style,
+                    linewidth=1.4,
+                    baseline=None,
+                    label=f"{model_name}, sampled",
+                )
+
+        if geant4 is not None:
+            g4_layers, g4_excess_cm = geant4
+            samples_mm = (np.asarray(g4_excess_cm)[np.asarray(g4_layers) == layer] * 10)
+
+            if samples_mm.size:
+                counts, edges = np.histogram(samples_mm, bins=bins, range=(0, upper_cm * 10),)
+
+                widths = np.diff(edges)
+                centers = 0.5 * (edges[:-1] + edges[1:])
+                N = samples_mm.size
+                p_hat = counts / N
+                g4_density = p_hat / widths
+                g4_error = np.sqrt(p_hat * (1.0 - p_hat) / N) / widths
+
+                if plot_data is not None:
+                    plot_data[prefix + "edges_mm"] = edges
+                    plot_data[prefix + "g4_density"] = g4_density
+                    plot_data[prefix + "g4_error"] = g4_error
+                    plot_data[prefix + "show_geant4"] = show_geant4
+
+                if show_geant4:
+                    ax.errorbar(
+                        centers, g4_density, yerr=g4_error,
+                        fmt="o", markersize=3, markerfacecolor="none",
+                        color=g4color, elinewidth=0.8, capsize=0,
+                        label=f"Geant4",# layer {layer}",
+                    )
+
+                if ax_res is not None:
+                    #more accurate but slower
+                    # cdf_edges = np.zeros_like(edges)
+                    # for probability, values in zip(probabilities, weights):
+                        # cdf_edges += probability * gchi2_exact_cdf(edges / 10.0, values)
+                    # if remaining_range is not None:
+                        # cdf_edges /= reach_probability
+                    # model_density = np.diff(cdf_edges) / widths
 
 
-if __name__ == "__main__":
-    main()
+                    integrated_density = np.r_[0.0, np.cumsum(0.5 * (density[:-1] + density[1:]) * np.diff(x_cm)),]
+                    integral_edges = np.interp(edges / 10, x_cm, integrated_density)
+                    model_density = np.diff(integral_edges) / widths
+
+                    residualsModel_G4 = model_density - g4_density
+                    if plot_data is not None:
+                        plot_data[prefix + "residual"] = residualsModel_G4
+                    ax_res.plot(
+                        centers, residualsModel_G4,
+                        color=model_color,
+                        linestyle=analytical_style,
+                        linewidth=1.4,
+                    )
+
+                    # Sampled density using exactly the same bins.
+                    if n_geometry is not None and excess_cm.size:
+                        sampled_counts, _ = np.histogram(excess_cm * 10, bins=edges,)
+                        sampled_density = (sampled_counts / (excess_cm.size * widths))
+
+                        if plot_data is not None:
+                            plot_data[prefix + "sample_residual"] = sampled_density - g4_density
+                        ax_res.stairs(
+                            sampled_density - g4_density,
+                            edges,
+                            color=model_color,
+                            linestyle=sampled_style,
+                            linewidth=1.4,
+                            baseline=None,
+                        )
+
+                    # Reference uncertainty, drawn once around zero.
+                    if show_geant4:
+                        ax_res.fill_between(centers, -g4_error, g4_error, color="0.85", linewidth=0, zorder=0, label=r"Geant4 stat. uncertainty ($\pm1\sigma$)",)
+                        #ax_res.plot(x_cm * 10, np.diff(np.r_[0.0,density]))                       
+                        ax_res.legend(frameon=False, fontsize=8, loc="best")
+
+    ax.set(xlabel=r"Excess path length $\Delta r$ / mm", ylabel=r"Probability density / mm$^{-1}$")
+    ax.legend()
+    return fig, ax
+
+
+def plot_reach_and_stopping(
+    z_plot, reach_g4_plot, reach_analytical_plot, *,
+    reach_geometry_plot=None, mixture_reach_analytical_plot=None,
+    mixture_reach_geometry_plot=None, R0=None, n_primaries=None, n_configurations=None,xlim=None,
+):
+    """Return reach and stopping figures; depths in cm, residuals Geant4 - model.
+    Inputs share an increasing depth grid. Geant4 reach must be nonincreasing.
+    Optional errors assume n_primaries independent, equally weighted primaries.
+    """
+    z = np.asarray(z_plot)
+    g4 = np.asarray(reach_g4_plot)
+    widths = np.diff(z)
+    models = [
+        ("Single Gaussian", reach_analytical_plot, "#0072B2", "-"),
+        ("Single Gaussian, trajectory  sampling", reach_geometry_plot, "#0072B2", "--"),
+        (f"Gaussian mixture (M={n_configurations} configurations)" if n_configurations is not None else "Gaussian mixture", mixture_reach_analytical_plot, "#D55E00", "-."),
+        ("Gaussian mixture, trajectory sampling", mixture_reach_geometry_plot, "#D55E00", ":"),
+    ]
+
+    figures = []
+    with plt.rc_context({"font.size": 9, "legend.fontsize": 8}):
+        for stopping in (False, True):
+            fig, (ax, ax_res) = plt.subplots(
+                2, 1, sharex=True, figsize=(15 / 2.54, 14 / 2.54),
+                gridspec_kw={"height_ratios": [3, 1]}, constrained_layout=True,
+            )
+            x = 0.5 * (z[:-1] + z[1:]) if stopping else z
+            probability = -np.diff(g4) if stopping else g4
+            reference = probability #/ widths if stopping else probability  #density by normalization
+            error = None
+            if n_primaries is not None:
+                error = np.sqrt(probability * (1 - probability) / n_primaries)
+                if stopping:
+                    error = error #/ widths
+                band = dict(color="0.85", linewidth=0, zorder=0,
+                            label=r"Geant4 stat. uncertainty ($\pm1\sigma$)")
+                if stopping:
+                    ax_res.stairs(error, z, baseline=-error, fill=True, **band)
+                else:
+                    ax_res.fill_between(z, -error, error, **band,)
+                
+            ax.errorbar(
+                x, reference, yerr=error, fmt="o", markersize=3,
+                markerfacecolor="none", color="black", elinewidth=0.8,
+                capsize=0, zorder=3, label="Geant4",
+            )
+            for label, reach, color, linestyle in models:
+                if reach is None:
+                    continue
+                line = dict(color=color, linestyle=linestyle, linewidth=1.4)
+                if stopping:
+                    density = -np.diff(reach) #/ widths #if plot density else probabiltiy
+                    ax.stairs(density, z, baseline=None, label=label, **line)
+                    ax_res.stairs(reference-density, z, baseline=None, **line)
+                else:
+                    ax.plot(z, reach, label=label, **line)
+                    ax_res.plot(z,  g4 - np.asarray(reach), **line)
+
+            for panel in (ax, ax_res):
+                panel.grid(color="0.9", linewidth=0.5)
+                if R0 is not None:
+                    panel.axvline(R0, color="0.5", linestyle="--", linewidth=1,
+                                  label=r"$ \mathrm{R_0}$" if panel is ax else "_nolegend_")
+            ax_res.axhline(0, color="0.4", linewidth=0.8)
+            ax_res.set_xlabel(r"Depth $z$ / cm")
+            ax_res.set_ylabel("Residual")
+            ax.set_ylabel("Stopping probability per bin" if stopping
+                          else "Reach probability")
+            if not stopping:
+                ax.set_ylim(-0.03, 1.03)
+            ax_res.set_xlim(xlim if xlim is not None else (z[0], z[-1]))
+            ax.legend()
+            ax_res.legend()
+            figures.append(fig)
+    return tuple(figures)

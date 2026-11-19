@@ -19,16 +19,17 @@ plt.rcParams.update({'font.size': 16})
 # Configuration: preserve the settings in the supplied script.
 USEPWO = False
 USEHIGHLAND = False
-USEMODELMIXTURE = True
+USEMODELMIXTURE = False
 SAVEDATA = False
 SAVEPLOT = False
+SAVE_PLOT_DATA = False
 LARGEOUTPUT = False
 
 ROOT_FILE = "h2oproj.root"
 E0 = 220.0
 # Set to None to use range_energy(data, E0). These are your current overrides.
-R0_OVERRIDE = 6.734 if USEPWO else 30.7233  #30.72, 6.73398 6.736 6.728
-FRACTION_R0 = 0.999
+R0_OVERRIDE = 6.734 if USEPWO else 30.724  #30.72, 6.73398 6.736 6.728
+FRACTION_R0 = 0.99
 Z = 73.6 if USEPWO else 7.4 # 73.6, 7.4 due to Mayneord’s formula
 X0 = 0.89 if USEPWO else 36.08
 
@@ -40,9 +41,10 @@ DELTA_X_TO_CM = 1.0
 PLOT_LAYER_INDEX = 145
 X_LIM = 6.0 if USEPWO else 30.3
 ANGULAR_MODEL = "mixture"  # "core" or "mixture"
-MIXTURE_MODEL = "rutherford" # "rutherford" or "highland"
+MIXTURE_MODEL = "highland" # "rutherford" or "highland"
 MIXTURE_FIT_METHOD = "curve_fit"  # "mle", "curve_fit", or "kl"
-MIXTURE_BINS = 2000  # Used by curve_fit and the comparison histogram.
+MIXTURE_BINS = 1000  # Used by curve_fit and the comparison histogram. 
+#1000 for water with curvefit to singlescat
 CORE_FIT_WIDTH = 2.0
 
 def gaussian_core_sigma(
@@ -450,8 +452,8 @@ def main():
         mixture = alternative = None
 
         if ANGULAR_MODEL == "mixture":
-            angles = CumScatteringAngle[rows]
-            # angles = ScatteringAngle[rows]
+            #angles = CumScatteringAngle[rows]
+            angles = ScatteringAngle[rows]
             for name in methods:
                 start_time = perf_counter()
                 try:
@@ -478,18 +480,18 @@ def main():
                 alternative = fit_parameters["curve_fit"][i]
         
         if i== PLOT_LAYER_INDEX:
-            # plot_cumulative_angular_fit(CumScatteringAngle[rows], CumSigmaCore[i], i, z[i], mixture, alternative)
-            plot_cumulative_angular_fit(ScatteringAngle[rows], CumSigmaCore[i], i, z[i], mixture, alternative)
+            plot_cumulative_angular_fit(CumScatteringAngle[rows], CumSigmaCore[i], i, z[i], mixture, alternative)
+            # plot_cumulative_angular_fit(ScatteringAngle[rows], CumSigmaCore[i], i, z[i], mixture, alternative)
         if i % 10 == 0:
             # print(f"Layer {i}, angles: {len(angles)}")
             print(f"Layer {i}, depth {z[i]:.6f} cm")
 
-    # KickVarCoreMixture = CumMixtureSigmaCore[:n_model]**2    
-    # KickVarTailMixture = CumMixtureSigmaTail[:n_model]**2    
-    # CumVarCoreMixture = np.cumsum(KickVarCoreMixture)
-    # CumVarTailMixture = np.cumsum(KickVarTailMixture)
-    # CumMixtureSigmaCore = np.sqrt(CumVarCoreMixture)
-    # CumMixtureSigmaTail = np.sqrt(CumVarTailMixture)
+    KickVarCoreMixture = CumMixtureSigmaCore[:n_model]**2    
+    KickVarTailMixture = CumMixtureSigmaTail[:n_model]**2    
+    CumVarCoreMixture = np.cumsum(KickVarCoreMixture)
+    CumVarTailMixture = np.cumsum(KickVarTailMixture)
+    CumMixtureSigmaCore = np.sqrt(CumVarCoreMixture)
+    CumMixtureSigmaTail = np.sqrt(CumVarTailMixture)
 
     # KickVarCoreMixture = SingleSigmaCore[:n_model]**2
     # KickVarCore = KickVarCoreMixture
@@ -500,7 +502,7 @@ def main():
     
     CumVarCore = CumSigmaCore**2
     KickVarCore = np.diff(np.r_[0.0, CumVarCore])
-    KickVarCoreMixture = KickVarCore
+    #KickVarCoreMixture = KickVarCore
     plt.plot(z[:n_model], np.diff(np.r_[0.0, CumSigmaCore**2]), "o-", markersize=3, label="Kick var Core width")
     plt.plot(z[:n_model], SingleSigmaCore**2, "o", markersize=3, label="single sigma^2")
     plt.legend()
@@ -642,7 +644,10 @@ def main():
     target_depth = FRACTION_R0 * R0
     layer_index = int(np.argmin(np.abs(z[:n_model] - target_depth)))
 
+    plot_dir = Path("paper") / ("pwo" if USEPWO else "h2o")
+    excess_data = {} if SAVE_PLOT_DATA else None
     options = dict(
+        plot_data=excess_data,
         layers=[layer_index],
         x_max_mm=2.0,
         bins=150,
@@ -686,11 +691,20 @@ def main():
         True, which="major",
         color="0.9", linestyle="-", linewidth=0.7,
     )
+    if SAVE_PLOT_DATA:
+        plot_dir.mkdir(parents=True, exist_ok=True)
+        np.savez_compressed(
+            plot_dir / f"data/excess_pathlength_{E0}_layer_{layer_index}.npz",
+            kind="excess", E0=E0, R0=R0, layer=layer_index,
+            depth_cm=z[layer_index], n_geometry=N_GEOMETRY,
+            xlim=ax.get_xlim(), ylim=ax.get_ylim(), res_ylim=ax_res.get_ylim(),
+            **excess_data,
+        )
     if SAVEPLOT:
         if USEPWO:
-            fig.savefig(f"img/pwo/excess_pathlength_layers_{E0}.pdf", format="pdf", dpi=300)
+            fig.savefig(f"paper/pwo/img/excess_pathlength_layers_{E0}.pdf", format="pdf", dpi=300)
         else:
-            fig.savefig(f"img/h2o/excess_pathlength_layers_{E0}.pdf", format="pdf", dpi=300)
+            fig.savefig(f"paper/h2o/img/excess_pathlength_layers_{E0}.pdf", format="pdf", dpi=300)
     plt.show()
     del options
 
@@ -801,10 +815,10 @@ def main():
 
     mixture_reach_geometry_error_plot = np.r_[mixture_reach_geometry_error, 0.0]
     
-    fig_reach, fig_stop = mcs.plot_reach_and_stopping(
-        z_plot,
-        reach_g4_plot,
-        reach_analytical_plot,
+    reach_data = dict(
+        z_plot=z_plot,
+        reach_g4_plot=reach_g4_plot,
+        reach_analytical_plot=reach_analytical_plot,
         reach_geometry_plot=reach_geometry_plot,
         mixture_reach_analytical_plot=(
             mixture_reach_analytical_plot if ANGULAR_MODEL== "mixture" else None
@@ -818,13 +832,21 @@ def main():
         xlim=(X_LIM, z_plot[-1] + 0.03),
     )
 
+    fig_reach, fig_stop = mcs.plot_reach_and_stopping(**reach_data)
+    if SAVE_PLOT_DATA:
+        plot_dir.mkdir(parents=True, exist_ok=True)
+        np.savez_compressed(
+            plot_dir / f"data/reach_stopping_{E0}.npz", kind="reach", E0=E0,
+            **{key: value for key, value in reach_data.items() if value is not None},
+        )
+
     if SAVEPLOT:
-        output_dir = Path("img") / ("pwo" if USEPWO else "h2o")
+        output_dir = Path("paper") / ("pwo" if USEPWO else "h2o")
         output_dir.mkdir(parents=True, exist_ok=True)
 
         with plt.rc_context({"pdf.fonttype": 42}):
-            fig_reach.savefig(output_dir / f"reach_probability_{E0}.pdf")
-            fig_stop.savefig(output_dir / f"stopping_density_{E0}.pdf")
+            fig_reach.savefig(output_dir / f"img/reach_probability_{E0}.pdf")
+            fig_stop.savefig(output_dir / f"img/stopping_density_{E0}.pdf")
 
     plt.show()
 

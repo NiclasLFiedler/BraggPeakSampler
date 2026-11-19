@@ -167,50 +167,39 @@ def gaussian_mixture_model(z, dz, R0, E0, p_exp, X0, Z, Xs=None, KickVariance=No
 
     mass = 938.272
     beta = _beta(mass, energy)
-    
-    reduced_thickness = dz / (X0 * beta**2)
-    modified_reduced_thickness = Z**(2/3) * reduced_thickness
-    log_d = np.log(reduced_thickness)
-    log_d_modified = np.log(modified_reduced_thickness)
-    variance1 = 0.8471 + 0.03347*log_d - 0.001843*log_d**2
-    epsilon = np.where(
-        log_d_modified < 0.5,
-        0.04841 + 0.006348*log_d_modified + 0.0006096*log_d_modified**2,
-        -0.01908 + 0.1106*log_d_modified - 0.005729*log_d_modified**2,
-    )
-    energyComp = _energy_at_depth(mid, R0, E0, p_exp)
-    Compbeta = _beta(mass, energyComp)
-    Compreduced_thickness = dz / (X0 * Compbeta**2)
-    Compmodified_reduced_thickness = Z**(2/3) * Compreduced_thickness
-    Complog_d = np.log(Compreduced_thickness)
-    Complog_d_modified = np.log(Compmodified_reduced_thickness)
-    Compvariance1 = 0.8471 + 0.03347*Complog_d - 0.001843*Complog_d**2
-    Compepsilon = np.where(
-        Complog_d_modified < 0.5,
-        0.04841 + 0.006348*Complog_d_modified + 0.0006096*Complog_d_modified**2,
-        -0.01908 + 0.1106*Complog_d_modified - 0.005729*Complog_d_modified**2,
-    )
+    if MIXTURE_MODEL == "highland":
+        reduced_thickness = dz / (X0 * beta**2)
+        modified_reduced_thickness = Z**(2/3) * reduced_thickness
+        log_d = np.log(reduced_thickness)
+        log_d_modified = np.log(modified_reduced_thickness)
+        variance1 = 0.8471 + 0.03347*log_d - 0.001843*log_d**2
+        epsilon = np.where(
+            log_d_modified < 0.5,
+            0.04841 + 0.006348*log_d_modified + 0.0006096*log_d_modified**2,
+            -0.01908 + 0.1106*log_d_modified - 0.005729*log_d_modified**2,
+        )
+
     plt.plot(z, variance1, "o-", markersize=3, label="variance1 highlandgeant4")
-    plt.plot(z, Compvariance1, "o-", markersize=3, label="variance1 highland")
     plt.plot(z, epsilon, "o-", markersize=3, label="epsilon highland geant4")
-    plt.plot(z, Compepsilon, "o-", markersize=3, label="epsilon highland")
-    plt.legend()
-    plt.show()
+
+    
     if MIXTURE_MODEL == "rutherford":
         reduced_thickness = dz / (Xs * beta**2)
         modified_reduced_thickness = Z**(2/3) * reduced_thickness
         log_d = np.log(reduced_thickness)
         log_d_modified = np.log(modified_reduced_thickness)
         variance1 = 0.8510 + 0.03314*log_d - 0.001825*log_d**2
-        plt.plot(z, variance1, "o-", markersize=3, label="variance1 rutherford")
-        plt.legend()
-        plt.show()
         epsilon = np.where(
             log_d_modified < 0.5,
             0.05283 + 0.0077*log_d_modified + 0.00069*log_d_modified**2,
             -0.01517 + 0.1151*log_d_modified - 0.00653*log_d_modified**2,
         )
-
+        
+        plt.plot(z, variance1, "o-", markersize=3, label="variance1 rutherford")
+        plt.plot(z, epsilon, "o-", markersize=3, label="epsilon rutherford")
+        
+    plt.legend()
+    plt.show()
     variance2 = (1 - (1 - epsilon)*variance1) / epsilon
 
     pc = np.sqrt(energy * (energy + 2 * mass))  # MeV
@@ -482,7 +471,7 @@ def reach_probability_rng_geometry_mixture(remaining_range, epsilon, kick_core_v
         theta_x = np.cumsum(kicks_x, axis=1)
         theta_y = np.cumsum(kicks_y, axis=1)
 
-       # slope_squared = np.tan(theta_x)**2 + np.tan(theta_y)**2
+        # slope_squared = np.tan(theta_x)**2 + np.tan(theta_y)**2
         # excess_factor = slope_squared / (np.sqrt(1 + slope_squared) + 1)
         
         excess_factor = 0.5 * (theta_x**2 + theta_y**2)
@@ -590,7 +579,7 @@ def reach_probability_sampled_mixture(z, dz, R0, var_core, var_tail,
             progress(j+1, len(z), len(patterns))
     return mean, error
 
-def plot_excess_pathlength_layers(z, dz, layers, cumulative_variance=None, *, mixture=None, x_max_mm=None, n_configurations=2000, seed=20120584, geant4=None, bins=150,n_geometry=None, R0 =None,ax=None, ax_res=None, show_geant4=True, Range=None): 
+def plot_excess_pathlength_layers(z, dz, layers, cumulative_variance=None, *, mixture=None, x_max_mm=None, n_configurations=2000, seed=20120584, geant4=None, bins=150,n_geometry=None, R0 =None,ax=None, ax_res=None, show_geant4=True, Range=None, plot_data=None): 
     if (cumulative_variance is None) == (mixture is None):
         raise ValueError("Supply either cumulative_variance or mixture.")
     layers = np.asarray(layers)
@@ -683,6 +672,12 @@ def plot_excess_pathlength_layers(z, dz, layers, cumulative_variance=None, *, mi
             density /= reach_probability
 
 
+        if plot_data is not None:
+            prefix = f"{'single' if mixture is None else 'mixture'}_{layer}_"
+            plot_data[prefix + "x_mm"] = x_cm * 10
+            plot_data[prefix + "density"] = density / 10
+            plot_data[prefix + "label"] = plotlabel
+
         ax.plot(
             x_cm * 10, density / 10,
             color=model_color,
@@ -717,6 +712,9 @@ def plot_excess_pathlength_layers(z, dz, layers, cumulative_variance=None, *, mi
 
             counts, edges = np.histogram(excess_cm * 10, bins=bins, range=(0, upper_cm * 10),)
             if excess_cm.size:
+                if plot_data is not None:
+                    plot_data[prefix + "sample_edges_mm"] = edges
+                    plot_data[prefix + "sample_density"] = counts / (excess_cm.size * np.diff(edges))
                 ax.stairs(
                     counts / (excess_cm.size * np.diff(edges)),
                     edges,
@@ -741,6 +739,12 @@ def plot_excess_pathlength_layers(z, dz, layers, cumulative_variance=None, *, mi
                 g4_density = p_hat / widths
                 g4_error = np.sqrt(p_hat * (1.0 - p_hat) / N) / widths
 
+                if plot_data is not None:
+                    plot_data[prefix + "edges_mm"] = edges
+                    plot_data[prefix + "g4_density"] = g4_density
+                    plot_data[prefix + "g4_error"] = g4_error
+                    plot_data[prefix + "show_geant4"] = show_geant4
+
                 if show_geant4:
                     ax.errorbar(
                         centers, g4_density, yerr=g4_error,
@@ -764,6 +768,8 @@ def plot_excess_pathlength_layers(z, dz, layers, cumulative_variance=None, *, mi
                     model_density = np.diff(integral_edges) / widths
 
                     residualsModel_G4 = model_density - g4_density
+                    if plot_data is not None:
+                        plot_data[prefix + "residual"] = residualsModel_G4
                     ax_res.plot(
                         centers, residualsModel_G4,
                         color=model_color,
@@ -776,6 +782,8 @@ def plot_excess_pathlength_layers(z, dz, layers, cumulative_variance=None, *, mi
                         sampled_counts, _ = np.histogram(excess_cm * 10, bins=edges,)
                         sampled_density = (sampled_counts / (excess_cm.size * widths))
 
+                        if plot_data is not None:
+                            plot_data[prefix + "sample_residual"] = sampled_density - g4_density
                         ax_res.stairs(
                             sampled_density - g4_density,
                             edges,
@@ -801,7 +809,7 @@ def plot_reach_and_stopping(
     reach_geometry_plot=None, mixture_reach_analytical_plot=None,
     mixture_reach_geometry_plot=None, R0=None, n_primaries=None, n_configurations=None,xlim=None,
 ):
-    """Return reach and stopping figures; depths in cm, residuals model - Geant4.
+    """Return reach and stopping figures; depths in cm, residuals Geant4 - model.
     Inputs share an increasing depth grid. Geant4 reach must be nonincreasing.
     Optional errors assume n_primaries independent, equally weighted primaries.
     """
@@ -811,7 +819,7 @@ def plot_reach_and_stopping(
     models = [
         ("Single Gaussian", reach_analytical_plot, "#0072B2", "-"),
         ("Single Gaussian, trajectory  sampling", reach_geometry_plot, "#0072B2", "--"),
-        ("Gaussian mixture (M={n_configurations}$ configurations)", mixture_reach_analytical_plot, "#D55E00", "-."),
+        (f"Gaussian mixture (M={n_configurations} configurations)" if n_configurations is not None else "Gaussian mixture", mixture_reach_analytical_plot, "#D55E00", "-."),
         ("Gaussian mixture, trajectory sampling", mixture_reach_geometry_plot, "#D55E00", ":"),
     ]
 
