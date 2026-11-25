@@ -92,10 +92,10 @@ void DetectorConstruction::DefineMaterials()
   // Air defined using NIST Manager
   worldMat = nistManager->FindOrBuildMaterial("G4_Galactic"); 
 
-  // detMaterial = nistManager->FindOrBuildMaterial("G4_PbWO4");
-  // detMaterial->GetIonisation()->SetMeanExcitationEnergy(600.7*eV);
+  detMaterial = nistManager->FindOrBuildMaterial("G4_PbWO4");
+  detMaterial->GetIonisation()->SetMeanExcitationEnergy(600.7*eV);
   
-  detMaterial = nistManager->FindOrBuildMaterial("G4_WATER");
+  // detMaterial = nistManager->FindOrBuildMaterial("G4_WATER");
 
   G4Material *SiO2 = new G4Material("SiO2", 2.65*g/cm3, 2);
   SiO2->AddElement(elSi, 1);
@@ -250,23 +250,37 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
   G4EmCalculator emCalc;
   
   
+  bool highenergy = true;
   G4double RangeWater220 = 30.719*cm; 
-  G4double RangePWO220 = 6.7335*cm;
+  G4double RangePWO220 = 6.736*cm;
  
   G4double phantomZ = RangePWO220+0.01*RangePWO220;
+  G4double switchDepth = 0.97*RangePWO220;
+  G4double coarseWidth = 0.005*RangePWO220;
+  G4double fineWidth   = 0.0015*RangePWO220;
   
-  // Depth measured from the phantom entrance along the beam.
-  G4double switchDepth = 0.96*RangePWO220;
-  
-  G4double coarseWidth = 0.01*RangePWO220;
-  G4double fineWidth   = 0.001*RangePWO220;
-  
-  bool useH2O = true;
+  if(!highenergy){
+    RangePWO220 = 1*cm;
+    phantomZ = RangePWO220+0.01*RangePWO220;
+    switchDepth = 0.96*RangePWO220;
+    coarseWidth = 0.01*RangePWO220;
+    fineWidth   = 0.001*RangePWO220;
+  }
+  bool useH2O = false;
   if(useH2O){
-    phantomZ = RangeWater220+0.05;
-    switchDepth = 0.993*RangeWater220;
-    coarseWidth = 0.01*RangeWater220;
-    fineWidth   = 0.0001*RangeWater220;
+    if(highenergy){
+      phantomZ = RangeWater220+0.05;
+      switchDepth = 0.993*RangeWater220;
+      coarseWidth = 0.01*RangeWater220;
+      fineWidth   = 0.0001*RangeWater220;
+    }
+    else{
+      RangeWater220 = 2.242*cm; 
+      phantomZ = RangeWater220+0.05;
+      switchDepth = 0.993*RangeWater220;
+      coarseWidth = 0.01*RangeWater220;
+      fineWidth   = 0.0001*RangeWater220;
+    }
   }
   if (switchDepth <= 0.0 || switchDepth >= phantomZ ||
       coarseWidth <= 0.0 || fineWidth <= 0.0)

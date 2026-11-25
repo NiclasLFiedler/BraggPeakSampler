@@ -204,17 +204,17 @@ def gaussian_mixture_model(z, dz, R0, E0, p_exp, X0, Z, Xs=None, KickVariance=No
 
     pc = np.sqrt(energy * (energy + 2 * mass))  # MeV
 
-    total_variance = np.asarray(KickVariance, dtype=float)
-    if KickVariance is not None:
-        total_variance = KickVariance
-    else:
-        total_variance = (15.0 / (beta * pc))**2 * dz / Xs
-        total_variance = (1+0.038*np.log(z/X0))**2*(13.6 / (beta * pc))**2 * dz / X0 
+    # total_variance = np.asarray(KickVariance, dtype=float)
+    # if KickVariance is not None:
+    #     total_variance = KickVariance
+    # else:
+    #     total_variance = (15.0 / (beta * pc))**2 * dz / Xs
+    #     total_variance = (1+0.038*np.log(z/X0))**2*(13.6 / (beta * pc))**2 * dz / X0 
         
-    core_variance = variance1 * total_variance
-    tail_variance = variance2 * total_variance
+    # core_variance = variance1 * total_variance
+    # tail_variance = variance2 * total_variance
 
-    return core_variance, tail_variance, epsilon
+    # return core_variance, tail_variance, epsilon
 
     if KickVariance is not None:
         core_variance = np.asarray(KickVariance, dtype=float)
@@ -428,8 +428,8 @@ def reach_probability_rng_geometry(remaining_range, cumulative_variance, dz,
         theta_x = np.cumsum(kicks_x, axis=1)
         theta_y = np.cumsum(kicks_y, axis=1)
 
-        # slope_squared = np.tan(theta_x)**2 + np.tan(theta_y)**2
-        # excess_factor = slope_squared / (np.sqrt(1 + slope_squared) + 1) #with tan
+        #slope_squared = np.tan(theta_x)**2 + np.tan(theta_y)**2
+        #excess_factor = slope_squared / (np.sqrt(1 + slope_squared) + 1) #with tan
 
         excess_factor = 0.5 * (theta_x**2 + theta_y**2)
         delta_R = excess_factor @ widths
@@ -471,8 +471,8 @@ def reach_probability_rng_geometry_mixture(remaining_range, epsilon, kick_core_v
         theta_x = np.cumsum(kicks_x, axis=1)
         theta_y = np.cumsum(kicks_y, axis=1)
 
-        # slope_squared = np.tan(theta_x)**2 + np.tan(theta_y)**2
-        # excess_factor = slope_squared / (np.sqrt(1 + slope_squared) + 1)
+        #slope_squared = np.tan(theta_x)**2 + np.tan(theta_y)**2
+        #excess_factor = slope_squared / (np.sqrt(1 + slope_squared) + 1)
         
         excess_factor = 0.5 * (theta_x**2 + theta_y**2)
         delta_R = excess_factor @ widths
@@ -611,7 +611,6 @@ def plot_excess_pathlength_layers(z, dz, layers, cumulative_variance=None, *, mi
         fig, ax = plt.subplots(figsize=(15 / 2.54, 11 / 2.54), constrained_layout=True,)
     else:
         fig = ax.figure
-
 
     if mixture is None:
         model_name = "Single Gaussian"
@@ -864,9 +863,8 @@ def plot_reach_and_stopping(
 
             for panel in (ax, ax_res):
                 panel.grid(color="0.9", linewidth=0.5)
-                if R0 is not None:
-                    panel.axvline(R0, color="0.5", linestyle="--", linewidth=1,
-                                  label=r"$ \mathrm{R_0}$" if panel is ax else "_nolegend_")
+                #if R0 is not None:
+                #    panel.axvline(R0, color="0.5", linestyle="--", linewidth=1, label=r"$ \mathrm{R_0}$" if panel is ax else "_nolegend_")
             ax_res.axhline(0, color="0.4", linewidth=0.8)
             ax_res.set_xlabel(r"Depth $z$ / cm")
             ax_res.set_ylabel(r"Residual / cm$^{-1}$" if stopping else "Residual")

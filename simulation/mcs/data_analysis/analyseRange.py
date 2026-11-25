@@ -15,21 +15,21 @@ from rel_entr_fit_helper import fit_simple_kl, fit_complex_kl
 from pathlib import Path
 plt.rcParams.update({'font.size': 16})
 
-
 # Configuration: preserve the settings in the supplied script.
-USEPWO = False
+USEPWO = True
 USEHIGHLAND = False
 USEMODELMIXTURE = False
-SAVEDATA = False
+SAVEDATA = False  #dep
 SAVEPLOT = False
 SAVE_PLOT_DATA = False
-LARGEOUTPUT = False
+SHOWPLOT = True
 
 ROOT_FILE = "h2oproj.root"
-E0 = 220.0
+E0 = 220
 # Set to None to use range_energy(data, E0). These are your current overrides.
-R0_OVERRIDE = 6.734 if USEPWO else 30.724  #30.72, 6.73398 6.736 6.728
+R0_OVERRIDE = 6.735 if USEPWO else 30.724  #30.72, 6.73398 6.736 6.728
 FRACTION_R0 = 0.99
+FRACTION2_R0 = 0.8
 Z = 73.6 if USEPWO else 7.4 # 73.6, 7.4 due to Mayneord’s formula
 X0 = 0.89 if USEPWO else 36.08
 
@@ -265,7 +265,10 @@ def plot_cumulative_angular_fit(values, core_sigma, layer, depth, mixture=None, 
     ax.grid(alpha=0.3)
     fig.tight_layout()
     # fig.savefig(f"scattering_{ANGULAR_MODEL}_layer_{layer}.pdf")
-    plt.show()
+    if SHOWPLOT:
+        plt.show()
+    else:
+        plt.close()
 
 def integer_ids(values, name):
     values = np.asarray(values)
@@ -301,7 +304,10 @@ def plot_mixture_parameters(z, weight, sigma_core, sigma_tail):
 
     fig.tight_layout()
     # fig.savefig("mixture_parameters.pdf")
-    plt.show()
+    if SHOWPLOT:
+        plt.show()
+    else:
+        plt.close()
 
 def comp_plot_mixture_parameters(z, weight, sigma_core, sigma_tail, z2, weight2, sigma_core2, sigma_tail2):
     fig, (ax_weight, ax_sigma) = plt.subplots(
@@ -331,7 +337,10 @@ def comp_plot_mixture_parameters(z, weight, sigma_core, sigma_tail, z2, weight2,
 
     fig.tight_layout()
     # fig.savefig("mixture_parameters.pdf")
-    plt.show()
+    if SHOWPLOT:
+        plt.show()
+    else:
+        plt.close()
 
 def main():
     if ANGULAR_MODEL not in ("core", "mixture"):
@@ -432,8 +441,8 @@ def main():
         if (previous_width is not None and width < previous_width
                 and not np.isclose(width, previous_width, rtol=1e-4, atol=1e-8)):
             previous_fit = dict.fromkeys(methods)
-            print(f"Layer {i}: grid spacing {previous_width:.6g} -> {width:.6g} cm; "
-                  "resetting mixture fit initial parameters.")
+            print(f"Layer {i} grid spacing {previous_width:.6g} -> {width:.6g} cm; "
+                  "resetting m:ixture fit initial parameters.")
         previous_width = width
         
         CumSigmaCore[i] = gaussian_core_sigma(CumScatteringAngle[rows],
@@ -448,12 +457,12 @@ def main():
                                                     CumDeltaXSigmaCore[i-1],
                                                     fit_width=CORE_FIT_WIDTH
                                                     )
-        
+
         mixture = alternative = None
 
         if ANGULAR_MODEL == "mixture":
-            #angles = CumScatteringAngle[rows]
-            angles = ScatteringAngle[rows]
+            angles = CumScatteringAngle[rows]
+            # angles = ScatteringAngle[rows]
             for name in methods:
                 start_time = perf_counter()
                 try:
@@ -481,32 +490,36 @@ def main():
         
         if i== PLOT_LAYER_INDEX:
             plot_cumulative_angular_fit(CumScatteringAngle[rows], CumSigmaCore[i], i, z[i], mixture, alternative)
-            # plot_cumulative_angular_fit(ScatteringAngle[rows], CumSigmaCore[i], i, z[i], mixture, alternative)
+            #plot_cumulative_angular_fit(ScatteringAngle[rows], CumSigmaCore[i], i, z[i], mixture, alternative)
         if i % 10 == 0:
             # print(f"Layer {i}, angles: {len(angles)}")
             print(f"Layer {i}, depth {z[i]:.6f} cm")
 
-    KickVarCoreMixture = CumMixtureSigmaCore[:n_model]**2    
-    KickVarTailMixture = CumMixtureSigmaTail[:n_model]**2    
-    CumVarCoreMixture = np.cumsum(KickVarCoreMixture)
-    CumVarTailMixture = np.cumsum(KickVarTailMixture)
-    CumMixtureSigmaCore = np.sqrt(CumVarCoreMixture)
-    CumMixtureSigmaTail = np.sqrt(CumVarTailMixture)
+    # uncomment for single scattering use 
+    # KickVarCoreMixture = CumMixtureSigmaCore[:n_model]**2    
+    # KickVarTailMixture = CumMixtureSigmaTail[:n_model]**2    
+    # CumVarCoreMixture = np.cumsum(KickVarCoreMixture)
+    # CumVarTailMixture = np.cumsum(KickVarTailMixture)
+    # CumMixtureSigmaCore = np.sqrt(CumVarCoreMixture)
+    # CumMixtureSigmaTail = np.sqrt(CumVarTailMixture)
 
     # KickVarCoreMixture = SingleSigmaCore[:n_model]**2
     # KickVarCore = KickVarCoreMixture
     # CumVarCore = np.cumsum(KickVarCore)
     # CumSigmaCore = np.sqrt(CumVarCore)
-    # KickVarCoreMixture = KickVarCore
-    #KickVarCoreMixture = mcs.fit_cumulative_variance(np.diff(np.r_[0.0, CumSigmaCore**2]))
+    #KickVarCoreMixture = KickVarCore
+    KickVarCoreMixture = mcs.fit_cumulative_variance(np.diff(np.r_[0.0, CumSigmaCore**2]))
     
     CumVarCore = CumSigmaCore**2
     KickVarCore = np.diff(np.r_[0.0, CumVarCore])
-    #KickVarCoreMixture = KickVarCore
-    plt.plot(z[:n_model], np.diff(np.r_[0.0, CumSigmaCore**2]), "o-", markersize=3, label="Kick var Core width")
-    plt.plot(z[:n_model], SingleSigmaCore**2, "o", markersize=3, label="single sigma^2")
+    # KickVarCoreMixture = KickVarCore
+    plt.plot(z[:n_model], np.diff(np.r_[0.0, CumSigmaCore[:n_model]**2]), "o-", markersize=3, label="Kick var Core width")
+    plt.plot(z[:n_model], SingleSigmaCore[:n_model]**2, "o", markersize=3, label="single sigma^2")
     plt.legend()
-    plt.show()
+    if SHOWPLOT:
+        plt.show()
+    else:
+        plt.close()
 
     if ANGULAR_MODEL == "mixture":
         CumMixtureVarCore = np.full(len(z), np.nan)
@@ -545,14 +558,13 @@ def main():
     CumMixtureModelVarCore = np.full(len(z), np.nan)
     CumMixtureModelVarTail = np.full(len(z), np.nan)
     
-    
     CumVarCoreFit = mcs.fit_cumulative_variance(CumVarCore[:n_model])
     V = CumVarCoreFit
     CumVarHighland = mcs.highland_variance(z=z[:n_model], dz=dz[:n_model], R0=R0, E0=E0, p_exp=p_exp, X0=X0)
     if USEHIGHLAND:
         V = CumVarHighland
     
-    #KickVarCoreMixture = np.diff(np.r_[0.0, V])
+    # KickVarCoreMixture = np.diff(np.r_[0.0, V])
     
     Xs = mcs.scattering_length_from_X0(X0, Z)
     MixtureModelKickVarCore, MixtureModelKickVarTail, CumMixtureModelWeight = mcs.gaussian_mixture_model(z=z[:n_model],
@@ -575,20 +587,23 @@ def main():
     
     if ANGULAR_MODEL == "mixture":
         plt.figure(figsize=(10, 7))
-        plt.plot(z, CumMixtureVarCore, "o-", markersize=3, label="Geant4 Core variance")
-        plt.plot(z, CumMixtureVarTail, "^-", markersize=3, label="Geant4 Tail variance")
-        plt.plot(z, MixtureWeight, "^-", markersize=3, label="Geant4 Weight")
+        plt.plot(z[:n_model], CumMixtureVarCore[:n_model], "o-", markersize=3, label="Geant4 Core variance")
+        plt.plot(z[:n_model], CumMixtureVarTail[:n_model], "^-", markersize=3, label="Geant4 Tail variance")
+        plt.plot(z[:n_model], MixtureWeight[:n_model], "^-", markersize=3, label="Geant4 Weight")
         
-        plt.plot(z, CumMixtureModelWeight, "^-", markersize=3, label="Model Mixture Weight")
-        plt.plot(z, CumMixtureModelVarCore, "o-", markersize=3, label="Model Core variance")
-        plt.plot(z, CumMixtureModelVarTail, "^-", markersize=3, label="Model Tail variance")
+        plt.plot(z[:n_model], CumMixtureModelWeight[:n_model], "^-", markersize=3, label="Model Mixture Weight")
+        plt.plot(z[:n_model], CumMixtureModelVarCore[:n_model], "o-", markersize=3, label="Model Core variance")
+        plt.plot(z[:n_model], CumMixtureModelVarTail[:n_model], "^-", markersize=3, label="Model Tail variance")
 
         plt.xlabel("Depth / cm")
         plt.ylabel(r"Cumulative angular variance / rad$^2$")
         plt.legend()
         plt.grid(alpha=0.3)
         plt.tight_layout()
-        plt.show()
+        if SHOWPLOT:
+            plt.show()
+        else:
+            plt.close()
         CumMixtureVariance = ((1-MixtureWeight) * CumMixtureVarCore + (MixtureWeight) * CumMixtureVarTail)
         if SAVEDATA:
             np.savez("cumulative_angular_mixture.npz", z=z,
@@ -640,7 +655,8 @@ def main():
         gridspec_kw={"height_ratios": [3, 1]},
         constrained_layout=True,
     )
-
+    
+    ####### first excess path length fraction start
     target_depth = FRACTION_R0 * R0
     layer_index = int(np.argmin(np.abs(z[:n_model] - target_depth)))
 
@@ -664,7 +680,6 @@ def main():
         **options,
         Range=R0
     )
-    del layerID, G4ExcessPathLength
 
     if ANGULAR_MODEL== "mixture":
         print("Anuglar Model")
@@ -694,7 +709,7 @@ def main():
     if SAVE_PLOT_DATA:
         plot_dir.mkdir(parents=True, exist_ok=True)
         np.savez_compressed(
-            plot_dir / f"data/excess_pathlength_{E0}_layer_{layer_index}.npz",
+            plot_dir / f"data/excess_pathlength_{int(E0)}_{FRACTION_R0}R0_layer_{layer_index}.npz",
             kind="excess", E0=E0, R0=R0, layer=layer_index,
             depth_cm=z[layer_index], n_geometry=N_GEOMETRY,
             xlim=ax.get_xlim(), ylim=ax.get_ylim(), res_ylim=ax_res.get_ylim(),
@@ -702,11 +717,91 @@ def main():
         )
     if SAVEPLOT:
         if USEPWO:
-            fig.savefig(f"paper/pwo/img/excess_pathlength_layers_{E0}.pdf", format="pdf", dpi=300)
+            fig.savefig(f"paper/pwo/img/excess_pathlength_layers_{int(E0)}_{FRACTION_R0}R0.pdf", format="pdf", dpi=300)
         else:
-            fig.savefig(f"paper/h2o/img/excess_pathlength_layers_{E0}.pdf", format="pdf", dpi=300)
-    plt.show()
-    del options
+            fig.savefig(f"paper/h2o/img/excess_pathlength_layers_{int(E0)}_{FRACTION_R0}R0.pdf", format="pdf", dpi=300)
+    if SHOWPLOT:
+        plt.show()
+    else:
+        plt.close()
+    fig, (ax, ax_res) = plt.subplots(
+        2, 1,
+        sharex=True,
+        figsize=(15 / 2.54, 14 / 2.54),
+        gridspec_kw={"height_ratios": [3, 1]},
+        constrained_layout=True,
+    )
+    ####### first excess path length fraction end
+    ####### second excess path length fraction start
+    target_depth = FRACTION2_R0 * R0
+    layer_index = int(np.argmin(np.abs(z[:n_model] - target_depth)))
+
+    plot_dir = Path("paper") / ("pwo" if USEPWO else "h2o")
+    excess_data = {} if SAVE_PLOT_DATA else None
+    options = dict(
+        plot_data=excess_data,
+        layers=[layer_index],
+        x_max_mm=2.0,
+        bins=150,
+        n_geometry=N_GEOMETRY,
+        R0=R0,
+        geant4=(layerID, G4ExcessPathLength),
+        ax=ax,
+        ax_res=ax_res,
+    )
+    print("Core")
+    mcs.plot_excess_pathlength_layers(
+        z, dz,
+        cumulative_variance=V,
+        **options,
+        Range=R0
+    )
+
+    if ANGULAR_MODEL== "mixture":
+        print("Anuglar Model")
+        mcs.plot_excess_pathlength_layers(
+            z, dz,
+            mixture=(MixtureKickVarCore[:n_model], MixtureKickVarTail[:n_model], MixtureWeight[:n_model]),
+            show_geant4=False,
+            **options,
+            Range=R0
+        )
+    
+    ax.set_xlabel("")
+    ax_res.set(
+        xlabel=r"Excess path length $\Delta r$ / mm",
+        ylabel="Residual\n" + r"/ mm$^{-1}$",
+    )
+    ax.set_axisbelow(True)
+    ax.grid(
+        True, which="major",
+        color="0.9", linestyle="-", linewidth=0.7,
+    )
+    ax_res.axhline(0, color="0.4", linewidth=0.8, zorder=0)
+    ax_res.grid(
+        True, which="major",
+        color="0.9", linestyle="-", linewidth=0.7,
+    )
+    if SAVE_PLOT_DATA:
+        plot_dir.mkdir(parents=True, exist_ok=True)
+        np.savez_compressed(
+            plot_dir / f"data/excess_pathlength_{E0}_{FRACTION2_R0}R0_layer_{layer_index}.npz",
+            kind="excess", E0=E0, R0=R0, layer=layer_index,
+            depth_cm=z[layer_index], n_geometry=N_GEOMETRY,
+            xlim=ax.get_xlim(), ylim=ax.get_ylim(), res_ylim=ax_res.get_ylim(),
+            **excess_data,
+        )
+    if SAVEPLOT:
+        if USEPWO:
+            fig.savefig(f"paper/pwo/img/excess_pathlength_layers_{E0}_{FRACTION2_R0}R0.pdf", format="pdf", dpi=300)
+        else:
+            fig.savefig(f"paper/h2o/img/excess_pathlength_layers_{E0}_{FRACTION2_R0}R0.pdf", format="pdf", dpi=300)
+    if SHOWPLOT:
+        plt.show()
+    else:
+        plt.close()
+    ####### second excess path length fraction end
+    del options, layerID, G4ExcessPathLength
 
     z_fit = z[:n_model]
     plt.figure(figsize=(12, 9))
@@ -736,7 +831,10 @@ def main():
     plt.legend()
     plt.grid()
     plt.tight_layout()
-    plt.show()
+    if SHOWPLOT:
+        plt.show()
+    else:
+        plt.close()
 
     if USEHIGHLAND:
         mcs.simulation_grid(z[:n_model], V[:n_model], R0, layer_ids=boundary_layers[:n_model])
@@ -851,6 +949,11 @@ def main():
     plt.show()
 
 
+
+    ####deprecated####
+
+
+
     print(f"Last model evaluation: {z[n_model-1]:.8f} cm; "
           f"gap to R0: {R0-z[n_model-1]:.8f} cm; "
           f"reach there: {reach_analytical[n_model-1]:.6g}")
@@ -871,7 +974,7 @@ def main():
     plt.legend()
     plt.grid(alpha=.3)
     plt.tight_layout()
-    plt.show()
+    plt.close()
 
     # Retain your lever-arm diagnostic on unequal intervals. With right-end 
     # angles held over each interval, kick i acts over z[j]-(z[i]-dz[i]).
@@ -890,8 +993,94 @@ def main():
     plt.grid()
     plt.tight_layout()
     # plt.savefig("lateral_scattering.pdf", bbox_inches="tight")
-    plt.show()
-
+    plt.close()
 
 if __name__ == "__main__":
     main()
+    
+###
+# paper values for plots
+#geant4 runmac
+# /run/numberOfThreads 16
+# /run/setCutForAGivenParticle e- 100 km
+# /process/eLoss/CSDARange true
+# /process/eLoss/linLossLimit 0.0001
+# /process/eLoss/fluct false
+# 
+# /run/initialize
+# 
+# /process/inactivate nuclearStopping proton
+# /process/inactivate protonInelastic
+# /process/inactivate hadElastic
+# #/process/inactivate msc
+# 
+# /run/verbose 1
+# /gun/particle proton
+# /set/beamenergy 220 MeV
+# 
+# #/tracking/verbose 1
+# #/run/beamOn 1
+# #/run/dumpCouples
+# 
+# /run/beamOn 1000000
+
+# 220 MeV Water 30.724 cm, curve fit, single scattering, 1000 mixture bins 
+# 1000000 events
+# phantomZ = RangeWater220+0.05
+# switchDepth = 0.993*RangeWater220
+# coarseWidth = 0.01*RangeWater220
+# fineWidth   = 0.0001*RangeWater220
+###
+
+###
+#pbwo4 220 MeV, curve fit, cumulative scattering, 1000 mixture bins
+# ROOT_FILE = "h2oproj.root"
+# E0 = 220.0
+# # Set to None to use range_energy(data, E0). These are your current overrides.
+# R0_OVERRIDE = 6.734 if USEPWO else 30.722  #30.72, 6.73398 6.736 6.728
+# FRACTION_R0 = 0.99
+# FRACTION2_R0 = 0.8
+# Z = 73.6 if USEPWO else 7.4 # 73.6, 7.4 due to Mayneord’s formula
+# X0 = 0.89 if USEPWO else 36.08
+# 
+# N_GEOMETRY = 100_000
+# N_CONFIGURATIONS = 2000  # Increase and inspect the pointwise sampling error.
+# CONFIGURATION_SEED = 20120584  # Separate stream from angle/geometry RNG.
+# # Confirm against your scorer: convert deltaX to cm if it was stored in mm.
+# DELTA_X_TO_CM = 1.0
+# PLOT_LAYER_INDEX = 145
+# X_LIM = 6.0 if USEPWO else 30.3
+# ANGULAR_MODEL = "mixture"  # "core" or "mixture"
+# MIXTURE_MODEL = "highland" # "rutherford" or "highland"
+# MIXTURE_FIT_METHOD = "curve_fit"  # "mle", "curve_fit", or "kl"
+# MIXTURE_BINS = 1000  # Used by curve_fit and the comparison histogram. 
+# #1000 for water with curvefit to singlescat
+# CORE_FIT_WIDTH = 2.0
+###
+# /run/numberOfThreads 16
+# /run/setCutForAGivenParticle e- 100 km
+# /process/eLoss/CSDARange true
+# /process/eLoss/linLossLimit 0.0001
+# /process/eLoss/fluct false
+# 
+# /run/initialize
+# 
+# /process/inactivate nuclearStopping proton
+# /process/inactivate protonInelastic
+# /process/inactivate hadElastic
+# #/process/inactivate msc
+# 
+# /run/verbose 1
+# /gun/particle proton
+# /set/beamenergy 220 MeV
+# 
+# #/tracking/verbose 1
+# #/run/beamOn 1
+# #/run/dumpCouples
+# 
+# /run/beamOn 200000
+#  G4double phantomZ = RangePWO220+0.01*RangePWO220;
+#  G4double switchDepth = 0.97*RangePWO220;
+#  G4double coarseWidth = 0.01*RangePWO220;
+#  G4double fineWidth   = 0.0005*RangePWO220;
+  

@@ -24,5 +24,5 @@ for energy in "${beam_energies[@]}"; do
     cd ../build
     echo "Simulation with $energy MeV completed. Output saved"
 done
-#cd ../data_analysis
-#python3 range_energy.py
+cd ../data_analysis
+python3 analyseRange.py
