@@ -20,8 +20,8 @@ USEPWO = True
 USEHIGHLAND = False
 USEMODELMIXTURE = False
 SAVEDATA = False  #dep
-SAVEPLOT = False
-SAVE_PLOT_DATA = False
+SAVEPLOT = True
+SAVE_PLOT_DATA = True
 SHOWPLOT = True
 
 ROOT_FILE = "h2oproj.root"
@@ -33,8 +33,8 @@ FRACTION2_R0 = 0.8
 Z = 73.6 if USEPWO else 7.4 # 73.6, 7.4 due to Mayneord’s formula
 X0 = 0.89 if USEPWO else 36.08
 
-N_GEOMETRY = 100_000
-N_CONFIGURATIONS = 2000  # Increase and inspect the pointwise sampling error.
+N_GEOMETRY = 300_000
+N_CONFIGURATIONS = 10000  # Increase and inspect the pointwise sampling error.
 CONFIGURATION_SEED = 20120584  # Separate stream from angle/geometry RNG.
 # Confirm against your scorer: convert deltaX to cm if it was stored in mm.
 DELTA_X_TO_CM = 1.0
@@ -43,7 +43,7 @@ X_LIM = 6.0 if USEPWO else 30.3
 ANGULAR_MODEL = "mixture"  # "core" or "mixture"
 MIXTURE_MODEL = "highland" # "rutherford" or "highland"
 MIXTURE_FIT_METHOD = "curve_fit"  # "mle", "curve_fit", or "kl"
-MIXTURE_BINS = 1000  # Used by curve_fit and the comparison histogram. 
+MIXTURE_BINS = 150  # Used by curve_fit and the comparison histogram. 
 #1000 for water with curvefit to singlescat
 CORE_FIT_WIDTH = 2.0
 
@@ -660,7 +660,7 @@ def main():
     target_depth = FRACTION_R0 * R0
     layer_index = int(np.argmin(np.abs(z[:n_model] - target_depth)))
 
-    plot_dir = Path("paper") / ("pwo" if USEPWO else "h2o")
+    plot_dir = Path("paper") / ("pwo2" if USEPWO else "h2o")
     excess_data = {} if SAVE_PLOT_DATA else None
     options = dict(
         plot_data=excess_data,
@@ -717,7 +717,7 @@ def main():
         )
     if SAVEPLOT:
         if USEPWO:
-            fig.savefig(f"paper/pwo/img/excess_pathlength_layers_{int(E0)}_{FRACTION_R0}R0.pdf", format="pdf", dpi=300)
+            fig.savefig(f"paper/pwo2/img/excess_pathlength_layers_{int(E0)}_{FRACTION_R0}R0.pdf", format="pdf", dpi=300)
         else:
             fig.savefig(f"paper/h2o/img/excess_pathlength_layers_{int(E0)}_{FRACTION_R0}R0.pdf", format="pdf", dpi=300)
     if SHOWPLOT:
@@ -736,7 +736,7 @@ def main():
     target_depth = FRACTION2_R0 * R0
     layer_index = int(np.argmin(np.abs(z[:n_model] - target_depth)))
 
-    plot_dir = Path("paper") / ("pwo" if USEPWO else "h2o")
+    plot_dir = Path("paper") / ("pwo2" if USEPWO else "h2o")
     excess_data = {} if SAVE_PLOT_DATA else None
     options = dict(
         plot_data=excess_data,
@@ -793,7 +793,7 @@ def main():
         )
     if SAVEPLOT:
         if USEPWO:
-            fig.savefig(f"paper/pwo/img/excess_pathlength_layers_{E0}_{FRACTION2_R0}R0.pdf", format="pdf", dpi=300)
+            fig.savefig(f"paper/pwo2/img/excess_pathlength_layers_{E0}_{FRACTION2_R0}R0.pdf", format="pdf", dpi=300)
         else:
             fig.savefig(f"paper/h2o/img/excess_pathlength_layers_{E0}_{FRACTION2_R0}R0.pdf", format="pdf", dpi=300)
     if SHOWPLOT:
@@ -939,7 +939,7 @@ def main():
         )
 
     if SAVEPLOT:
-        output_dir = Path("paper") / ("pwo" if USEPWO else "h2o")
+        output_dir = Path("paper") / ("pwo2" if USEPWO else "h2o")
         output_dir.mkdir(parents=True, exist_ok=True)
 
         with plt.rc_context({"pdf.fonttype": 42}):

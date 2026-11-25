@@ -256,8 +256,8 @@ G4VPhysicalVolume* DetectorConstruction::DefineVolumes()
  
   G4double phantomZ = RangePWO220+0.01*RangePWO220;
   G4double switchDepth = 0.97*RangePWO220;
-  G4double coarseWidth = 0.005*RangePWO220;
-  G4double fineWidth   = 0.0015*RangePWO220;
+  G4double coarseWidth = 0.008*RangePWO220;
+  G4double fineWidth   = 0.001*RangePWO220;
   
   if(!highenergy){
     RangePWO220 = 1*cm;
